@@ -25,8 +25,8 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
     return (
       <div style={{
         position: 'fixed',
-        bottom: 20,
-        right: 20,
+        bottom: 90,
+        right: 'calc(50% - 69px + 148px + 8px)',
         fontSize: 12,
         fontWeight: 700,
         color: 'var(--text-muted)',
@@ -34,7 +34,7 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
         opacity: savedMessage ? 1 : 0.5,
         pointerEvents: 'none',
       }}>
-        {isSaving ? '💾 Saving...' : '✓ Saved'}
+        {isSaving ? '⟳ Saving...' : '✓ Saved'}
       </div>
     );
   }
@@ -44,14 +44,10 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
     <div style={{
       position: 'fixed',
       bottom: 90,
-      left: 0,
-      right: 0,
-      padding: '12px 16px',
-      background: 'var(--bg)',
-      borderTop: '1px solid var(--border)',
+      right: 'calc(50% - 69px)',
       display: 'flex',
       gap: 8,
-      justifyContent: 'space-between',
+      alignItems: 'center',
       zIndex: 50,
     }}>
       <button
@@ -60,7 +56,7 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
         style={{
           width: 44,
           height: 44,
-          borderRadius: 12,
+          borderRadius: '50%',
           border: '1px solid var(--input-border)',
           background: 'var(--surface)',
           color: 'var(--text)',
@@ -71,6 +67,7 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
           alignItems: 'center',
           justifyContent: 'center',
           transition: 'all 0.2s ease',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
         }}
         title="Undo changes"
       >
@@ -81,20 +78,24 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
         onClick={onSave}
         disabled={!hasChanges || isSaving}
         style={{
-          flex: 1,
+          width: 44,
           height: 44,
-          borderRadius: 12,
+          borderRadius: '50%',
           border: 'none',
           background: hasChanges ? '#6366F1' : '#9CA3AF',
           color: '#fff',
-          fontSize: 14,
-          fontWeight: 700,
+          fontSize: 18,
           cursor: hasChanges && !isSaving ? 'pointer' : 'not-allowed',
           opacity: isSaving ? 0.7 : 1,
           transition: 'all 0.2s ease',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 0,
         }}
       >
-        {isSaving ? 'Saving...' : 'Save'}
+        {isSaving ? '⟳' : '✓'}
       </button>
 
       <button
@@ -102,7 +103,7 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
         style={{
           width: 44,
           height: 44,
-          borderRadius: 12,
+          borderRadius: '50%',
           border: '1px solid var(--input-border)',
           background: 'var(--surface)',
           color: 'var(--text)',
@@ -112,6 +113,7 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
           alignItems: 'center',
           justifyContent: 'center',
           transition: 'all 0.2s ease',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
         }}
         title="Cancel and close"
       >
