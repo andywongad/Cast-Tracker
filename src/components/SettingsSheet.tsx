@@ -3,7 +3,7 @@ import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 
 export default function SettingsSheet() {
-  const { settings, setTheme, setShowColumns, setCastColumns, resetAll } = useStore();
+  const { settings, setTheme, setShowColumns, setCastColumns, setAutoSave, resetAll } = useStore();
   const { settingsOpen, closeSettings, screen, goHome, openFeedback } = useUI();
   const [resetConfirm, setResetConfirm] = useState(false);
 
@@ -24,6 +24,11 @@ export default function SettingsSheet() {
             <button key={th} onClick={() => setTheme(th)} className="ct-tab-btn" style={{ border: theme === th ? 'none' : '1px solid var(--input-border)', background: theme === th ? '#6366F1' : 'transparent', color: theme === th ? '#fff' : 'var(--text-secondary)' }}>{th}</button>
           ))}
         </div>
+
+        <label className="ct-label-muted">CHARACTER EDITING</label>
+        <button onClick={() => setAutoSave(!settings.autoSave)} style={{ width: '100%', height: 44, marginBottom: 22, border: '1px solid var(--input-border)', borderRadius: 12, background: settings.autoSave ? '#6366F1' : 'transparent', color: settings.autoSave ? '#fff' : 'var(--text-secondary)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+          {settings.autoSave ? '✓ Auto-Save Enabled' : 'Auto-Save Disabled'}
+        </button>
 
         {screen === 'home' && (
           <>

@@ -23,7 +23,7 @@ export default function HomeScreen() {
     return () => clearTimeout(t);
   }, [query, isSearching]);
 
-  const cols = settings.showColumns || 2;
+  const cols = settings.showColumns || 4;
   const gridCols = `repeat(${cols}, 1fr)`;
 
   const searchResults = useMemo(() => data.shows.filter((s) => (s.title + ' ' + s.type).toLowerCase().includes(q)), [data.shows, q]);

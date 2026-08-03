@@ -21,6 +21,7 @@ interface StoreValue {
   setTheme: (t: 'Light' | 'Dark') => void;
   setShowColumns: (n: number) => void;
   setCastColumns: (n: number) => void;
+  setAutoSave: (enabled: boolean) => void;
   resetAll: () => void;
   pushRecent: (id: string) => void;
   showById: (id: string | null) => Show | undefined;
@@ -57,6 +58,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const setTheme = useCallback((t: 'Light' | 'Dark') => persistSettingsPatch({ theme: t }), [persistSettingsPatch]);
   const setShowColumns = useCallback((n: number) => persistSettingsPatch({ showColumns: n }), [persistSettingsPatch]);
   const setCastColumns = useCallback((n: number) => persistSettingsPatch({ castColumns: n }), [persistSettingsPatch]);
+  const setAutoSave = useCallback((enabled: boolean) => persistSettingsPatch({ autoSave: enabled }), [persistSettingsPatch]);
 
   const resetAll = useCallback(() => {
     storage.clearAllData();
@@ -133,9 +135,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [shareStore, updateData]);
 
   const value = useMemo<StoreValue>(() => ({
-    data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns,
+    data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave,
     resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem,
-  }), [data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem]);
+  }), [data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

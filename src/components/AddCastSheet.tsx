@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import type { CastVersion, Relationship, Gender } from '../types';
 import { bgStyle, genId, initials } from '../lib/utils';
 import { getAggregateCredits, getEpisodeCredits, getSeasonEpisodeCount, hasTmdbKey, type AggregateCastMember } from '../lib/tmdb';
 import CropModal from './CropModal';
+import EditControls from './EditControls';
 
 const SOCIAL_PLATFORMS = ['Instagram', 'TikTok', 'X', 'YouTube', 'Facebook', 'Snapchat', 'Other'];
 
@@ -44,7 +45,7 @@ function blankVersion(): CastVersion {
 }
 
 export default function AddCastSheet() {
-  const { showById, updateData } = useStore();
+  const { showById, updateData, settings } = useStore();
   const { activeShowId, addCastSheet, closeAddCast } = useUI();
   const show = showById(activeShowId);
   const editing = addCastSheet.editingId ? show?.cast.find((c) => c.id === addCastSheet.editingId) : null;
@@ -58,6 +59,9 @@ export default function AddCastSheet() {
   const [mode, setMode] = useState<'manual' | 'autofill'>('manual');
   const [afSeason, setAfSeason] = useState(show?.currentSeason || 1);
   const [afEpisode, setAfEpisode] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
+  const originalFormRef = useRef<FormState | null>(null);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [afEpisodeCount, setAfEpisodeCount] = useState(12);
   const [afPreview, setAfPreview] = useState<{ name: string; character: string; photo: string | null; id: number }[]>([]);
   const [afLoading, setAfLoading] = useState(false);
@@ -71,18 +75,25 @@ export default function AddCastSheet() {
     setMode('manual');
     setShowOtherNames(false);
     setNameQuery('');
+    setIsSaving(false);
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+
     if (editing) {
-      setForm({
+      const initial = {
         name: editing.name, otherNames: editing.otherNames || [], nickname: editing.nickname, desc: editing.desc,
         photo: editing.photo, gender: editing.gender || '', age: editing.age, hometown: editing.hometown,
         occupation: editing.occupation, notes: editing.notes || '', firstEp: editing.firstEp, season: editing.season || 1,
         actorName: editing.actorName || '', actorTmdbId: editing.actorTmdbId, social: editing.social,
         socialPlatform: editing.socialPlatform || 'Instagram', wikiUrl: editing.wikiUrl, imdbUrl: editing.imdbUrl,
         versions: (editing.versions || []).map((v) => ({ ...v })), relationships: (editing.relationships || []).map((r) => ({ ...r })),
-      });
+      };
+      setForm(initial);
+      originalFormRef.current = structuredClone(initial);
       setShowOtherNames((editing.otherNames || []).length > 0);
     } else {
-      setForm(blankForm(show?.currentSeason || 1));
+      const blank = blankForm(show?.currentSeason || 1);
+      setForm(blank);
+      originalFormRef.current = structuredClone(blank);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addCastSheet.open, addCastSheet.editingId]);
@@ -110,6 +121,69 @@ export default function AddCastSheet() {
     if (q.length < 2 || tmdbCast.length === 0) return [];
     return tmdbCast.filter((p) => (isDrama ? p.character.toLowerCase().includes(q) : p.name.toLowerCase().includes(q))).slice(0, 5);
   }, [nameQuery, tmdbCast, isDrama]);
+
+  const hasChanges = useMemo(() => {
+    if (!originalFormRef.current) return false;
+    return JSON.stringify(form) !== JSON.stringify(originalFormRef.current);
+  }, [form]);
+
+  // Auto-save effect
+  useEffect(() => {
+    if (!settings.autoSave || !hasChanges || !addCastSheet.open) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      handleSave();
+    }, 2000);
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [form, settings.autoSave, hasChanges, addCastSheet.open]);
+
+  const handleSave = async () => {
+    if (!form.name.trim()) return;
+    setIsSaving(true);
+    try {
+      const fields = {
+        name: form.name.trim(), native: '', nickname: form.nickname.trim(), otherNames: form.otherNames.map((s) => s.trim()).filter(Boolean),
+        desc: form.desc.trim(), photo: form.photo, notes: form.notes.trim(), versions: form.versions,
+        relationships: form.relationships.filter((r) => r.targetId && r.label.trim()).map((r) => ({ ...r, label: r.label.trim() })),
+        gender: form.gender, age: form.age.trim(), hometown: form.hometown.trim(), occupation: form.occupation.trim(),
+        social: form.social.trim(), socialPlatform: form.socialPlatform, firstEp: form.firstEp.trim(), season: form.season || 1,
+        actorName: form.actorName.trim(), actorTmdbId: form.actorTmdbId, wikiUrl: form.wikiUrl.trim(), imdbUrl: form.imdbUrl.trim(),
+      };
+      updateData((d) => {
+        const s = d.shows.find((x) => x.id === show.id);
+        if (!s) return;
+        if (editing) {
+          const c = s.cast.find((x) => x.id === editing.id);
+          if (c) Object.assign(c, fields);
+        } else {
+          s.cast.push({ ...fields, id: genId('c'), color: colorForIndex(s.cast.length) } as any);
+        }
+      });
+      originalFormRef.current = structuredClone({ ...form, ...fields });
+      if (!settings.autoSave) closeAddCast();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUndo = () => {
+    if (originalFormRef.current) {
+      setForm(structuredClone(originalFormRef.current));
+    }
+  };
+
+  const handleCancel = () => {
+    if (hasChanges && !settings.autoSave) {
+      if (confirm(`Discard changes to ${form.name || termLower}?`)) {
+        handleUndo();
+        closeAddCast();
+      }
+    } else {
+      closeAddCast();
+    }
+  };
 
   if (!addCastSheet.open || !show) return null;
 
@@ -204,7 +278,7 @@ export default function AddCastSheet() {
 
   return (
     <div className="ct-scrim" onClick={closeAddCast}>
-      <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
+      <div className="ct-sheet" style={{ paddingBottom: settings.autoSave ? undefined : '140px' }} onClick={(e) => e.stopPropagation()}>
         <div className="ct-sheet-grabber" />
         <button className="ct-sheet-close" onClick={closeAddCast}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="var(--text)" strokeWidth="1.6" strokeLinecap="round" /></svg>
@@ -373,10 +447,14 @@ export default function AddCastSheet() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 9 }}>
-              <button onClick={closeAddCast} className="ct-btn-ghost" style={{ flex: 1 }}>Cancel</button>
-              <button onClick={save} disabled={!form.name.trim()} className="ct-btn-primary" style={{ flex: 1 }}>Save</button>
-            </div>
+            <EditControls
+              onSave={handleSave}
+              onCancel={handleCancel}
+              onUndo={handleUndo}
+              autoSave={settings.autoSave}
+              isSaving={isSaving}
+              hasChanges={hasChanges}
+            />
             {editing && <button onClick={deleteCast} style={{ width: '100%', height: 40, border: 'none', background: 'transparent', color: '#E08A80', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginTop: 12 }}>Delete {termLower}</button>}
           </>
         )}

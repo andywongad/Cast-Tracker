@@ -90,6 +90,7 @@ export interface AppSettings {
   theme: 'Light' | 'Dark' | null;
   showColumns: number;
   castColumns: number;
+  autoSave: boolean;
 }
 
 export type SharePayload =
