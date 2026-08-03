@@ -9,6 +9,7 @@ import ShowScreen from './components/ShowScreen';
 import AddShowSheet from './components/AddShowSheet';
 import AddCastSheet from './components/AddCastSheet';
 import SettingsSheet from './components/SettingsSheet';
+import FeedbackSheet from './components/FeedbackSheet';
 import { ValueConverterSheet, TranslatorSheet } from './components/ConverterSheets';
 import { ShareSheet, RedeemSheet } from './components/ShareRedeem';
 import WebViewOverlay from './components/WebViewOverlay';
@@ -42,6 +43,7 @@ function Shell() {
       <RedeemSheet />
       <Footer />
       <SettingsSheet />
+      <FeedbackSheet />
       <ValueConverterSheet />
       <TranslatorSheet />
       <AddShowSheet />

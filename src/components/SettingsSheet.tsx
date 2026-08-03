@@ -4,7 +4,7 @@ import { useUI } from '../hooks/useUI';
 
 export default function SettingsSheet() {
   const { settings, setTheme, setShowColumns, setCastColumns, resetAll } = useStore();
-  const { settingsOpen, closeSettings, screen, goHome } = useUI();
+  const { settingsOpen, closeSettings, screen, goHome, openFeedback } = useUI();
   const [resetConfirm, setResetConfirm] = useState(false);
 
   if (!settingsOpen) return null;
@@ -48,6 +48,9 @@ export default function SettingsSheet() {
         )}
 
         <div style={{ borderTop: '1px solid var(--border)', margin: '20px 0 16px' }} />
+
+        <button onClick={openFeedback} className="ct-btn-ghost" style={{ width: '100%', height: 44, marginBottom: 8 }}>💬 Send Feedback</button>
+
         {resetConfirm ? (
           <>
             <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 10 }}>This clears all shows, cast, shares, and recents &mdash; can&rsquo;t be undone.</div>

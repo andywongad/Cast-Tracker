@@ -45,6 +45,10 @@ interface UIValue {
   openSettings: () => void;
   closeSettings: () => void;
 
+  feedbackOpen: boolean;
+  openFeedback: () => void;
+  closeFeedback: () => void;
+
   converterOpen: boolean;
   converterPrefill: { fromCcy?: string; toCcy?: string; amount?: string } | null;
   openConverter: (prefill?: { fromCcy?: string; toCcy?: string; amount?: string }) => void;
@@ -79,6 +83,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [addCastSheet, setAddCastSheet] = useState<{ open: boolean; editingId: string | null }>({ open: false, editingId: null });
   const [castDetailId, setCastDetailId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [converterOpen, setConverterOpen] = useState(false);
   const [converterPrefill, setConverterPrefill] = useState<{ fromCcy?: string; toCcy?: string; amount?: string } | null>(null);
   const [translatorOpen, setTranslatorOpen] = useState(false);
@@ -102,6 +107,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
+
+  const openFeedback = useCallback(() => setFeedbackOpen(true), []);
+  const closeFeedback = useCallback(() => setFeedbackOpen(false), []);
 
   const openConverter = useCallback((prefill?: { fromCcy?: string; toCcy?: string; amount?: string }) => {
     setConverterPrefill(prefill || null);
@@ -128,15 +136,16 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     addCastSheet, openAddCast, openEditCast, closeAddCast,
     castDetailId, openCastDetail, closeCastDetail,
     settingsOpen, openSettings, closeSettings,
+    feedbackOpen, openFeedback, closeFeedback,
     converterOpen, converterPrefill, openConverter, closeConverter,
     translatorOpen, openTranslator, closeTranslator,
     shareSheet, openShareSheet, closeShareSheet,
     redeem, openRedeem, closeRedeem,
     webView, openWebView, closeWebView,
-  }), [screen, activeShowId, query, addShowSheet, addShowPrefill, addCastSheet, castDetailId, settingsOpen, converterOpen,
+  }), [screen, activeShowId, query, addShowSheet, addShowPrefill, addCastSheet, castDetailId, settingsOpen, feedbackOpen, converterOpen,
       converterPrefill, translatorOpen, shareSheet, redeem, webView, openShow, goHome, openAddShow, openEditShow,
       closeAddShow, openAddCast, openEditCast, closeAddCast, openCastDetail, closeCastDetail, openSettings,
-      closeSettings, openConverter, closeConverter, openTranslator, closeTranslator, openShareSheet,
+      closeSettings, openFeedback, closeFeedback, openConverter, closeConverter, openTranslator, closeTranslator, openShareSheet,
       closeShareSheet, openRedeem, closeRedeem, openWebView, closeWebView]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
