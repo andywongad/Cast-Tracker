@@ -5,6 +5,7 @@ import { bgStyle, epNumFromLabel, initials } from '../lib/utils';
 import { getShowDetails, getSeasonEpisodeCount, getEpisodeCredits, hasTmdbKey } from '../lib/tmdb';
 import CastGrid from './CastGrid';
 import RelationshipMap from './RelationshipMap';
+import NotificationToggle from './NotificationToggle';
 
 function ShareIcon() {
   return <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1.8" stroke="#fff" strokeWidth="1.3" /><circle cx="12" cy="3.5" r="1.8" stroke="#fff" strokeWidth="1.3" /><circle cx="12" cy="12.5" r="1.8" stroke="#fff" strokeWidth="1.3" /><path d="M5.6 7.2l4.6-3.2M5.6 8.8l4.6 3.2" stroke="#fff" strokeWidth="1.3" /></svg>;
@@ -114,6 +115,9 @@ export default function ShowScreen() {
             {show.wikiUrl && <button className="ct-pill" onClick={() => openWebView(show.wikiUrl, 'Wikipedia')}>Wikipedia</button>}
             {show.imdbUrl && <button className="ct-pill" onClick={() => openWebView(show.imdbUrl, 'IMDb')}>IMDb</button>}
             <button className="ct-pill" onClick={() => openShareSheet(shareShow(show.id))}>Share</button>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <NotificationToggle showId={show.id} />
           </div>
           {isRealityShow && (
             <div style={{ display: 'inline-flex', marginTop: 10, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: 3 }}>

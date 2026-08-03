@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { StoreProvider, useStore } from './hooks/useStore';
 import { UIProvider, useUI } from './hooks/useUI';
 import { THEMES } from './lib/theme';
+import { registerServiceWorker } from './lib/notifications';
 import TopBar from './components/TopBar';
 import Footer from './components/Footer';
 import HomeScreen from './components/HomeScreen';
@@ -18,6 +19,10 @@ import CastDetailSheet from './components/CastDetailSheet';
 function Shell() {
   const { settings } = useStore();
   const { screen, activeShowId } = useUI();
+
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   const themeName = settings.theme ?? 'Light';
   const t = THEMES[themeName];
