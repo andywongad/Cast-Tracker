@@ -40,6 +40,9 @@ a { color: inherit; }
   gap: 10px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .ct-iconbtn {
@@ -108,7 +111,9 @@ a { color: inherit; }
 .ct-footer {
   flex: none; height: 70px; padding: 0 12px calc(env(safe-area-inset-bottom, 0px));
   display: flex; align-items: flex-end; justify-content: space-around;
-  background: var(--bg); border-top: 1px solid var(--border); position: relative;
+  background: var(--bg); border-top: 1px solid var(--border); position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 .ct-footer-btn {
   display: flex; flex-direction: column; align-items: center; gap: 4px; border: none;
