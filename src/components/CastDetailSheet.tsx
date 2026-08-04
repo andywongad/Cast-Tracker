@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { initials, bgStyle } from '../lib/utils';
 import { getPersonCredits, type PersonCredit } from '../lib/tmdb';
+
+// Softer, sentence-case field labels — less shouting for a glanceable sheet
+const fieldLabel: CSSProperties = { fontSize: 11.5, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 };
 
 function EditIcon() {
   return <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11.3 2.3a1.5 1.5 0 0 1 2.1 2.1L5.7 12l-2.9.7.7-2.9 7.8-7.5z" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" fill="none"></path></svg>;
@@ -105,7 +108,7 @@ export default function CastDetailSheet() {
 
         {relatedList.length > 0 && (
           <>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 6 }}>RELATED TO</div>
+            <div style={{ ...fieldLabel, marginBottom: 6 }}>Related to</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
               {relatedList.map(({ rel, target }) => (
                 <button key={rel.id} onClick={() => openCastDetail(target!.id)} style={{ display: 'flex', alignItems: 'baseline', gap: 6, border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}>
@@ -119,21 +122,21 @@ export default function CastDetailSheet() {
 
         {(activeVersion?.desc || c.desc) && (
           <>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 4 }}>VISUAL DESCRIPTION</div>
+            <div style={fieldLabel}>Visual description</div>
             <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 16 }}>{activeVersion?.desc || c.desc}</div>
           </>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <div><div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 4 }}>AGE</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.age || '—'}</div></div>
-            <div><div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 4 }}>HOMETOWN</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.hometown || '—'}</div></div>
+            <div><div style={fieldLabel}>Age</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.age || '—'}</div></div>
+            <div><div style={fieldLabel}>Hometown</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.hometown || '—'}</div></div>
           </div>
-          <div><div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 4 }}>OCCUPATION</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.occupation || '—'}</div></div>
-          <div><div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 4 }}>FIRST SEEN</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.firstEp || '—'}</div></div>
+          <div><div style={fieldLabel}>Occupation</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.occupation || '—'}</div></div>
+          <div><div style={fieldLabel}>First seen</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.firstEp || '—'}</div></div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)' }}>NOTES</div>
+              <div style={{ ...fieldLabel, marginBottom: 0 }}>Notes</div>
               {!notesEditing && <button onClick={startNotesEdit} style={{ border: 'none', background: 'none', padding: 2, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5-8 8L3 13.5l.5-2.5 8-8z" stroke="var(--text-muted)" strokeWidth="1.3" strokeLinejoin="round" /></svg></button>}
             </div>
             {notesEditing ? (
@@ -154,14 +157,14 @@ export default function CastDetailSheet() {
           <div style={{ marginTop: 20, padding: '16px 14px', borderRadius: 14, background: 'color-mix(in oklch, var(--accent-soft) 8%, transparent)', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 4, height: 14, borderRadius: 2, background: 'var(--accent-soft)' }} />
-              <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--accent-soft)' }}>{isDrama ? 'ABOUT THE ACTOR' : 'MORE'}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.01em', color: 'var(--accent-soft)' }}>{isDrama ? 'About the actor' : 'More'}</div>
             </div>
             {isDrama && <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: -8 }}>Real-world info — separate from the character</div>}
             {isDrama && actorName && (
-              <div><div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 4 }}>ACTOR NAME</div><div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{actorName}</div></div>
+              <div><div style={fieldLabel}>Actor name</div><div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{actorName}</div></div>
             )}
             {social && (
-              <div><div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 4 }}>SOCIAL</div><div style={{ fontSize: 13, color: 'var(--accent-soft)' }}>{socialPlatform} &middot; {social}</div></div>
+              <div><div style={fieldLabel}>Social</div><div style={{ fontSize: 13, color: 'var(--accent-soft)' }}>{socialPlatform} &middot; {social}</div></div>
             )}
             {(wikiUrl || imdbUrl) && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -172,7 +175,7 @@ export default function CastDetailSheet() {
             {actorTmdbId && (
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 2 }}>
                 <button onClick={toggleCredits} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
-                  <span style={{ flex: 1, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)' }}>WHERE ELSE HAVE I SEEN THEM?</span>
+                  <span style={{ ...fieldLabel, flex: 1, marginBottom: 0 }}>Where else have I seen them?</span>
                   <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ transform: creditsExpanded ? 'rotate(180deg)' : 'none' }}><path d="M3 5.5L8 10.5L13 5.5" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </button>
                 {creditsExpanded && (

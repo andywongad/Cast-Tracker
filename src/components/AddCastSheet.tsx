@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import type { CastVersion, Relationship, Gender } from '../types';
-import { bgStyle, genId, initials } from '../lib/utils';
+import { bgStyle, genId, initials, colorForIndex } from '../lib/utils';
 import { getAggregateCredits, getEpisodeCredits, getSeasonEpisodeCount, hasTmdbKey, type AggregateCastMember } from '../lib/tmdb';
 import CropModal from './CropModal';
 import EditControls from './EditControls';
@@ -52,6 +52,7 @@ export default function AddCastSheet() {
 
   const [form, setForm] = useState<FormState>(blankForm(show?.currentSeason || 1));
   const [showOtherNames, setShowOtherNames] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const [nameQuery, setNameQuery] = useState('');
   const [tmdbCast, setTmdbCast] = useState<AggregateCastMember[]>([]);
   const [crop, setCrop] = useState<{ file: File | null; target: 'main' | { versionId: string } }>({ file: null, target: 'main' });
@@ -90,10 +91,12 @@ export default function AddCastSheet() {
       setForm(initial);
       originalFormRef.current = structuredClone(initial);
       setShowOtherNames((editing.otherNames || []).length > 0);
+      setShowMore(!!(editing.nickname || editing.age || editing.hometown || editing.occupation || editing.firstEp || editing.notes || (editing.versions || []).length || editing.actorName || editing.social || editing.wikiUrl || editing.imdbUrl || (editing.otherNames || []).length));
     } else {
       const blank = blankForm(show?.currentSeason || 1);
       setForm(blank);
       originalFormRef.current = structuredClone(blank);
+      setShowMore(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addCastSheet.open, addCastSheet.editingId]);
@@ -319,7 +322,7 @@ export default function AddCastSheet() {
           </div>
         ) : (
           <>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 6, overflowX: 'auto', paddingBottom: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: showMore ? 6 : 16, overflowX: 'auto', paddingBottom: 2 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 'none' }}>
                 <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(form.photo, 'contain') }}>
                   {!form.photo && <span style={{ fontSize: 22, fontWeight: 800, color: 'rgba(99,102,241,0.8)' }}>{initials(form.name)}</span>}
@@ -328,10 +331,10 @@ export default function AddCastSheet() {
                     <input type="file" accept="image/*" onChange={(e) => openCropFor(e.target.files?.[0], 'main')} style={{ display: 'none' }} />
                   </label>
                 </div>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Present</span>
+                {showMore && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Present</span>}
               </div>
 
-              {form.versions.map((v) => (
+              {showMore && form.versions.map((v) => (
                 <div key={v.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 'none' }}>
                   <div onClick={() => setVersionCardId(v.id)} style={{ position: 'relative', width: 66, height: 66, flex: 'none', cursor: 'pointer' }}>
                     <button onClick={(e) => { e.stopPropagation(); removeVersion(v.id); }} style={{ position: 'absolute', top: -6, right: -6, zIndex: 1, width: 20, height: 20, borderRadius: 999, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 11, lineHeight: 1, cursor: 'pointer' }}>&times;</button>
@@ -343,12 +346,12 @@ export default function AddCastSheet() {
                 </div>
               ))}
 
-              <button onClick={addVersion} style={{ width: 66, height: 66, flex: 'none', border: '1px dashed var(--input-border)', borderRadius: 16, background: 'transparent', color: 'var(--text-secondary)', fontSize: 24, fontWeight: 400, lineHeight: 1, cursor: 'pointer' }} title="Add a younger/older version">+</button>
+              {showMore && <button onClick={addVersion} style={{ width: 66, height: 66, flex: 'none', border: '1px dashed var(--input-border)', borderRadius: 16, background: 'transparent', color: 'var(--text-secondary)', fontSize: 24, fontWeight: 400, lineHeight: 1, cursor: 'pointer' }} title="Add a younger/older version">+</button>}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.4, marginBottom: 16 }}>Tap + to add another version of this {termLower} — like a younger flashback — with its own photo and age. Tap a photo to edit it.</div>
+            {showMore && <div style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.4, marginBottom: 16 }}>Tap + to add another version of this {termLower} — like a younger flashback — with its own photo and age. Tap a photo to edit it.</div>}
 
             <label className="ct-label">{term} NAME *</label>
-            <div style={{ position: 'relative', marginBottom: 12 }}>
+            <div style={{ position: 'relative', marginBottom: 16 }}>
               <input value={form.name} onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setNameQuery(e.target.value); }} placeholder="English name" className="ct-input" />
               {nameSuggestions.length > 0 && (
                 <div style={{ position: 'absolute', left: 0, right: 0, top: 50, zIndex: 5, background: 'var(--sheet)', border: '1px solid var(--border)', borderRadius: 12, padding: 6, boxShadow: '0 8px 20px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -365,22 +368,11 @@ export default function AddCastSheet() {
               )}
             </div>
 
-            {showOtherNames ? (
-              <>
-                <label className="ct-label">OTHER {term} NAMES</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
-                  {form.otherNames.map((on, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <input value={on} onChange={(e) => setForm((f) => ({ ...f, otherNames: f.otherNames.map((x, xi) => (xi === i ? e.target.value : x)) }))} placeholder="Alias, title, or romanization" className="ct-input" style={{ flex: 1 }} />
-                      <button onClick={() => setForm((f) => ({ ...f, otherNames: f.otherNames.filter((_, xi) => xi !== i) }))} aria-label="Remove name" style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 20, lineHeight: 1, padding: 6, cursor: 'pointer' }}>&times;</button>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={() => setForm((f) => ({ ...f, otherNames: [...f.otherNames, ''] }))} style={{ border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add another name</button>
-              </>
-            ) : (
-              <button onClick={() => { setShowOtherNames(true); setForm((f) => ({ ...f, otherNames: f.otherNames.length ? f.otherNames : [''] })); }} style={{ border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add other {termLower} names</button>
-            )}
+            <label className="ct-label">{term} NICKNAME</label>
+            <input value={form.nickname} onChange={(e) => setForm((f) => ({ ...f, nickname: e.target.value }))} placeholder="What do you call them?" className="ct-input" style={{ marginBottom: 16 }} />
+
+            <label className="ct-label">{term} VISUAL DESCRIPTION</label>
+            <textarea value={form.desc} onChange={(e) => setForm((f) => ({ ...f, desc: e.target.value }))} placeholder="Chunky glasses, pink hat, high cheekbones&hellip;" className="ct-textarea" style={{ marginBottom: 16 }} />
 
             {show.cast.length > (editing ? 1 : 0) && (
               <>
@@ -397,55 +389,76 @@ export default function AddCastSheet() {
                     </div>
                   ))}
                 </div>
-                <button onClick={addRelationship} style={{ border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add relationship</button>
+                <button onClick={addRelationship} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add relationship</button>
               </>
             )}
 
-            <label className="ct-label">{term} NICKNAME</label>
-            <input value={form.nickname} onChange={(e) => setForm((f) => ({ ...f, nickname: e.target.value }))} placeholder="What do you call them?" className="ct-input" style={{ marginBottom: 16 }} />
+            {!showMore && (
+              <button onClick={() => setShowMore(true)} style={{ width: '100%', height: 44, border: '1px dashed var(--input-border)', borderRadius: 12, background: 'transparent', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 16 }}>+ Add more details</button>
+            )}
 
-            <label className="ct-label">{term} VISUAL DESCRIPTION</label>
-            <textarea value={form.desc} onChange={(e) => setForm((f) => ({ ...f, desc: e.target.value }))} placeholder="Chunky glasses, pink hat, high cheekbones&hellip;" className="ct-textarea" style={{ marginBottom: 16 }} />
+            {showMore && (
+              <>
+                {showOtherNames ? (
+                  <>
+                    <label className="ct-label">OTHER {term} NAMES</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+                      {form.otherNames.map((on, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <input value={on} onChange={(e) => setForm((f) => ({ ...f, otherNames: f.otherNames.map((x, xi) => (xi === i ? e.target.value : x)) }))} placeholder="Alias, title, or romanization" className="ct-input" style={{ flex: 1 }} />
+                          <button onClick={() => setForm((f) => ({ ...f, otherNames: f.otherNames.filter((_, xi) => xi !== i) }))} aria-label="Remove name" style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 20, lineHeight: 1, padding: 6, cursor: 'pointer' }}>&times;</button>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={() => setForm((f) => ({ ...f, otherNames: [...f.otherNames, ''] }))} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add another name</button>
+                  </>
+                ) : (
+                  <button onClick={() => { setShowOtherNames(true); setForm((f) => ({ ...f, otherNames: f.otherNames.length ? f.otherNames : [''] })); }} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add other {termLower} names</button>
+                )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
-              <div><label className="ct-label">GENDER</label>
-                <select value={form.gender} onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value as Gender }))} className="ct-input" style={{ padding: '0 10px', fontSize: 14 }}>
-                  <option value="">Not set</option><option value="Female">Female</option><option value="Male">Male</option><option value="Non-binary">Non-binary</option>
-                </select>
-              </div>
-              <div><label className="ct-label">AGE</label><input value={form.age} onChange={(e) => setForm((f) => ({ ...f, age: e.target.value }))} className="ct-input" /></div>
-              <div><label className="ct-label">HOMETOWN</label><input value={form.hometown} onChange={(e) => setForm((f) => ({ ...f, hometown: e.target.value }))} className="ct-input" /></div>
-            </div>
-            <div style={{ marginBottom: 12 }}><label className="ct-label">OCCUPATION</label><input value={form.occupation} onChange={(e) => setForm((f) => ({ ...f, occupation: e.target.value }))} className="ct-input" /></div>
-            <div style={{ marginBottom: 12 }}>
-              <label className="ct-label">FIRST SEEN</label>
-              <select value={form.firstEp} onChange={(e) => setForm((f) => ({ ...f, firstEp: e.target.value }))} className="ct-input">
-                <option value="">Not sure yet</option>
-                {firstEpOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
-              </select>
-            </div>
-            <div style={{ marginBottom: 16 }}><label className="ct-label">NOTES</label><textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Your own notes about this character&hellip;" rows={3} className="ct-textarea" /></div>
-
-            <div style={{ padding: '16px 14px', borderRadius: 14, background: 'color-mix(in oklch, var(--accent-soft) 8%, transparent)', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 4, height: 14, borderRadius: 2, background: 'var(--accent-soft)' }} /><div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--accent-soft)' }}>{isDrama ? 'ABOUT THE ACTOR' : 'MORE'}</div></div>
-              {isDrama && <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: -6 }}>Real-world info — separate from the character</div>}
-              {isDrama && (
-                <div><label className="ct-label">ACTOR NAME</label><input value={form.actorName} onChange={(e) => setForm((f) => ({ ...f, actorName: e.target.value }))} placeholder="Real actor's name" className="ct-input" /></div>
-              )}
-              <div>
-                <label className="ct-label">SOCIAL</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '108px 1fr', gap: 8 }}>
-                  <select value={form.socialPlatform} onChange={(e) => setForm((f) => ({ ...f, socialPlatform: e.target.value }))} style={{ width: '100%', height: 46, border: '1px solid var(--input-border)', borderRadius: 11, background: 'var(--surface)', padding: '0 8px', fontSize: 13, color: 'var(--text)' }}>
-                    {SOCIAL_PLATFORMS.map((sp) => <option key={sp} value={sp}>{sp}</option>)}
-                  </select>
-                  <input value={form.social} onChange={(e) => setForm((f) => ({ ...f, social: e.target.value }))} placeholder="@handle" className="ct-input" />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+                  <div><label className="ct-label">GENDER</label>
+                    <select value={form.gender} onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value as Gender }))} className="ct-input" style={{ padding: '0 10px', fontSize: 14 }}>
+                      <option value="">Not set</option><option value="Female">Female</option><option value="Male">Male</option><option value="Non-binary">Non-binary</option>
+                    </select>
+                  </div>
+                  <div><label className="ct-label">AGE</label><input value={form.age} onChange={(e) => setForm((f) => ({ ...f, age: e.target.value }))} className="ct-input" /></div>
+                  <div><label className="ct-label">HOMETOWN</label><input value={form.hometown} onChange={(e) => setForm((f) => ({ ...f, hometown: e.target.value }))} className="ct-input" /></div>
                 </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div><label className="ct-label">WIKIPEDIA LINK</label><input value={form.wikiUrl} onChange={(e) => setForm((f) => ({ ...f, wikiUrl: e.target.value }))} className="ct-input" /></div>
-                <div><label className="ct-label">IMDB LINK</label><input value={form.imdbUrl} onChange={(e) => setForm((f) => ({ ...f, imdbUrl: e.target.value }))} className="ct-input" /></div>
-              </div>
-            </div>
+                <div style={{ marginBottom: 12 }}><label className="ct-label">OCCUPATION</label><input value={form.occupation} onChange={(e) => setForm((f) => ({ ...f, occupation: e.target.value }))} className="ct-input" /></div>
+                <div style={{ marginBottom: 12 }}>
+                  <label className="ct-label">FIRST SEEN</label>
+                  <select value={form.firstEp} onChange={(e) => setForm((f) => ({ ...f, firstEp: e.target.value }))} className="ct-input">
+                    <option value="">Not sure yet</option>
+                    {firstEpOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
+                  </select>
+                </div>
+                <div style={{ marginBottom: 16 }}><label className="ct-label">NOTES</label><textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Your own notes about this character&hellip;" rows={3} className="ct-textarea" /></div>
+
+                <div style={{ padding: '16px 14px', borderRadius: 14, background: 'color-mix(in oklch, var(--accent-soft) 8%, transparent)', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 4, height: 14, borderRadius: 2, background: 'var(--accent-soft)' }} /><div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--accent-soft)' }}>{isDrama ? 'ABOUT THE ACTOR' : 'MORE'}</div></div>
+                  {isDrama && <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: -6 }}>Real-world info — separate from the character</div>}
+                  {isDrama && (
+                    <div><label className="ct-label">ACTOR NAME</label><input value={form.actorName} onChange={(e) => setForm((f) => ({ ...f, actorName: e.target.value }))} placeholder="Real actor's name" className="ct-input" /></div>
+                  )}
+                  <div>
+                    <label className="ct-label">SOCIAL</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '108px 1fr', gap: 8 }}>
+                      <select value={form.socialPlatform} onChange={(e) => setForm((f) => ({ ...f, socialPlatform: e.target.value }))} style={{ width: '100%', height: 46, border: '1px solid var(--input-border)', borderRadius: 11, background: 'var(--surface)', padding: '0 8px', fontSize: 13, color: 'var(--text)' }}>
+                        {SOCIAL_PLATFORMS.map((sp) => <option key={sp} value={sp}>{sp}</option>)}
+                      </select>
+                      <input value={form.social} onChange={(e) => setForm((f) => ({ ...f, social: e.target.value }))} placeholder="@handle" className="ct-input" />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div><label className="ct-label">WIKIPEDIA LINK</label><input value={form.wikiUrl} onChange={(e) => setForm((f) => ({ ...f, wikiUrl: e.target.value }))} className="ct-input" /></div>
+                    <div><label className="ct-label">IMDB LINK</label><input value={form.imdbUrl} onChange={(e) => setForm((f) => ({ ...f, imdbUrl: e.target.value }))} className="ct-input" /></div>
+                  </div>
+                </div>
+
+                <button onClick={() => setShowMore(false)} style={{ width: '100%', height: 40, border: 'none', background: 'transparent', color: 'var(--text-muted)', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 4 }}>Show fewer details</button>
+              </>
+            )}
 
             <EditControls
               onSave={handleSave}
