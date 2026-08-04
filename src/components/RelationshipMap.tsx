@@ -3,7 +3,8 @@ import type { CastMember, MapCell, MapRelationship, Show } from '../types';
 import { useStore } from '../hooks/useStore';
 import { bgStyle, genId, initials } from '../lib/utils';
 
-const COLS = 5;
+const COLS = 7;
+const ROWS = 8;
 const MAP_LINE = '#E85D9C';
 const MAP_HEART = '#D2453B';
 
@@ -45,12 +46,12 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   const visibleCast = useMemo(() => seasonCast.filter((c) => !c.hideFromMap), [seasonCast]);
   const hiddenCast = useMemo(() => seasonCast.filter((c) => c.hideFromMap), [seasonCast]);
 
-  const rows = Math.max(4, Math.ceil((visibleCast.length * 2 + 10) / COLS));
-  const defaultCells = useMemo(() => assignDefaultCells(visibleCast, rows), [visibleCast, rows]);
+  const rows = ROWS;
+  const defaultCells = useMemo(() => assignDefaultCells(visibleCast, rows), [visibleCast]);
 
   const cellPct = (cell: MapCell) => ({
-    x: COLS > 1 ? 10 + (cell.c / (COLS - 1)) * 80 : 50,
-    y: rows > 1 ? 10 + (cell.r / (rows - 1)) * 80 : 50,
+    x: COLS > 1 ? 8 + (cell.c / (COLS - 1)) * 84 : 50,
+    y: rows > 1 ? 27.5 + (cell.r / (rows - 1)) * 45 : 50,
   });
 
   const posById = useMemo(() => {
@@ -63,7 +64,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleCast, epKey, defaultCells, rows]);
 
-  const containerH = Math.max(260, rows * 46 + 40);
+  const containerH = Math.max(260, rows * 46 + 40) * 3;
 
   const pctFromClient = (clientX: number, clientY: number) => {
     const el = containerRef.current;
@@ -110,7 +111,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
     const r = el.getBoundingClientRect();
     const px = clientX - r.left, py = clientY - r.top;
     let best: MapCell | null = null, bestDist = Infinity;
-    for (let rr = 0; rr < rows; rr++) {
+    for (let rr = -3; rr <= 10; rr++) {
       for (let cc = 0; cc < COLS; cc++) {
         const p = cellPct({ r: rr, c: cc });
         const cx = (p.x / 100) * r.width, cy = (p.y / 100) * r.height;
@@ -281,10 +282,13 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           <defs>
             <marker id="relArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill={MAP_LINE} /></marker>
           </defs>
-          {dragMove && Array.from({ length: rows }).map((_, r) => Array.from({ length: COLS }).map((_, c) => {
-            const p = cellPct({ r, c });
-            return <circle key={`${r}-${c}`} cx={p.x} cy={p.y} r={1.2} fill="var(--text-faint)" opacity={0.35} />;
-          }))}
+          {Array.from({ length: 14 }).map((_, idx) => {
+            const r = idx - 3;
+            return Array.from({ length: COLS }).map((_, c) => {
+              const p = cellPct({ r, c });
+              return <circle key={`${r}-${c}`} cx={p.x} cy={p.y} r={1.2} fill="var(--text-faint)" opacity={0} />;
+            });
+          })}
           {singleLines.map(({ sourceId, rel }) => {
             const a = posById[sourceId], b = posById[rel.targetId];
             if (!a || !b) return null;
