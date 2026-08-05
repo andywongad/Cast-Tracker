@@ -60,6 +60,9 @@ export default function ShowScreen() {
   const isRealityShow = show.type === 'REALITY' || show.type === 'VARIETY';
   const mapOpen = isRealityShow && !gridMode;
   const hasSeasons = seasons.length > 0;
+  // Keep the latest season pinned first, descending (Season 1 last).
+  // Static order — selecting a season only changes the highlight, never the ordering.
+  const orderedSeasons = [...seasons].sort((a, b) => b - a);
   const visibleCastAll = hasSeasons ? show.cast.filter((c) => (c.season || 1) === currentSeason) : show.cast;
   const cq = castQuery.trim().toLowerCase();
   const visibleCast = cq ? visibleCastAll.filter((c) => c.name.toLowerCase().includes(cq) || (c.nickname || '').toLowerCase().includes(cq)) : visibleCastAll;
@@ -141,7 +144,7 @@ export default function ShowScreen() {
 
       {hasSeasons && (
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 8 }}>
-          {seasons.map((sn) => (
+          {orderedSeasons.map((sn) => (
             <button key={sn} onClick={() => setSeason(sn)} style={{ flex: 'none', height: 32, padding: '0 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: currentSeason === sn ? 'none' : '1px solid var(--border)', background: currentSeason === sn ? '#6366F1' : 'transparent', color: currentSeason === sn ? '#fff' : 'var(--text-secondary)' }}>Season {sn}</button>
           ))}
         </div>

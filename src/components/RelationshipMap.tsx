@@ -3,8 +3,9 @@ import type { CastMember, MapCell, MapRelationship, Show } from '../types';
 import { useStore } from '../hooks/useStore';
 import { bgStyle, genId, initials } from '../lib/utils';
 
-const COLS = 7;
+const COLS = 6;
 const ROWS = 8;
+const DEFAULT_TOP_ROW = -3; // anchor default layout near the top so images are visible without scrolling
 const MAP_LINE = '#E85D9C';
 const MAP_HEART = '#D2453B';
 
@@ -12,23 +13,34 @@ function epKeyFor(season: number, ep: string) { return `${season}_${ep}`; }
 function getEpRel(c: CastMember, epKey: string): MapRelationship[] { return c.relByEp?.[epKey] || []; }
 function getEpCell(c: CastMember, epKey: string): MapCell | null { return c.mapCellByEp?.[epKey] || null; }
 
-function assignDefaultCells(cast: CastMember[], rows: number): Record<string, MapCell> {
+function assignDefaultCells(cast: CastMember[]): Record<string, MapCell> {
+  const out: Record<string, MapCell> = {};
+  // Lay a list out evenly, spread across the column range [colMin, colMax] and vertically centered.
+  const place = (list: CastMember[], colMin: number, colMax: number) => {
+    const n = list.length;
+    if (!n) return;
+    const width = colMax - colMin;
+    const numCols = Math.min(width + 1, n);
+    list.forEach((m, i) => {
+      const slotCol = i % numCols;
+      const slotRow = Math.floor(i / numCols);
+      const c = numCols > 1 ? colMin + Math.round((slotCol / (numCols - 1)) * width) : Math.round((colMin + colMax) / 2);
+      const r = DEFAULT_TOP_ROW + slotRow; // stack downward from the top
+      out[m.id] = { r, c };
+    });
+  };
   const female = cast.filter((c) => c.gender === 'Female');
   const male = cast.filter((c) => c.gender === 'Male');
   const other = cast.filter((c) => c.gender !== 'Female' && c.gender !== 'Male');
-  const out: Record<string, MapCell> = {};
-  const fill = (list: CastMember[], colStart: number, colEnd: number) => {
-    let idx = 0;
-    for (let r = 0; r < rows && idx < list.length; r++) {
-      for (let c = colStart; c <= colEnd && idx < list.length; c++) {
-        out[list[idx].id] = { r, c };
-        idx++;
-      }
-    }
-  };
-  fill(female, 0, 1);
-  fill(male, 3, 4);
-  fill(other, 2, 2);
+  if (female.length && male.length) {
+    // Dating-show style: women on the left, men on the right, everyone else centered
+    place(female, 0, 2);
+    place(other, 3, 3);
+    place(male, 4, COLS - 1);
+  } else {
+    // No clear gender split — one even, orderly grid across the whole map
+    place(cast, 0, COLS - 1);
+  }
   return out;
 }
 
@@ -47,7 +59,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   const hiddenCast = useMemo(() => seasonCast.filter((c) => c.hideFromMap), [seasonCast]);
 
   const rows = ROWS;
-  const defaultCells = useMemo(() => assignDefaultCells(visibleCast, rows), [visibleCast]);
+  const defaultCells = useMemo(() => assignDefaultCells(visibleCast), [visibleCast]);
 
   const cellPct = (cell: MapCell) => ({
     x: COLS > 1 ? 8 + (cell.c / (COLS - 1)) * 84 : 50,
