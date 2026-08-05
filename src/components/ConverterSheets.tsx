@@ -17,7 +17,7 @@ function SwapIcon() {
 export function ValueConverterSheet() {
   const { converterOpen, converterPrefill, closeConverter } = useUI();
   const [tab, setTab] = useState<'currency' | 'inflation'>('currency');
-  const [amount, setAmount] = useState('35');
+  const [amount, setAmount] = useState('0');
   const [fromCcy, setFromCcy] = useState('USD');
   const [toCcy, setToCcy] = useState('USD');
   const [fromYear, setFromYear] = useState(1965);
@@ -71,7 +71,14 @@ export function ValueConverterSheet() {
                   {CCY_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="35" style={{ width: '100%', border: 'none', background: 'transparent', padding: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', outline: 'none' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', padding: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', outline: 'none' }} />
+                {amount && (
+                  <button onClick={() => setAmount('')} aria-label="Clear amount" style={{ flex: 'none', border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="var(--text-muted)" strokeWidth="1.6" /><path d="M9 9l6 6M15 9l-6 6" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round" /></svg>
+                  </button>
+                )}
+              </div>
             </div>
             <div style={{ position: 'relative', height: 1, background: 'var(--border)' }}>
               <button onClick={() => { const f = fromYear; setFromYear(toYear); setToYear(f); }} style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 34, height: 34, borderRadius: 999, background: 'var(--sheet)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><SwapIcon /></button>
@@ -92,7 +99,14 @@ export function ValueConverterSheet() {
               <select value={fromCcy} onChange={(e) => setFromCcy(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: 14, fontWeight: 800, color: 'var(--text)', padding: 0, marginBottom: 8, outline: 'none' }}>
                 {CCY_CODES.map((c) => <option key={c} value={c}>{CCY_RATES[c].label}</option>)}
               </select>
-              <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="35" style={{ width: '100%', border: 'none', background: 'transparent', padding: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', outline: 'none' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0" style={{ flex: 1, minWidth: 0, border: 'none', background: 'transparent', padding: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)', outline: 'none' }} />
+                {amount && (
+                  <button onClick={() => setAmount('')} aria-label="Clear amount" style={{ flex: 'none', border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="var(--text-muted)" strokeWidth="1.6" /><path d="M9 9l6 6M15 9l-6 6" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round" /></svg>
+                  </button>
+                )}
+              </div>
             </div>
             <div style={{ position: 'relative', height: 1, background: 'var(--border)' }}>
               <button onClick={() => { const f = fromCcy; setFromCcy(toCcy); setToCcy(f); }} style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 34, height: 34, borderRadius: 999, background: 'var(--sheet)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><SwapIcon /></button>
