@@ -368,6 +368,23 @@ export default function AddCastSheet() {
               )}
             </div>
 
+            {showOtherNames ? (
+              <>
+                <label className="ct-label">OTHER {term} NAMES</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+                  {form.otherNames.map((on, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input value={on} onChange={(e) => setForm((f) => ({ ...f, otherNames: f.otherNames.map((x, xi) => (xi === i ? e.target.value : x)) }))} placeholder="Alias, title, or romanization" className="ct-input" style={{ flex: 1 }} />
+                      <button onClick={() => setForm((f) => ({ ...f, otherNames: f.otherNames.filter((_, xi) => xi !== i) }))} aria-label="Remove name" style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 20, lineHeight: 1, padding: 6, cursor: 'pointer' }}>&times;</button>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setForm((f) => ({ ...f, otherNames: [...f.otherNames, ''] }))} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add another name</button>
+              </>
+            ) : (
+              <button onClick={() => { setShowOtherNames(true); setForm((f) => ({ ...f, otherNames: f.otherNames.length ? f.otherNames : [''] })); }} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add other {termLower} names</button>
+            )}
+
             <label className="ct-label">{term} NICKNAME</label>
             <input value={form.nickname} onChange={(e) => setForm((f) => ({ ...f, nickname: e.target.value }))} placeholder="What do you call them?" className="ct-input" style={{ marginBottom: 16 }} />
 
@@ -399,23 +416,6 @@ export default function AddCastSheet() {
 
             {showMore && (
               <>
-                {showOtherNames ? (
-                  <>
-                    <label className="ct-label">OTHER {term} NAMES</label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
-                      {form.otherNames.map((on, i) => (
-                        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <input value={on} onChange={(e) => setForm((f) => ({ ...f, otherNames: f.otherNames.map((x, xi) => (xi === i ? e.target.value : x)) }))} placeholder="Alias, title, or romanization" className="ct-input" style={{ flex: 1 }} />
-                          <button onClick={() => setForm((f) => ({ ...f, otherNames: f.otherNames.filter((_, xi) => xi !== i) }))} aria-label="Remove name" style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 20, lineHeight: 1, padding: 6, cursor: 'pointer' }}>&times;</button>
-                        </div>
-                      ))}
-                    </div>
-                    <button onClick={() => setForm((f) => ({ ...f, otherNames: [...f.otherNames, ''] }))} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add another name</button>
-                  </>
-                ) : (
-                  <button onClick={() => { setShowOtherNames(true); setForm((f) => ({ ...f, otherNames: f.otherNames.length ? f.otherNames : [''] })); }} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add other {termLower} names</button>
-                )}
-
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
                   <div><label className="ct-label">GENDER</label>
                     <select value={form.gender} onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value as Gender }))} className="ct-input" style={{ padding: '0 10px', fontSize: 14 }}>
