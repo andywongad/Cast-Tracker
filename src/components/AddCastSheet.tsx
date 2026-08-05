@@ -370,7 +370,7 @@ export default function AddCastSheet() {
 
             {showOtherNames ? (
               <>
-                <label className="ct-label">OTHER {term} NAMES</label>
+                <label className="ct-label">ALTERNATE NAMES</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
                   {form.otherNames.map((on, i) => (
                     <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -382,7 +382,7 @@ export default function AddCastSheet() {
                 <button onClick={() => setForm((f) => ({ ...f, otherNames: [...f.otherNames, ''] }))} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add another name</button>
               </>
             ) : (
-              <button onClick={() => { setShowOtherNames(true); setForm((f) => ({ ...f, otherNames: f.otherNames.length ? f.otherNames : [''] })); }} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add other {termLower} names</button>
+              <button onClick={() => { setShowOtherNames(true); setForm((f) => ({ ...f, otherNames: f.otherNames.length ? f.otherNames : [''] })); }} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add alternate names</button>
             )}
 
             <label className="ct-label">{term} NICKNAME</label>
