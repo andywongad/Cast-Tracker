@@ -261,10 +261,11 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   return (
     <div>
       <div style={{ marginBottom: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>Relationship map for {mapEpisode}</div>
-          <button onClick={onToggleHelp} aria-label="Toggle instructions" style={{ width: 16, height: 16, borderRadius: 999, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-muted)', fontSize: 10, fontWeight: 700, lineHeight: 1, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>?</button>
-        </div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Relationship map for {mapEpisode}</div>
+        <button onClick={onToggleHelp} aria-expanded={mapHelpOpen} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', background: 'none', padding: '2px 0', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700, marginBottom: mapHelpOpen ? 6 : 8 }}>
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ transform: mapHelpOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }}><path d="M3 5.5L8 10.5L13 5.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <span>How to use the map</span>
+        </button>
         {mapHelpOpen && (
           <ul style={{ margin: '0 0 8px', padding: '0 0 0 14px', fontSize: 12, color: 'var(--text-faint)', lineHeight: 1.4, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <li>Drag from one contestant to another to show interest — the line starts at the person who's interested</li>
