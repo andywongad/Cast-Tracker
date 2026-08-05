@@ -62,7 +62,7 @@ export default function AddCastSheet() {
   const [afEpisode, setAfEpisode] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const originalFormRef = useRef<FormState | null>(null);
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [afEpisodeCount, setAfEpisodeCount] = useState(12);
   const [afPreview, setAfPreview] = useState<{ name: string; character: string; photo: string | null; id: number }[]>([]);
   const [afLoading, setAfLoading] = useState(false);
@@ -80,7 +80,7 @@ export default function AddCastSheet() {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
 
     if (editing) {
-      const initial = {
+      const initial: FormState = {
         name: editing.name, otherNames: editing.otherNames || [], nickname: editing.nickname, desc: editing.desc,
         photo: editing.photo, gender: editing.gender || '', age: editing.age, hometown: editing.hometown,
         occupation: editing.occupation, notes: editing.notes || '', firstEp: editing.firstEp, season: editing.season || 1,
