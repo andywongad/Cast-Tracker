@@ -12,6 +12,16 @@ interface ShareSheetState {
   color: string;
 }
 
+export interface Backup {
+  app: 'cast-tracker';
+  version: 1;
+  exportedAt: number;
+  data: AppData;
+  settings: AppSettings;
+  shares: ShareStore;
+  recent: string[];
+}
+
 interface StoreValue {
   data: AppData;
   settings: AppSettings;
@@ -22,6 +32,8 @@ interface StoreValue {
   setShowColumns: (n: number) => void;
   setCastColumns: (n: number) => void;
   setAutoSave: (enabled: boolean) => void;
+  exportBackup: () => Backup;
+  importBackup: (raw: string) => { ok: true } | { ok: false; error: string };
   resetAll: () => void;
   pushRecent: (id: string) => void;
   showById: (id: string | null) => Show | undefined;
@@ -59,6 +71,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const setShowColumns = useCallback((n: number) => persistSettingsPatch({ showColumns: n }), [persistSettingsPatch]);
   const setCastColumns = useCallback((n: number) => persistSettingsPatch({ castColumns: n }), [persistSettingsPatch]);
   const setAutoSave = useCallback((enabled: boolean) => persistSettingsPatch({ autoSave: enabled }), [persistSettingsPatch]);
+
+  const exportBackup = useCallback((): Backup => ({
+    app: 'cast-tracker', version: 1, exportedAt: Date.now(),
+    data, settings, shares: shareStore, recent: recentShows,
+  }), [data, settings, shareStore, recentShows]);
+
+  const importBackup = useCallback((raw: string): { ok: true } | { ok: false; error: string } => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return { ok: false as const, error: 'That file isn’t valid JSON.' };
+    }
+    const b = parsed as Partial<Backup>;
+    if (!b || b.app !== 'cast-tracker' || !b.data || !Array.isArray(b.data.shows)) {
+      return { ok: false as const, error: 'This doesn’t look like a Cast Tracker backup file.' };
+    }
+    const nextData: AppData = { shows: b.data.shows };
+    storage.persistData(nextData);
+    setData(nextData);
+    if (b.shares && typeof b.shares === 'object') { storage.persistShares(b.shares); setShareStore(b.shares); }
+    if (Array.isArray(b.recent)) { storage.persistRecent(b.recent); setRecentShows(b.recent); }
+    if (b.settings && typeof b.settings === 'object') { persistSettingsPatch(b.settings); }
+    return { ok: true as const };
+  }, [persistSettingsPatch]);
 
   const resetAll = useCallback(() => {
     storage.clearAllData();
@@ -136,8 +173,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<StoreValue>(() => ({
     data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave,
-    resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem,
-  }), [data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem]);
+    exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem,
+  }), [data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
