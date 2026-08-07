@@ -3,8 +3,8 @@ import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 
 export default function SettingsSheet() {
-  const { settings, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll } = useStore();
-  const { settingsOpen, closeSettings, screen, goHome, openFeedback } = useUI();
+  const { settings, setTheme, setAutoSave, exportBackup, importBackup, resetAll } = useStore();
+  const { settingsOpen, closeSettings, goHome, openFeedback } = useUI();
   const [resetConfirm, setResetConfirm] = useState(false);
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,28 +57,6 @@ export default function SettingsSheet() {
         <button onClick={() => setAutoSave(!settings.autoSave)} style={{ width: '100%', height: 44, marginBottom: 22, border: '1px solid var(--input-border)', borderRadius: 12, background: settings.autoSave ? 'var(--accent)' : 'transparent', color: settings.autoSave ? '#fff' : 'var(--text-secondary)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}>
           {settings.autoSave ? '✓ Auto-Save Enabled' : 'Auto-Save Disabled'}
         </button>
-
-        {screen === 'home' && (
-          <>
-            <label className="ct-label-muted">COLUMNS &middot; HOMEPAGE SHOWS</label>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-              {[2, 3, 4].map((n) => (
-                <button key={n} onClick={() => setShowColumns(n)} className={`ct-tab-btn${settings.showColumns === n ? ' is-active' : ''}`}>{n}</button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {screen === 'show' && (
-          <>
-            <label className="ct-label-muted">COLUMNS &middot; CAST GRID</label>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              {[2, 3].map((n) => (
-                <button key={n} onClick={() => setCastColumns(n)} className={`ct-tab-btn${settings.castColumns === n ? ' is-active' : ''}`}>{n}</button>
-              ))}
-            </div>
-          </>
-        )}
 
         <div style={{ borderTop: '1px solid var(--border)', margin: '20px 0 16px' }} />
 

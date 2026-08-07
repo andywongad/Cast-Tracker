@@ -149,6 +149,7 @@ a { color: inherit; }
 .ct-footer-label { font-size: 10.5px; font-weight: 500; color: var(--text-muted); }
 
 .ct-card {
+  position: relative; /* anchors the corner-hung action buttons */
   background: var(--card); border: none; border-radius: 22px; padding: 12px;
   box-shadow: var(--shadow-card);
   display: flex; flex-direction: column; min-width: 0; cursor: pointer;

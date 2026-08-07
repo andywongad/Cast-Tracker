@@ -4,9 +4,10 @@ import { useUI } from '../hooks/useUI';
 import { ShowTile, RecentShowTile } from './ShowTile';
 import { searchShows, hasTmdbKey, img, inferShowType, type TmdbShowResult } from '../lib/tmdb';
 import { bgStyle } from '../lib/utils';
+import DensityToggle from './DensityToggle';
 
 export default function HomeScreen() {
-  const { data, settings, recentShows, showById, backupState, dismissBackupNudge } = useStore();
+  const { data, settings, recentShows, showById, backupState, dismissBackupNudge, setShowColumns } = useStore();
   const { query, setQuery, openAddShow, openRedeem, openEditShow, openSettings } = useUI();
   const [tmdbResults, setTmdbResults] = useState<TmdbShowResult[]>([]);
   const [tmdbSearching, setTmdbSearching] = useState(false);
@@ -123,8 +124,13 @@ export default function HomeScreen() {
           {data.shows.length > 0 && (
             <>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span className="ct-eyebrow" style={{ marginBottom: 0 }}>Currently watching</span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{currentShows.length}</span>
+                {/* Count stays welded to its label; the control sits apart, or the two runs of
+                    numerals read as one string ("3 2 3 4"). */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+                  <span className="ct-eyebrow" style={{ marginBottom: 0 }}>Currently watching</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{currentShows.length}</span>
+                </div>
+                <DensityToggle value={cols} options={[2, 3, 4]} onChange={setShowColumns} label="Show columns" />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14, marginBottom: 26 }}>
                 {currentShows.map((s) => <ShowTile key={s.id} show={s} columns={cols} />)}

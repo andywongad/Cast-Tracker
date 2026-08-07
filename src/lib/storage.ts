@@ -31,7 +31,7 @@ export function loadSettings(): AppSettings {
   return {
     theme: s.theme ?? null,
     showColumns: s.showColumns ?? 2,
-    castColumns: Math.min(s.castColumns ?? 2, 3),
+    castColumns: Math.min(s.castColumns ?? 2, 4),
     autoSave: s.autoSave ?? false,
   };
 }
