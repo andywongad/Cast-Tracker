@@ -135,11 +135,11 @@ a { color: inherit; }
   bottom: 0;
   z-index: 10;
 }
-/* Soft status wash under the nav. Green-only now that the CTA is charcoal — a red core
-   under a charcoal button read as a stray colour rather than a glow. */
+/* Soft status wash under the nav, tinted to the accent so it reads as a glow from the CTA
+   rather than a second, unrelated colour. */
 .ct-footer::before {
   content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 76px; pointer-events: none;
-  background: radial-gradient(120% 150% at 50% 118%, rgba(63,178,127,0.17) 0%, rgba(63,178,127,0.09) 40%, rgba(63,178,127,0.04) 72%, rgba(63,178,127,0) 100%);
+  background: radial-gradient(120% 150% at 50% 118%, rgba(140,90,190,0.18) 0%, rgba(140,90,190,0.09) 40%, rgba(140,90,190,0.04) 72%, rgba(140,90,190,0) 100%);
 }
 .ct-footer > * { position: relative; z-index: 1; }
 .ct-footer-btn {
