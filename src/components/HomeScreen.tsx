@@ -54,7 +54,7 @@ export default function HomeScreen() {
 
       {recentList.length > 0 && !isSearching && (
         <>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>Recently Viewed</div>
+          <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>Recently Viewed</div>
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, marginBottom: 22 }}>
             {recentList.map((s) => <RecentShowTile key={s.id} show={s} />)}
           </div>
@@ -63,20 +63,20 @@ export default function HomeScreen() {
 
       {isSearching && (
         <>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 10 }}>RESULTS &middot; {searchResults.length}</div>
+          <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 10 }}>RESULTS &middot; {searchResults.length}</div>
           <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>
             {searchResults.map((s) => <ShowTile key={s.id} show={s} columns={cols} done={s.status === 'completed'} />)}
           </div>
           {searchResults.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 0 0' }}>
               <div style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>No shows match &ldquo;{query}&rdquo;.</div>
-              <button onClick={() => openAddShow()} style={{ height: 44, padding: '0 20px', border: 'none', borderRadius: 12, background: '#6366F1', color: '#fff', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>+ Add &ldquo;{query}&rdquo; as a new show</button>
+              <button onClick={() => openAddShow()} style={{ height: 44, padding: '0 20px', border: 'none', borderRadius: 12, background: 'var(--text)', color: '#fff', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>+ Add &ldquo;{query}&rdquo; as a new show</button>
             </div>
           )}
           {tmdbSearching && <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 18 }}>Searching TMDb&hellip;</div>}
           {tmdbResults.length > 0 && (
             <>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)', margin: '20px 0 10px' }}>FROM TMDB &middot; TAP TO ADD</div>
+              <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '20px 0 10px' }}>FROM TMDB &middot; TAP TO ADD</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {tmdbResults.map((r) => (
                   <button key={r.id} onClick={() => openTmdbAsShow(r)} style={{ display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', border: '1px solid var(--border)', background: 'var(--surface)', padding: 8, borderRadius: 12, cursor: 'pointer', color: 'var(--text)' }}>
@@ -99,13 +99,13 @@ export default function HomeScreen() {
             <div style={{ textAlign: 'center', padding: '48px 20px', border: '1px dashed var(--border)', borderRadius: 18, marginBottom: 8 }}>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Track your first show</div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18, lineHeight: 1.4 }}>Add a show to start tracking cast, episodes, and relationships.</div>
-              <button onClick={() => openAddShow()} style={{ height: 44, padding: '0 20px', border: 'none', borderRadius: 12, background: '#6366F1', color: '#fff', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>Add a show</button>
+              <button onClick={() => openAddShow()} style={{ height: 44, padding: '0 20px', border: 'none', borderRadius: 12, background: 'var(--text)', color: '#fff', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>Add a show</button>
             </div>
           )}
           {data.shows.length > 0 && (
             <>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Currently watching</span>
+                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Currently watching</span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{currentShows.length}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14, marginBottom: 26 }}>
@@ -114,7 +114,7 @@ export default function HomeScreen() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Completed</span>
+                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Completed</span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{completedShows.length}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>

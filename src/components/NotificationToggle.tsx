@@ -45,7 +45,7 @@ export default function NotificationToggle({ showId }: { showId: string }) {
         padding: '0 16px',
         border: '1px solid var(--input-border)',
         borderRadius: 12,
-        background: subscribed ? '#6366F1' : 'transparent',
+        background: subscribed ? 'var(--text)' : 'transparent',
         color: subscribed ? '#fff' : 'var(--text-secondary)',
         fontSize: 13.5,
         fontWeight: 700,

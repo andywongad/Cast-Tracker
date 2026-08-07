@@ -321,10 +321,10 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           })}
           {lineDrag && (() => {
             const anchor = posById[lineDrag.end === 'target' ? lineDrag.sourceId : (show.cast.find((c) => c.id === lineDrag.sourceId)?.relByEp?.[epKey]?.find((r) => r.id === lineDrag.relId)?.targetId || '')];
-            return anchor ? <line x1={anchor.x} y1={anchor.y} x2={lineDrag.x} y2={lineDrag.y} stroke="#6366F1" strokeWidth={0.4} vectorEffect="non-scaling-stroke" strokeDasharray="1,1.2" /> : null;
+            return anchor ? <line x1={anchor.x} y1={anchor.y} x2={lineDrag.x} y2={lineDrag.y} stroke="currentColor" strokeWidth={0.4} vectorEffect="non-scaling-stroke" strokeDasharray="1,1.2" /> : null;
           })()}
           {dragRelate && posById[dragRelate.sourceId] && (
-            <line x1={posById[dragRelate.sourceId].x} y1={posById[dragRelate.sourceId].y} x2={dragRelate.x} y2={dragRelate.y} stroke="#6366F1" strokeWidth={0.4} vectorEffect="non-scaling-stroke" strokeDasharray="2,2" />
+            <line x1={posById[dragRelate.sourceId].x} y1={posById[dragRelate.sourceId].y} x2={dragRelate.x} y2={dragRelate.y} stroke="currentColor" strokeWidth={0.4} vectorEffect="non-scaling-stroke" strokeDasharray="2,2" />
           )}
         </svg>
 

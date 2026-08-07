@@ -12,10 +12,11 @@ export default function Footer() {
         <span className="ct-footer-label">Translate</span>
       </button>
       <button style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }} onClick={addAction}>
-        <div style={{ width: 50, height: 50, borderRadius: 999, background: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: -24, boxShadow: '0 6px 16px rgba(99,102,241,0.45)', border: '4px solid var(--bg)' }}>
-          <span style={{ fontSize: 26, fontWeight: 400, color: '#fff', lineHeight: 1 }}>+</span>
+        {/* Charcoal, matching every other primary action — red is reserved for destructive ones. */}
+        <div style={{ width: 54, height: 54, borderRadius: 999, background: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: -26, boxShadow: 'var(--shadow-lift)', border: '5px solid var(--bg)' }}>
+          <span style={{ fontSize: 26, fontWeight: 300, color: 'var(--card)', lineHeight: 1 }}>+</span>
         </div>
-        <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-muted)', paddingBottom: 8 }}>{addLabel}</span>
+        <span style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-muted)', paddingBottom: 10 }}>{addLabel}</span>
       </button>
       <button className="ct-footer-btn" onClick={() => openConverter()}>
         <svg width="19" height="19" viewBox="0 0 16 16" fill="none"><path d="M2 5.5h9M2 5.5l2.5-2.5M2 5.5L4.5 8M14 10.5H5M14 10.5l-2.5-2.5M14 10.5L11.5 13" stroke="var(--text-muted)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>

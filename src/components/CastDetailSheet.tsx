@@ -97,15 +97,15 @@ export default function CastDetailSheet() {
         {c.versions.length > 0 && (
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', marginBottom: 16, paddingBottom: 2 }}>
             <button onClick={() => setActiveVersionId(null)} style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${!activeVersionId ? '#6366F1' : 'transparent'}`, ...bgStyle(c.photo, 'contain') }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${!activeVersionId ? 'var(--text)' : 'transparent'}`, ...bgStyle(c.photo, 'contain') }}>
                 {!c.photo && <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(c.name)}</span>}
               </div>
               <span style={{ fontSize: 10, fontWeight: 700, color: !activeVersionId ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Present</span>
             </button>
             {c.versions.map((v) => (
               <button key={v.id} onClick={() => setActiveVersionId(v.id)} style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'rgba(99,102,241,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${activeVersionId === v.id ? '#6366F1' : 'transparent'}`, ...bgStyle(v.photo, 'contain') }}>
-                  {!v.photo && <span style={{ fontSize: 15, fontWeight: 800, color: 'rgba(99,102,241,0.8)' }}>{initials(v.name)}</span>}
+                <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${activeVersionId === v.id ? 'var(--text)' : 'transparent'}`, ...bgStyle(v.photo, 'contain') }}>
+                  {!v.photo && <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(v.name)}</span>}
                 </div>
                 <span style={{ fontSize: 10, fontWeight: 700, color: activeVersionId === v.id ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.age || v.name || 'Version'}</span>
               </button>
@@ -151,7 +151,7 @@ export default function CastDetailSheet() {
                 <textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} placeholder="Add a quick note&hellip;" className="ct-textarea" style={{ minHeight: 60, fontSize: 13.5, marginBottom: 6 }} />
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setNotesEditing(false)} style={{ flex: 1, height: 34, border: '1px solid var(--input-border)', borderRadius: 9, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={saveNotes} style={{ flex: 1, height: 34, border: 'none', borderRadius: 9, background: '#6366F1', color: '#fff', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                  <button onClick={saveNotes} style={{ flex: 1, height: 34, border: 'none', borderRadius: 9, background: 'var(--text)', color: '#fff', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Save</button>
                 </div>
               </>
             ) : (

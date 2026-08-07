@@ -371,8 +371,8 @@ export default function AddCastSheet() {
 
         {!editing && show.tmdbId && hasTmdbKey() && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-            <button onClick={() => setMode('manual')} className="ct-tab-btn" style={{ border: mode === 'manual' ? 'none' : '1px solid var(--input-border)', background: mode === 'manual' ? '#6366F1' : 'transparent', color: mode === 'manual' ? '#fff' : 'var(--text-secondary)' }}>Manual entry</button>
-            <button onClick={() => setMode('autofill')} className="ct-tab-btn" style={{ border: mode === 'autofill' ? 'none' : '1px solid var(--input-border)', background: mode === 'autofill' ? '#6366F1' : 'transparent', color: mode === 'autofill' ? '#fff' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            <button onClick={() => setMode('manual')} className={`ct-tab-btn${mode === 'manual' ? ' is-active' : ''}`}>Manual entry</button>
+            <button onClick={() => setMode('autofill')} className={`ct-tab-btn${mode === 'autofill' ? ' is-active' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l1.8 3.7 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="currentColor" /></svg>
               Add from episode
             </button>
@@ -405,9 +405,9 @@ export default function AddCastSheet() {
           <>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: hasField('versions') ? 6 : 16, overflowX: 'auto', paddingBottom: 2 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 'none' }}>
-                <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(form.photo, 'contain') }}>
-                  {!form.photo && <span style={{ fontSize: 22, fontWeight: 800, color: 'rgba(99,102,241,0.8)' }}>{initials(form.name)}</span>}
-                  <label style={{ position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 999, background: '#6366F1', border: '2px solid var(--sheet)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(form.photo, 'contain') }}>
+                  {!form.photo && <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(form.name)}</span>}
+                  <label style={{ position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 999, background: 'var(--text)', border: '2px solid var(--sheet)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5-8 8L3 13.5l.5-2.5 8-8z" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg>
                     <input type="file" accept="image/*" onChange={(e) => openCropFor(e.target.files?.[0], 'main')} style={{ display: 'none' }} />
                   </label>
@@ -419,8 +419,8 @@ export default function AddCastSheet() {
                 <div key={v.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 'none' }}>
                   <div onClick={() => setVersionCardId(v.id)} style={{ position: 'relative', width: 66, height: 66, flex: 'none', cursor: 'pointer' }}>
                     <button onClick={(e) => { e.stopPropagation(); removeVersion(v.id); }} style={{ position: 'absolute', top: -6, right: -6, zIndex: 1, width: 20, height: 20, borderRadius: 999, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 11, lineHeight: 1, cursor: 'pointer' }}>&times;</button>
-                    <div style={{ position: 'relative', width: '100%', height: '100%', borderRadius: 16, backgroundColor: 'rgba(99,102,241,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...bgStyle(v.photo, 'contain') }}>
-                      {!v.photo && <span style={{ fontSize: 20, fontWeight: 800, color: 'rgba(99,102,241,0.8)' }}>{initials(v.name)}</span>}
+                    <div style={{ position: 'relative', width: '100%', height: '100%', borderRadius: 16, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...bgStyle(v.photo, 'contain') }}>
+                      {!v.photo && <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(v.name)}</span>}
                     </div>
                   </div>
                   <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.03em', maxWidth: 66, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.age || 'Version'}</span>
@@ -485,11 +485,11 @@ export default function AddCastSheet() {
                   <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 31, border: '1px solid var(--input-border)', borderRadius: 12, background: 'var(--surface)', boxShadow: '0 12px 28px rgba(0,0,0,0.22)', padding: 5 }}>
                     {availableFields.map(({ key, label }) => (
                       <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text)' }}>
-                        <input type="checkbox" checked={hasField(key)} onChange={() => toggleField(key)} style={{ width: 16, height: 16, accentColor: '#6366F1', cursor: 'pointer' }} />
+                        <input type="checkbox" checked={hasField(key)} onChange={() => toggleField(key)} style={{ width: 16, height: 16, accentColor: 'var(--text)', cursor: 'pointer' }} />
                         {label}
                       </label>
                     ))}
-                    <button onClick={() => setFieldMenuOpen(false)} style={{ width: '100%', height: 38, marginTop: 4, border: 'none', borderRadius: 9, background: '#6366F1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Done</button>
+                    <button onClick={() => setFieldMenuOpen(false)} style={{ width: '100%', height: 38, marginTop: 4, border: 'none', borderRadius: 9, background: 'var(--text)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Done</button>
                   </div>
                 </>
               )}
@@ -563,7 +563,7 @@ export default function AddCastSheet() {
                             className="ct-input"
                             style={{ flex: 1, fontWeight: 700 }}
                           />
-                          <button onClick={commitLabel} disabled={!draft.trim()} aria-label="Confirm field name" style={{ flex: 'none', height: 46, padding: '0 14px', border: 'none', borderRadius: 11, background: '#6366F1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: draft.trim() ? 'pointer' : 'not-allowed', opacity: draft.trim() ? 1 : 0.5 }}>Set</button>
+                          <button onClick={commitLabel} disabled={!draft.trim()} aria-label="Confirm field name" style={{ flex: 'none', height: 46, padding: '0 14px', border: 'none', borderRadius: 11, background: 'var(--text)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: draft.trim() ? 'pointer' : 'not-allowed', opacity: draft.trim() ? 1 : 0.5 }}>Set</button>
                           <button onClick={() => { removeCustomField(cf.id); setEditingLabelId(null); setLabelDraft(null); }} aria-label="Remove field" style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 20, lineHeight: 1, padding: 6, cursor: 'pointer' }}>&times;</button>
                         </div>
                       ) : (
@@ -648,9 +648,9 @@ function VersionCardPanel({ version, onChange, onUpload, onRemove, onClose }: {
         <div style={{ fontSize: 12, color: 'var(--text-faint)', marginBottom: 18 }}>Edit freely for this version — a younger/older look with its own photo.</div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-          <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'rgba(99,102,241,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(version.photo, 'contain') }}>
-            {!version.photo && <span style={{ fontSize: 22, fontWeight: 800, color: 'rgba(99,102,241,0.8)' }}>{initials(version.name)}</span>}
-            <label style={{ position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 999, background: '#6366F1', border: '2px solid var(--sheet)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(version.photo, 'contain') }}>
+            {!version.photo && <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(version.name)}</span>}
+            <label style={{ position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 999, background: 'var(--text)', border: '2px solid var(--sheet)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5-8 8L3 13.5l.5-2.5 8-8z" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg>
               <input type="file" accept="image/*" onChange={(e) => onUpload(e.target.files?.[0])} style={{ display: 'none' }} />
             </label>

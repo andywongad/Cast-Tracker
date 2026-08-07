@@ -15,10 +15,11 @@ function SwapArrowsVertical() {
   );
 }
 
-const cardStyle: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: '14px 16px' };
-const cardLabel: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 12 };
-const valueText: React.CSSProperties = { fontSize: 22, fontWeight: 700, textAlign: 'right', minWidth: 0, flex: 1 };
-const pickerStyle: React.CSSProperties = { flex: 'none', maxWidth: '58%', border: 'none', background: 'transparent', fontSize: 15, fontWeight: 800, color: 'var(--text)', padding: 0, outline: 'none' };
+const cardStyle: React.CSSProperties = { background: 'var(--card)', border: 'none', borderRadius: 22, padding: 20, boxShadow: 'var(--shadow-card)' };
+const cardLabel: React.CSSProperties = { fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 };
+// Oversized, ultra-light numerals are the anchor of the fintech look.
+const valueText: React.CSSProperties = { fontSize: 34, fontWeight: 200, letterSpacing: '-0.02em', textAlign: 'right', minWidth: 0, flex: 1 };
+const pickerStyle: React.CSSProperties = { flex: 'none', maxWidth: '58%', border: 'none', background: 'transparent', fontSize: 14, fontWeight: 500, color: 'var(--text)', padding: 0, outline: 'none' };
 
 /**
  * The blue puck straddling the two cards. Renders as a zero-height flex item between them so it
@@ -32,9 +33,9 @@ function SwapPuck({ onClick }: { onClick: () => void }) {
         aria-label="Swap"
         style={{
           position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
-          width: 42, height: 42, borderRadius: 999, background: '#6366F1', border: '3px solid var(--sheet)',
+          width: 42, height: 42, borderRadius: 999, background: 'var(--text)', border: '4px solid var(--sheet)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-          boxShadow: '0 4px 14px rgba(99,102,241,0.4)', padding: 0,
+          boxShadow: 'var(--shadow-card)', padding: 0,
         }}
       >
         <SwapArrowsVertical />
@@ -82,8 +83,8 @@ export function ValueConverterSheet() {
         <div className="ct-sheet-title">Value converter</div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-          <button onClick={() => setTab('currency')} className="ct-tab-btn" style={{ border: tab === 'currency' ? 'none' : '1px solid var(--input-border)', background: tab === 'currency' ? '#6366F1' : 'transparent', color: tab === 'currency' ? '#fff' : 'var(--text-secondary)' }}>Currency</button>
-          <button onClick={() => setTab('inflation')} className="ct-tab-btn" style={{ border: tab === 'inflation' ? 'none' : '1px solid var(--input-border)', background: tab === 'inflation' ? '#6366F1' : 'transparent', color: tab === 'inflation' ? '#fff' : 'var(--text-secondary)' }}>Then &rarr; now</button>
+          <button onClick={() => setTab('currency')} className={`ct-tab-btn${tab === 'currency' ? ' is-active' : ''}`}>Currency</button>
+          <button onClick={() => setTab('inflation')} className={`ct-tab-btn${tab === 'inflation' ? ' is-active' : ''}`}>Then &rarr; now</button>
         </div>
 
         <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
@@ -110,11 +111,11 @@ export function ValueConverterSheet() {
               <div style={cardStyle}>
                 <div style={cardLabel}>Now</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <select value={toYear} onChange={(e) => setToYear(parseInt(e.target.value))} style={{ ...pickerStyle, color: 'var(--accent-soft)' }}>
+                  <select value={toYear} onChange={(e) => setToYear(parseInt(e.target.value))} style={{ ...pickerStyle, color: 'var(--text)' }}>
                     {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
                   </select>
-                  <span style={{ flex: 'none', fontSize: 15, fontWeight: 800, color: 'var(--accent-soft)' }}>{inflationCcy}</span>
-                  <div style={{ ...valueText, color: 'var(--accent-soft)' }}>{symbol(inflationCcy)}{fmtMoney(inflatedInCcy)}</div>
+                  <span style={{ flex: 'none', fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>{inflationCcy}</span>
+                  <div style={{ ...valueText, color: 'var(--text)' }}>{symbol(inflationCcy)}{fmtMoney(inflatedInCcy)}</div>
                 </div>
               </div>
             </>
@@ -138,10 +139,10 @@ export function ValueConverterSheet() {
               <div style={cardStyle}>
                 <div style={cardLabel}>To</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <select value={toCcy} onChange={(e) => setToCcy(e.target.value)} style={{ ...pickerStyle, color: 'var(--accent-soft)' }}>
+                  <select value={toCcy} onChange={(e) => setToCcy(e.target.value)} style={{ ...pickerStyle, color: 'var(--text)' }}>
                     {CCY_CODES.map((c) => <option key={c} value={c}>{CCY_RATES[c].label}</option>)}
                   </select>
-                  <div style={{ ...valueText, color: 'var(--accent-soft)' }}>{symbol(toCcy)}{fmtMoney(currencyResult)}</div>
+                  <div style={{ ...valueText, color: 'var(--text)' }}>{symbol(toCcy)}{fmtMoney(currencyResult)}</div>
                 </div>
               </div>
             </>
@@ -208,10 +209,10 @@ export function TranslatorSheet() {
           <SwapPuck onClick={swap} />
           <div style={cardStyle}>
             <div style={cardLabel}>To</div>
-            <select value={to} onChange={(e) => { setTo(e.target.value); setResult(''); }} style={{ ...pickerStyle, display: 'block', maxWidth: '100%', color: 'var(--accent-soft)' }}>
+            <select value={to} onChange={(e) => { setTo(e.target.value); setResult(''); }} style={{ ...pickerStyle, display: 'block', maxWidth: '100%', color: 'var(--text)' }}>
               {LANGUAGES.filter((l) => l.code !== 'auto').map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
             </select>
-            <div style={{ marginTop: 10, fontSize: 17, fontWeight: result ? 700 : 400, lineHeight: 1.4, color: result ? 'var(--accent-soft)' : 'var(--text-faint)', minHeight: 46 }}>{loading ? 'Translating…' : (result || 'Translation')}</div>
+            <div style={{ marginTop: 10, fontSize: 17, fontWeight: result ? 400 : 300, lineHeight: 1.4, color: result ? 'var(--text)' : 'var(--text-faint)', minHeight: 46 }}>{loading ? 'Translating…' : (result || 'Translation')}</div>
           </div>
         </div>
 

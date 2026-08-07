@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { StoreProvider, useStore } from './hooks/useStore';
 import { UIProvider, useUI } from './hooks/useUI';
-import { THEMES } from './lib/theme';
+import { THEMES, themeVars } from './lib/theme';
 import { registerServiceWorker } from './lib/notifications';
 import TopBar from './components/TopBar';
 import Footer from './components/Footer';
@@ -26,15 +26,11 @@ function Shell() {
 
   const themeName = settings.theme ?? 'Light';
   const t = THEMES[themeName];
-  const rootStyle: React.CSSProperties = useMemo(() => ({
+  const rootStyle = useMemo(() => ({
     position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
     background: t.bg, color: t.text,
-    ['--bg' as any]: t.bg, ['--card' as any]: t.card, ['--sheet' as any]: t.sheet, ['--surface' as any]: t.surface,
-    ['--border' as any]: t.border, ['--input-border' as any]: t.inputBorder, ['--divider' as any]: t.divider,
-    ['--text' as any]: t.text, ['--text-muted' as any]: t.textMuted, ['--text-secondary' as any]: t.textSecondary,
-    ['--text-tertiary' as any]: t.textTertiary, ['--text-faint' as any]: t.textFaint, ['--icon-muted' as any]: t.iconMuted,
-    ['--accent-soft' as any]: t.accentSoft, ['--initials-tint' as any]: t.initialsTint, ['--scrim' as any]: t.scrim,
-  }), [t]);
+    ...themeVars(t),
+  }) as React.CSSProperties, [t]);
 
   return (
     <div className="ct-app" style={rootStyle}>

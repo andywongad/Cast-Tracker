@@ -2,9 +2,10 @@
 html, body { height: 100%; }
 body {
   margin: 0;
-  background: #05060a;
-  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  background: #F4F4F3;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.011em;
 }
 #root { height: 100%; }
 input, textarea, button, select { font-family: inherit; }
@@ -33,52 +34,57 @@ a { color: inherit; }
 
 .ct-topbar {
   flex: none;
-  min-height: 56px;
-  padding: max(env(safe-area-inset-top, 0px), 14px) 14px 10px;
+  min-height: 60px;
+  padding: max(env(safe-area-inset-top, 0px), 16px) 18px 12px;
   display: flex;
   align-items: center;
   gap: 10px;
   background: var(--bg);
-  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
+/* Line icons live in soft rounded-square containers, not circles. */
 .ct-iconbtn {
-  width: 34px; height: 34px; flex: none; border: none; border-radius: 10px;
+  width: 38px; height: 38px; flex: none; border: none; border-radius: 12px;
   background: var(--surface); display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
-.ct-iconbtn.bordered { border: 1px solid var(--border); }
+.ct-iconbtn.bordered { background: var(--card); box-shadow: var(--shadow-card); }
 
+/* Inputs read as filled wells — no strokes anywhere. */
 .ct-input {
-  width: 100%; height: 46px; border: 1px solid var(--input-border); border-radius: 11px;
-  background: var(--surface); padding: 0 13px; font-size: 15px; color: var(--text); outline: none;
+  width: 100%; height: 48px; border: none; border-radius: 14px;
+  background: var(--surface); padding: 0 15px; font-size: 15px; color: var(--text); outline: none;
 }
 .ct-textarea {
-  width: 100%; min-height: 74px; border: 1px solid var(--input-border); border-radius: 11px;
-  background: var(--surface); padding: 11px 13px; font-size: 14px; line-height: 1.5; color: var(--text);
+  width: 100%; min-height: 78px; border: none; border-radius: 14px;
+  background: var(--surface); padding: 13px 15px; font-size: 14px; line-height: 1.55; color: var(--text);
   outline: none; font-family: inherit;
 }
+.ct-input:focus, .ct-textarea:focus { box-shadow: 0 0 0 2px var(--divider); }
+
 .ct-label {
-  display: block; font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: #C9924A; margin-bottom: 7px;
+  display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 8px;
 }
 .ct-label-muted {
-  display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 6px;
+  display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.05em;
+  color: var(--text-muted); margin-bottom: 6px;
 }
 
 .ct-btn-primary {
-  height: 48px; border: none; border-radius: 13px; background: #6366F1; color: #fff;
-  font-size: 14.5px; font-weight: 700; cursor: pointer;
+  height: 52px; border: none; border-radius: 16px; background: var(--text); color: var(--card);
+  font-size: 15px; font-weight: 500; cursor: pointer; letter-spacing: -0.01em;
 }
-.ct-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.ct-btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
 .ct-btn-ghost {
-  height: 48px; border: 1px solid var(--input-border); border-radius: 13px; background: transparent;
-  color: var(--text-secondary); font-size: 14.5px; font-weight: 700; cursor: pointer;
+  height: 52px; border: none; border-radius: 16px; background: var(--surface);
+  color: var(--text-secondary); font-size: 15px; font-weight: 500; cursor: pointer;
 }
 .ct-btn-danger {
-  height: 48px; border: 1px solid #A0574F; border-radius: 13px; background: transparent;
-  color: #E08A80; font-size: 14.5px; font-weight: 700; cursor: pointer;
+  height: 52px; border: none; border-radius: 16px; background: var(--surface);
+  color: #C24B4B; font-size: 15px; font-weight: 500; cursor: pointer;
 }
 
 .ct-scrim {
@@ -87,42 +93,57 @@ a { color: inherit; }
 }
 .ct-sheet {
   position: relative; width: 100%; max-height: 85%; overflow-y: auto;
-  background: var(--sheet); border-radius: 22px 22px 0 0; padding: 10px 18px 30px;
-  box-shadow: 0 -12px 32px rgba(0,0,0,0.5);
+  background: var(--sheet); border-radius: 26px 26px 0 0; padding: 12px 20px 32px;
+  box-shadow: var(--shadow-lift);
 }
 .ct-sheet-grabber {
   width: 36px; height: 4px; border-radius: 999px; background: var(--divider); margin: 0 auto 18px;
 }
 .ct-sheet-close {
-  position: absolute; right: 18px; top: 16px; width: 32px; height: 32px; border-radius: 999px;
-  background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center;
+  position: absolute; right: 20px; top: 16px; width: 34px; height: 34px; border-radius: 12px;
+  background: var(--surface); border: none; display: flex; align-items: center;
   justify-content: center; cursor: pointer;
 }
-.ct-sheet-title { font-size: 20px; font-weight: 800; margin-bottom: 18px; }
+/* Headings run larger and lighter for a premium feel. */
+.ct-sheet-title { font-size: 26px; font-weight: 300; letter-spacing: -0.02em; margin-bottom: 22px; }
 
 .ct-pill {
-  font-size: 11px; font-weight: 700; color: var(--accent-soft); background: none;
-  padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border); cursor: pointer;
+  font-size: 11px; font-weight: 500; color: var(--text-secondary); background: var(--surface);
+  padding: 6px 12px; border-radius: 999px; border: none; cursor: pointer;
 }
+/* Pill toggle: white raised when active, flat gray when not. */
 .ct-tab-btn {
-  flex: 1; height: 44px; border-radius: 12px; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  flex: 1; height: 44px; border-radius: 999px; font-size: 13.5px; font-weight: 500; cursor: pointer;
+  border: none; background: var(--surface); color: var(--text-muted);
+  transition: background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+.ct-tab-btn.is-active {
+  background: var(--card); color: var(--text); font-weight: 500; box-shadow: var(--shadow-card);
 }
 
 .ct-footer {
-  flex: none; height: 70px; padding: 0 12px calc(env(safe-area-inset-bottom, 0px));
+  flex: none; height: 76px; padding: 0 12px calc(env(safe-area-inset-bottom, 0px));
   display: flex; align-items: flex-end; justify-content: space-around;
-  background: var(--bg); border-top: 1px solid var(--border); position: sticky;
+  background: var(--bg); position: sticky;
   bottom: 0;
   z-index: 10;
 }
-.ct-footer-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 4px; border: none;
-  background: none; padding: 8px 6px; cursor: pointer; color: var(--text-muted);
+/* Soft status wash under the nav. Green-only now that the CTA is charcoal — a red core
+   under a charcoal button read as a stray colour rather than a glow. */
+.ct-footer::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 76px; pointer-events: none;
+  background: radial-gradient(120% 150% at 50% 118%, rgba(63,178,127,0.17) 0%, rgba(63,178,127,0.09) 40%, rgba(63,178,127,0.04) 72%, rgba(63,178,127,0) 100%);
 }
-.ct-footer-label { font-size: 10.5px; font-weight: 700; color: var(--text-muted); }
+.ct-footer > * { position: relative; z-index: 1; }
+.ct-footer-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 5px; border: none;
+  background: none; padding: 10px 6px; cursor: pointer; color: var(--text-muted);
+}
+.ct-footer-label { font-size: 10.5px; font-weight: 500; color: var(--text-muted); }
 
 .ct-card {
-  background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 10px;
+  background: var(--card); border: none; border-radius: 22px; padding: 12px;
+  box-shadow: var(--shadow-card);
   display: flex; flex-direction: column; min-width: 0; cursor: pointer;
 }
 
@@ -131,3 +152,8 @@ a { color: inherit; }
 }
 
 ::placeholder { color: var(--text-faint); opacity: 1; }
+
+/* Dev-only surround (added by main.tsx under import.meta.env.DEV) — a neutral mid-gray
+   backdrop so the app's edges are obvious on a wide desktop window. */
+body.ct-dev { background: #74767B; }
+body.ct-dev .ct-app { box-shadow: 0 0 0 1px rgba(0,0,0,0.22), 0 24px 64px rgba(0,0,0,0.32); }

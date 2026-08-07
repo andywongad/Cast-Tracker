@@ -87,7 +87,7 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
           height: 44,
           borderRadius: '50%',
           border: 'none',
-          background: hasChanges ? '#6366F1' : '#9CA3AF',
+          background: hasChanges ? 'var(--text)' : '#9CA3AF',
           color: '#fff',
           fontSize: 18,
           cursor: hasChanges && !isSaving ? 'pointer' : 'not-allowed',

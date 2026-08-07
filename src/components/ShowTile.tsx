@@ -24,7 +24,7 @@ export function ShowTile({ show, columns, done = false }: { show: Show; columns:
         {!show.poster && <span style={{ position: 'absolute', right: 8, bottom: 6, fontSize: 60, fontWeight: 800, color: 'rgba(255,255,255,0.16)', lineHeight: 0.7 }}>{initials(show.title)}</span>}
         <span style={{ position: 'absolute', left: 10, bottom: 10, fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>{show.cast.length} cast</span>
         {caughtUpVisible && (
-          <span style={{ position: 'absolute', left: 10, bottom: 30, fontSize: 9.5, fontWeight: 700, color: '#fff', background: 'rgba(99,102,241,0.85)', padding: '3px 7px', borderRadius: 999 }}>Caught up &middot; {show.caughtUpEp}</span>
+          <span style={{ position: 'absolute', left: 10, bottom: 30, fontSize: 9.5, fontWeight: 700, color: '#fff', background: 'var(--text-muted)', padding: '3px 7px', borderRadius: 999 }}>Caught up &middot; {show.caughtUpEp}</span>
         )}
         <button onClick={(e) => { e.stopPropagation(); openEditShow(show.id); }} style={{ position: 'absolute', right: 39, top: 7, width: 26, height: 26, borderRadius: 999, background: 'rgba(0,0,0,0.5)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><EditIcon /></button>
         <button onClick={(e) => { e.stopPropagation(); openShareSheet(shareShow(show.id)); }} style={{ position: 'absolute', right: 7, top: 7, width: 26, height: 26, borderRadius: 999, background: 'rgba(0,0,0,0.5)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><ShareIcon /></button>

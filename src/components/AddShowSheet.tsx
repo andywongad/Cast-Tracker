@@ -130,7 +130,7 @@ export default function AddShowSheet() {
         <label className="ct-label-muted" style={{ marginTop: 8 }}>TYPE</label>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           {TYPES.map((t) => (
-            <button key={t} onClick={() => setForm((f) => ({ ...f, type: t }))} className="ct-tab-btn" style={{ border: form.type === t ? 'none' : '1px solid var(--input-border)', background: form.type === t ? '#6366F1' : 'transparent', color: form.type === t ? '#fff' : 'var(--text-secondary)' }}>{t.charAt(0) + t.slice(1).toLowerCase()}</button>
+            <button key={t} onClick={() => setForm((f) => ({ ...f, type: t }))} className={`ct-tab-btn${form.type === t ? ' is-active' : ''}`}>{t.charAt(0) + t.slice(1).toLowerCase()}</button>
           ))}
         </div>
 

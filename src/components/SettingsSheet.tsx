@@ -49,12 +49,12 @@ export default function SettingsSheet() {
         <label className="ct-label-muted">APPEARANCE</label>
         <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
           {(['Light', 'Dark'] as const).map((th) => (
-            <button key={th} onClick={() => setTheme(th)} className="ct-tab-btn" style={{ border: theme === th ? 'none' : '1px solid var(--input-border)', background: theme === th ? '#6366F1' : 'transparent', color: theme === th ? '#fff' : 'var(--text-secondary)' }}>{th}</button>
+            <button key={th} onClick={() => setTheme(th)} className={`ct-tab-btn${theme === th ? ' is-active' : ''}`}>{th}</button>
           ))}
         </div>
 
         <label className="ct-label-muted">CHARACTER EDITING</label>
-        <button onClick={() => setAutoSave(!settings.autoSave)} style={{ width: '100%', height: 44, marginBottom: 22, border: '1px solid var(--input-border)', borderRadius: 12, background: settings.autoSave ? '#6366F1' : 'transparent', color: settings.autoSave ? '#fff' : 'var(--text-secondary)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+        <button onClick={() => setAutoSave(!settings.autoSave)} style={{ width: '100%', height: 44, marginBottom: 22, border: '1px solid var(--input-border)', borderRadius: 12, background: settings.autoSave ? 'var(--text)' : 'transparent', color: settings.autoSave ? '#fff' : 'var(--text-secondary)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}>
           {settings.autoSave ? '✓ Auto-Save Enabled' : 'Auto-Save Disabled'}
         </button>
 
@@ -63,7 +63,7 @@ export default function SettingsSheet() {
             <label className="ct-label-muted">COLUMNS &middot; HOMEPAGE SHOWS</label>
             <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
               {[2, 3, 4].map((n) => (
-                <button key={n} onClick={() => setShowColumns(n)} className="ct-tab-btn" style={{ border: settings.showColumns === n ? 'none' : '1px solid var(--input-border)', background: settings.showColumns === n ? '#6366F1' : 'transparent', color: settings.showColumns === n ? '#fff' : 'var(--text-secondary)' }}>{n}</button>
+                <button key={n} onClick={() => setShowColumns(n)} className={`ct-tab-btn${settings.showColumns === n ? ' is-active' : ''}`}>{n}</button>
               ))}
             </div>
           </>
@@ -74,7 +74,7 @@ export default function SettingsSheet() {
             <label className="ct-label-muted">COLUMNS &middot; CAST GRID</label>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               {[2, 3].map((n) => (
-                <button key={n} onClick={() => setCastColumns(n)} className="ct-tab-btn" style={{ border: settings.castColumns === n ? 'none' : '1px solid var(--input-border)', background: settings.castColumns === n ? '#6366F1' : 'transparent', color: settings.castColumns === n ? '#fff' : 'var(--text-secondary)' }}>{n}</button>
+                <button key={n} onClick={() => setCastColumns(n)} className={`ct-tab-btn${settings.castColumns === n ? ' is-active' : ''}`}>{n}</button>
               ))}
             </div>
           </>

@@ -88,7 +88,7 @@ export default function FeedbackSheet() {
             <button
               type="submit"
               disabled={isSubmitting}
-              style={{ height: 48, border: 'none', borderRadius: 13, background: '#6366F1', color: '#fff', fontSize: 14.5, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.7 : 1, transition: 'all 0.2s ease' }}
+              style={{ height: 48, border: 'none', borderRadius: 13, background: 'var(--text)', color: '#fff', fontSize: 14.5, fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.7 : 1, transition: 'all 0.2s ease' }}
             >
               {isSubmitting ? 'Sending...' : 'Send Feedback'}
             </button>

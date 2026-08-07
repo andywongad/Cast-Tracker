@@ -124,8 +124,8 @@ export default function ShowScreen() {
           </div>
           {isRealityShow && (
             <div style={{ display: 'inline-flex', marginTop: 10, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: 3 }}>
-              <button onClick={() => setGridMode(true)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: gridMode ? '#6366F1' : 'transparent', color: gridMode ? '#fff' : 'var(--text-secondary)' }}>Grid</button>
-              <button onClick={() => setGridMode(false)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', background: !gridMode ? '#6366F1' : 'transparent', color: !gridMode ? '#fff' : 'var(--text-secondary)' }}>
+              <button onClick={() => setGridMode(true)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: gridMode ? 'var(--text)' : 'transparent', color: gridMode ? '#fff' : 'var(--text-secondary)' }}>Grid</button>
+              <button onClick={() => setGridMode(false)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', background: !gridMode ? 'var(--text)' : 'transparent', color: !gridMode ? '#fff' : 'var(--text-secondary)' }}>
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ marginRight: 5 }}><circle cx="4" cy="4" r="2" fill="currentColor" /><circle cx="12" cy="4" r="2" fill="currentColor" /><circle cx="8" cy="12" r="2" fill="currentColor" /><path d="M5.5 5.3L6.7 10.3M10.5 5.3L9.3 10.3M6 4h4" stroke="currentColor" strokeWidth="1.2" /></svg>
                 Relationship map
               </button>
@@ -145,7 +145,7 @@ export default function ShowScreen() {
       {hasSeasons && (
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 8 }}>
           {orderedSeasons.map((sn) => (
-            <button key={sn} onClick={() => setSeason(sn)} style={{ flex: 'none', height: 32, padding: '0 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: currentSeason === sn ? 'none' : '1px solid var(--border)', background: currentSeason === sn ? '#6366F1' : 'transparent', color: currentSeason === sn ? '#fff' : 'var(--text-secondary)' }}>Season {sn}</button>
+            <button key={sn} onClick={() => setSeason(sn)} style={{ flex: 'none', height: 32, padding: '0 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: currentSeason === sn ? 'none' : '1px solid var(--border)', background: currentSeason === sn ? 'var(--text)' : 'transparent', color: currentSeason === sn ? '#fff' : 'var(--text-secondary)' }}>Season {sn}</button>
           ))}
         </div>
       )}
@@ -169,7 +169,7 @@ export default function ShowScreen() {
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-faint)', marginBottom: 6 }}>No cast yet</div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 22, maxWidth: 240 }}>Add the people you're trying to keep straight while you watch.</div>
               <button onClick={() => openAddCast()} className="ct-btn-primary" style={{ padding: '0 22px', height: 46, borderRadius: 13, fontSize: 14 }}>+ Add first cast member</button>
-              {showBulk && <button onClick={bulkAdd} disabled={bulkBusy} style={{ marginTop: 10, height: 44, padding: '0 22px', border: '1.5px solid #6366F1', borderRadius: 13, background: 'transparent', color: '#6366F1', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>{bulkAddLabel}</button>}
+              {showBulk && <button onClick={bulkAdd} disabled={bulkBusy} style={{ marginTop: 10, height: 44, padding: '0 22px', border: '1.5px solid var(--text)', borderRadius: 13, background: 'transparent', color: 'var(--text)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>{bulkAddLabel}</button>}
             </div>
           )}
           {show.cast.length > 0 && (

@@ -17,48 +17,45 @@ export interface ThemeTokens {
   accentSoft: string;
   initialsTint: string;
   scrim: string;
+  /** Cards separate by soft diffused shadow, not strokes — these carry that weight. */
+  shadowCard: string;
+  shadowLift: string;
 }
 
 export const THEMES: Record<ThemeName, ThemeTokens> = {
   Dark: {
     bg: '#0D0F14', card: '#14171F', sheet: '#12141C', surface: '#171A22', border: '#1D2029',
-    inputBorder: '#242836', divider: '#2A2E3B', text: '#F5F5F7', textMuted: '#6B7080',
+    inputBorder: '#242836', divider: '#2A2E3B', text: '#F5F5F7', textMuted: '#8A8A8A',
     textSecondary: '#9599A8', textTertiary: '#C7CAD6', textFaint: '#4B4F5C', iconMuted: '#3A3F4E',
-    accentSoft: '#8B8FF0', initialsTint: 'rgba(99,102,241,0.75)', scrim: 'rgba(0,0,0,0.6)',
+    accentSoft: '#F5F5F7', initialsTint: 'rgba(255,255,255,0.55)', scrim: 'rgba(0,0,0,0.6)',
+    shadowCard: '0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.35)',
+    shadowLift: '0 2px 6px rgba(0,0,0,0.45), 0 16px 40px rgba(0,0,0,0.5)',
   },
   Light: {
-    bg: '#F5F5F7', card: '#FFFFFF', sheet: '#FFFFFF', surface: '#EEEEF2', border: '#E3E3E9',
-    inputBorder: '#D7D7E0', divider: '#E3E3E9', text: '#15161C', textMuted: '#8A8D98',
-    textSecondary: '#6B6E79', textTertiary: '#42454F', textFaint: '#A6A9B2', iconMuted: '#C7CAD1',
-    accentSoft: '#4C4FCE', initialsTint: 'rgba(99,102,241,0.85)', scrim: 'rgba(15,16,20,0.45)',
+    bg: '#F4F4F3', card: '#FFFFFF', sheet: '#FAFAFA', surface: '#F4F4F3', border: '#ECECEA',
+    inputBorder: '#ECECEA', divider: '#ECECEA', text: '#1A1A1A', textMuted: '#8A8A8A',
+    textSecondary: '#6E6E6E', textTertiary: '#3D3D3D', textFaint: '#B0B0B0', iconMuted: '#C9C9C7',
+    accentSoft: '#1A1A1A', initialsTint: 'rgba(26,26,26,0.35)', scrim: 'rgba(26,26,26,0.35)',
+    shadowCard: '0 1px 2px rgba(0,0,0,0.03), 0 8px 24px rgba(0,0,0,0.05)',
+    shadowLift: '0 2px 8px rgba(0,0,0,0.05), 0 18px 44px rgba(0,0,0,0.09)',
   },
 };
 
-export const ACCENT = '#6366F1';
+/** Status glow beneath the bottom nav. The CTA itself uses --text (charcoal). */
+export const CTA_GLOW_GREEN = '#3FB27F';
 export const DANGER = '#C24B4B';
 export const DANGER_TEXT = '#E08A80';
-export const LABEL_ACCENT = '#C9924A';
 export const MAP_LINE = '#E85D9C';
 export const MAP_HEART = '#D2453B';
 
-export function applyTheme(el: HTMLElement, name: ThemeName) {
-  const t = THEMES[name];
-  el.style.setProperty('--bg', t.bg);
-  el.style.setProperty('--card', t.card);
-  el.style.setProperty('--sheet', t.sheet);
-  el.style.setProperty('--surface', t.surface);
-  el.style.setProperty('--border', t.border);
-  el.style.setProperty('--input-border', t.inputBorder);
-  el.style.setProperty('--divider', t.divider);
-  el.style.setProperty('--text', t.text);
-  el.style.setProperty('--text-muted', t.textMuted);
-  el.style.setProperty('--text-secondary', t.textSecondary);
-  el.style.setProperty('--text-tertiary', t.textTertiary);
-  el.style.setProperty('--text-faint', t.textFaint);
-  el.style.setProperty('--icon-muted', t.iconMuted);
-  el.style.setProperty('--accent-soft', t.accentSoft);
-  el.style.setProperty('--initials-tint', t.initialsTint);
-  el.style.setProperty('--scrim', t.scrim);
-  el.style.background = t.bg;
-  el.style.color = t.text;
+/**
+ * Token map -> CSS custom properties, derived from the key names
+ * (`inputBorder` -> `--input-border`). Deriving them means a new token in ThemeTokens
+ * reaches the DOM automatically — the old hand-written list silently dropped anything
+ * you forgot to add to it.
+ */
+export function themeVars(t: ThemeTokens): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(t).map(([k, v]) => [`--${k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase())}`, v]),
+  );
 }
