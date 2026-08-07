@@ -33,6 +33,8 @@ interface StoreValue {
   setCastColumns: (n: number) => void;
   setAutoSave: (enabled: boolean) => void;
   exportBackup: () => Backup;
+  backupState: storage.BackupState;
+  dismissBackupNudge: () => void;
   importBackup: (raw: string) => { ok: true } | { ok: false; error: string };
   resetAll: () => void;
   pushRecent: (id: string) => void;
@@ -72,10 +74,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const setCastColumns = useCallback((n: number) => persistSettingsPatch({ castColumns: n }), [persistSettingsPatch]);
   const setAutoSave = useCallback((enabled: boolean) => persistSettingsPatch({ autoSave: enabled }), [persistSettingsPatch]);
 
-  const exportBackup = useCallback((): Backup => ({
-    app: 'cast-tracker', version: 1, exportedAt: Date.now(),
-    data, settings, shares: shareStore, recent: recentShows,
-  }), [data, settings, shareStore, recentShows]);
+  const [backupState, setBackupState] = useState<storage.BackupState>(() => storage.loadBackupState());
+  const patchBackupState = useCallback((patch: Partial<storage.BackupState>) => {
+    setBackupState((prev) => { const next = { ...prev, ...patch }; storage.persistBackupState(next); return next; });
+  }, []);
+  const dismissBackupNudge = useCallback(() => patchBackupState({ dismissedAt: Date.now() }), [patchBackupState]);
+
+  const exportBackup = useCallback((): Backup => {
+    // Exporting is what clears the nudge — the user has a copy off-device now.
+    patchBackupState({ lastExportAt: Date.now() });
+    return { app: 'cast-tracker', version: 1, exportedAt: Date.now(), data, settings, shares: shareStore, recent: recentShows };
+  }, [data, settings, shareStore, recentShows, patchBackupState]);
 
   const importBackup = useCallback((raw: string): { ok: true } | { ok: false; error: string } => {
     let parsed: unknown;
@@ -174,7 +183,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<StoreValue>(() => ({
     data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave,
     exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem,
-  }), [data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem]);
+    backupState, dismissBackupNudge,
+  }), [data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

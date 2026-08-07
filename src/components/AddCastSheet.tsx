@@ -407,7 +407,7 @@ export default function AddCastSheet() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 'none' }}>
                 <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(form.photo, 'contain') }}>
                   {!form.photo && <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(form.name)}</span>}
-                  <label style={{ position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 999, background: 'var(--text)', border: '2px solid var(--sheet)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <label style={{ position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 999, background: 'var(--accent)', border: '2px solid var(--sheet)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5-8 8L3 13.5l.5-2.5 8-8z" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg>
                     <input type="file" accept="image/*" onChange={(e) => openCropFor(e.target.files?.[0], 'main')} style={{ display: 'none' }} />
                   </label>
@@ -485,11 +485,11 @@ export default function AddCastSheet() {
                   <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 31, border: '1px solid var(--input-border)', borderRadius: 12, background: 'var(--surface)', boxShadow: '0 12px 28px rgba(0,0,0,0.22)', padding: 5 }}>
                     {availableFields.map(({ key, label }) => (
                       <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text)' }}>
-                        <input type="checkbox" checked={hasField(key)} onChange={() => toggleField(key)} style={{ width: 16, height: 16, accentColor: 'var(--text)', cursor: 'pointer' }} />
+                        <input type="checkbox" checked={hasField(key)} onChange={() => toggleField(key)} style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }} />
                         {label}
                       </label>
                     ))}
-                    <button onClick={() => setFieldMenuOpen(false)} style={{ width: '100%', height: 38, marginTop: 4, border: 'none', borderRadius: 9, background: 'var(--text)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Done</button>
+                    <button onClick={() => setFieldMenuOpen(false)} style={{ width: '100%', height: 38, marginTop: 4, border: 'none', borderRadius: 9, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Done</button>
                   </div>
                 </>
               )}
@@ -563,7 +563,7 @@ export default function AddCastSheet() {
                             className="ct-input"
                             style={{ flex: 1, fontWeight: 700 }}
                           />
-                          <button onClick={commitLabel} disabled={!draft.trim()} aria-label="Confirm field name" style={{ flex: 'none', height: 46, padding: '0 14px', border: 'none', borderRadius: 11, background: 'var(--text)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: draft.trim() ? 'pointer' : 'not-allowed', opacity: draft.trim() ? 1 : 0.5 }}>Set</button>
+                          <button onClick={commitLabel} disabled={!draft.trim()} aria-label="Confirm field name" style={{ flex: 'none', height: 46, padding: '0 14px', border: 'none', borderRadius: 11, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 13, fontWeight: 700, cursor: draft.trim() ? 'pointer' : 'not-allowed', opacity: draft.trim() ? 1 : 0.5 }}>Set</button>
                           <button onClick={() => { removeCustomField(cf.id); setEditingLabelId(null); setLabelDraft(null); }} aria-label="Remove field" style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 20, lineHeight: 1, padding: 6, cursor: 'pointer' }}>&times;</button>
                         </div>
                       ) : (
@@ -650,7 +650,7 @@ function VersionCardPanel({ version, onChange, onUpload, onRemove, onClose }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
           <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(version.photo, 'contain') }}>
             {!version.photo && <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(version.name)}</span>}
-            <label style={{ position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 999, background: 'var(--text)', border: '2px solid var(--sheet)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <label style={{ position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 999, background: 'var(--accent)', border: '2px solid var(--sheet)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5-8 8L3 13.5l.5-2.5 8-8z" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg>
               <input type="file" accept="image/*" onChange={(e) => onUpload(e.target.files?.[0])} style={{ display: 'none' }} />
             </label>

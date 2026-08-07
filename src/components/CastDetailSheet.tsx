@@ -6,6 +6,7 @@ import { getPersonCredits, type PersonCredit } from '../lib/tmdb';
 
 // Softer, sentence-case field labels — less shouting for a glanceable sheet
 const fieldLabel: CSSProperties = { fontSize: 11.5, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 };
+const fieldValue: CSSProperties = { fontSize: 14, color: 'var(--text-tertiary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 };
 
 function EditIcon() {
   return <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11.3 2.3a1.5 1.5 0 0 1 2.1 2.1L5.7 12l-2.9.7.7-2.9 7.8-7.5z" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" fill="none"></path></svg>;
@@ -84,7 +85,7 @@ export default function CastDetailSheet() {
         </button>
 
         <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
-          <div style={{ position: 'relative', width: 84, height: 84, borderRadius: 18, flex: 'none', overflow: 'hidden', backgroundColor: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(activeVersion?.photo || c.photo, 'contain') }}>
+          <div style={{ position: 'relative', width: 84, height: 84, borderRadius: 18, flex: 'none', overflow: 'hidden', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(activeVersion?.photo || c.photo, 'contain') }}>
             {!(activeVersion?.photo || c.photo) && <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(activeVersion?.name || c.name)}</span>}
           </div>
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -97,14 +98,14 @@ export default function CastDetailSheet() {
         {c.versions.length > 0 && (
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', marginBottom: 16, paddingBottom: 2 }}>
             <button onClick={() => setActiveVersionId(null)} style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${!activeVersionId ? 'var(--text)' : 'transparent'}`, ...bgStyle(c.photo, 'contain') }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${!activeVersionId ? 'var(--accent)' : 'transparent'}`, ...bgStyle(c.photo, 'contain') }}>
                 {!c.photo && <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(c.name)}</span>}
               </div>
               <span style={{ fontSize: 10, fontWeight: 700, color: !activeVersionId ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Present</span>
             </button>
             {c.versions.map((v) => (
               <button key={v.id} onClick={() => setActiveVersionId(v.id)} style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${activeVersionId === v.id ? 'var(--text)' : 'transparent'}`, ...bgStyle(v.photo, 'contain') }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${activeVersionId === v.id ? 'var(--accent)' : 'transparent'}`, ...bgStyle(v.photo, 'contain') }}>
                   {!v.photo && <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(v.name)}</span>}
                 </div>
                 <span style={{ fontSize: 10, fontWeight: 700, color: activeVersionId === v.id ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.age || v.name || 'Version'}</span>
@@ -134,13 +135,16 @@ export default function CastDetailSheet() {
           </>
         )}
 
+        {/* Empty fields are omitted rather than shown as a dash — a dash reads as a failed load. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <div><div style={fieldLabel}>Age</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.age || '—'}</div></div>
-            <div><div style={fieldLabel}>Hometown</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.hometown || '—'}</div></div>
-          </div>
-          <div><div style={fieldLabel}>Occupation</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.occupation || '—'}</div></div>
-          <div><div style={fieldLabel}>First seen</div><div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{c.firstEp || '—'}</div></div>
+          {(c.age || c.hometown) && (
+            <div style={{ display: 'grid', gridTemplateColumns: c.age && c.hometown ? '1fr 1fr' : '1fr', gap: 14 }}>
+              {c.age && <div><div style={fieldLabel}>Age</div><div style={fieldValue}>{c.age}</div></div>}
+              {c.hometown && <div><div style={fieldLabel}>Hometown</div><div style={fieldValue}>{c.hometown}</div></div>}
+            </div>
+          )}
+          {c.occupation && <div><div style={fieldLabel}>Occupation</div><div style={fieldValue}>{c.occupation}</div></div>}
+          {c.firstEp && <div><div style={fieldLabel}>First seen</div><div style={fieldValue}>{c.firstEp}</div></div>}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <div style={{ ...fieldLabel, marginBottom: 0 }}>Notes</div>
@@ -151,17 +155,19 @@ export default function CastDetailSheet() {
                 <textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} placeholder="Add a quick note&hellip;" className="ct-textarea" style={{ minHeight: 60, fontSize: 13.5, marginBottom: 6 }} />
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setNotesEditing(false)} style={{ flex: 1, height: 34, border: '1px solid var(--input-border)', borderRadius: 9, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={saveNotes} style={{ flex: 1, height: 34, border: 'none', borderRadius: 9, background: 'var(--text)', color: '#fff', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                  <button onClick={saveNotes} style={{ flex: 1, height: 34, border: 'none', borderRadius: 9, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Save</button>
                 </div>
               </>
             ) : (
-              <div style={{ fontSize: 14, color: 'var(--text-tertiary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{c.notes || '—'}</div>
+              c.notes
+                ? <div style={fieldValue}>{c.notes}</div>
+                : <button onClick={startNotesEdit} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 14, color: 'var(--text-faint)' }}>Add a note</button>
             )}
           </div>
-          {(c.customFields || []).map((cf) => (
+          {(c.customFields || []).filter((cf) => cf.value).map((cf) => (
             <div key={cf.id}>
               <div style={fieldLabel}>{cf.label || 'Untitled'}</div>
-              <div style={{ fontSize: 14, color: 'var(--text-tertiary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{cf.value || '—'}</div>
+              <div style={fieldValue}>{cf.value}</div>
             </div>
           ))}
         </div>

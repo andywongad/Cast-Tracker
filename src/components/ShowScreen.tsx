@@ -124,8 +124,8 @@ export default function ShowScreen() {
           </div>
           {isRealityShow && (
             <div style={{ display: 'inline-flex', marginTop: 10, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: 3 }}>
-              <button onClick={() => setGridMode(true)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: gridMode ? 'var(--text)' : 'transparent', color: gridMode ? '#fff' : 'var(--text-secondary)' }}>Grid</button>
-              <button onClick={() => setGridMode(false)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', background: !gridMode ? 'var(--text)' : 'transparent', color: !gridMode ? '#fff' : 'var(--text-secondary)' }}>
+              <button onClick={() => setGridMode(true)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: gridMode ? 'var(--accent)' : 'transparent', color: gridMode ? '#fff' : 'var(--text-secondary)' }}>Grid</button>
+              <button onClick={() => setGridMode(false)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', background: !gridMode ? 'var(--accent)' : 'transparent', color: !gridMode ? '#fff' : 'var(--text-secondary)' }}>
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ marginRight: 5 }}><circle cx="4" cy="4" r="2" fill="currentColor" /><circle cx="12" cy="4" r="2" fill="currentColor" /><circle cx="8" cy="12" r="2" fill="currentColor" /><path d="M5.5 5.3L6.7 10.3M10.5 5.3L9.3 10.3M6 4h4" stroke="currentColor" strokeWidth="1.2" /></svg>
                 Relationship map
               </button>
@@ -143,10 +143,12 @@ export default function ShowScreen() {
       </div>
 
       {hasSeasons && (
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 8 }}>
+        <div className="ct-hscroll" style={{ marginBottom: 8 }}>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
           {orderedSeasons.map((sn) => (
-            <button key={sn} onClick={() => setSeason(sn)} style={{ flex: 'none', height: 32, padding: '0 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: currentSeason === sn ? 'none' : '1px solid var(--border)', background: currentSeason === sn ? 'var(--text)' : 'transparent', color: currentSeason === sn ? '#fff' : 'var(--text-secondary)' }}>Season {sn}</button>
+            <button key={sn} onClick={() => setSeason(sn)} style={{ flex: 'none', height: 32, padding: '0 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: currentSeason === sn ? 'none' : '1px solid var(--border)', background: currentSeason === sn ? 'var(--accent)' : 'transparent', color: currentSeason === sn ? 'var(--accent-text)' : 'var(--text-secondary)' }}>Season {sn}</button>
           ))}
+          </div>
         </div>
       )}
 

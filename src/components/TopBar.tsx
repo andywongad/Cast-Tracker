@@ -15,9 +15,9 @@ export default function TopBar() {
         </button>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
-        {!showBack && <div style={{ fontSize: 26, fontWeight: 300, letterSpacing: '-0.02em' }}>Cast Tracker</div>}
+        {!showBack && <div className="ct-heading" style={{ fontSize: 24 }}>Cast Tracker</div>}
         {showBack && (
-          <div style={{ fontSize: 21, fontWeight: 300, letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div className="ct-heading" style={{ fontSize: 20, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {show?.title || ''}
           </div>
         )}

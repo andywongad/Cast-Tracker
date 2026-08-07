@@ -6,13 +6,18 @@ import { searchShows, hasTmdbKey, img, inferShowType, type TmdbShowResult } from
 import { bgStyle } from '../lib/utils';
 
 export default function HomeScreen() {
-  const { data, settings, recentShows, showById } = useStore();
-  const { query, setQuery, openAddShow, openRedeem, openEditShow } = useUI();
+  const { data, settings, recentShows, showById, backupState, dismissBackupNudge } = useStore();
+  const { query, setQuery, openAddShow, openRedeem, openEditShow, openSettings } = useUI();
   const [tmdbResults, setTmdbResults] = useState<TmdbShowResult[]>([]);
   const [tmdbSearching, setTmdbSearching] = useState(false);
 
   const q = query.trim().toLowerCase();
   const isSearching = q.length > 0;
+
+  // Surface the device-only storage risk once there's enough in here to be worth losing,
+  // and only until the user either exports or waves it off.
+  const trackedCast = useMemo(() => data.shows.reduce((n, s) => n + s.cast.length, 0), [data.shows]);
+  const showBackupNudge = trackedCast >= 8 && !backupState.lastExportAt && !backupState.dismissedAt;
 
   useEffect(() => {
     if (!isSearching || !hasTmdbKey()) { setTmdbResults([]); setTmdbSearching(false); return; }
@@ -52,9 +57,22 @@ export default function HomeScreen() {
 
       <button onClick={() => openRedeem('show')} style={{ background: 'none', border: 'none', padding: 0, margin: '-10px 0 18px', fontSize: 12.5, fontWeight: 700, color: 'var(--accent-soft)', cursor: 'pointer' }}>Have a show code? Redeem it &rarr;</button>
 
+      {showBackupNudge && !isSearching && (
+        <div style={{ background: 'var(--card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, padding: 16, marginBottom: 22 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Your cast lives only on this device</div>
+          <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>
+            There&rsquo;s no account or sync — clearing your browser data would erase {trackedCast} {trackedCast === 1 ? 'person' : 'people'} across {data.shows.length} {data.shows.length === 1 ? 'show' : 'shows'}. Export a backup file to keep a copy.
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={openSettings} style={{ flex: 1, height: 40, border: 'none', borderRadius: 12, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Export a backup</button>
+            <button onClick={dismissBackupNudge} style={{ flex: 'none', height: 40, padding: '0 14px', border: 'none', borderRadius: 12, background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Not now</button>
+          </div>
+        </div>
+      )}
+
       {recentList.length > 0 && !isSearching && (
         <>
-          <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>Recently Viewed</div>
+          <div className="ct-eyebrow">Recently Viewed</div>
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, marginBottom: 22 }}>
             {recentList.map((s) => <RecentShowTile key={s.id} show={s} />)}
           </div>
@@ -70,7 +88,7 @@ export default function HomeScreen() {
           {searchResults.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 0 0' }}>
               <div style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>No shows match &ldquo;{query}&rdquo;.</div>
-              <button onClick={() => openAddShow()} style={{ height: 44, padding: '0 20px', border: 'none', borderRadius: 12, background: 'var(--text)', color: '#fff', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>+ Add &ldquo;{query}&rdquo; as a new show</button>
+              <button onClick={() => openAddShow()} style={{ height: 44, padding: '0 20px', border: 'none', borderRadius: 12, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>+ Add &ldquo;{query}&rdquo; as a new show</button>
             </div>
           )}
           {tmdbSearching && <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 18 }}>Searching TMDb&hellip;</div>}
@@ -99,13 +117,13 @@ export default function HomeScreen() {
             <div style={{ textAlign: 'center', padding: '48px 20px', border: '1px dashed var(--border)', borderRadius: 18, marginBottom: 8 }}>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Track your first show</div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18, lineHeight: 1.4 }}>Add a show to start tracking cast, episodes, and relationships.</div>
-              <button onClick={() => openAddShow()} style={{ height: 44, padding: '0 20px', border: 'none', borderRadius: 12, background: 'var(--text)', color: '#fff', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>Add a show</button>
+              <button onClick={() => openAddShow()} style={{ height: 44, padding: '0 20px', border: 'none', borderRadius: 12, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>Add a show</button>
             </div>
           )}
           {data.shows.length > 0 && (
             <>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Currently watching</span>
+                <span className="ct-eyebrow" style={{ marginBottom: 0 }}>Currently watching</span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{currentShows.length}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14, marginBottom: 26 }}>
@@ -114,7 +132,7 @@ export default function HomeScreen() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Completed</span>
+                <span className="ct-eyebrow" style={{ marginBottom: 0 }}>Completed</span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{completedShows.length}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>

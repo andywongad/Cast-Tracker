@@ -72,4 +72,26 @@ export function clearAllData() {
   localStorage.removeItem(DATA_KEY);
   localStorage.removeItem(SHARE_KEY);
   localStorage.removeItem(RECENT_KEY);
+  localStorage.removeItem(BACKUP_KEY);
+}
+
+const BACKUP_KEY = 'ct.backup.v1';
+
+/** Tracks whether the user has been told their data is device-only, and whether they acted on it. */
+export interface BackupState {
+  lastExportAt: number | null;
+  dismissedAt: number | null;
+}
+
+export function loadBackupState(): BackupState {
+  const s = safeParse<Partial<BackupState>>(localStorage.getItem(BACKUP_KEY), {});
+  return { lastExportAt: s.lastExportAt ?? null, dismissedAt: s.dismissedAt ?? null };
+}
+
+export function persistBackupState(s: BackupState) {
+  try {
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(s));
+  } catch {
+    /* ignore */
+  }
 }

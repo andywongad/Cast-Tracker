@@ -12,9 +12,8 @@ export default function Footer() {
         <span className="ct-footer-label">Translate</span>
       </button>
       <button style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }} onClick={addAction}>
-        {/* Charcoal, matching every other primary action — red is reserved for destructive ones. */}
-        <div style={{ width: 54, height: 54, borderRadius: 999, background: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: -26, boxShadow: 'var(--shadow-lift)', border: '5px solid var(--bg)' }}>
-          <span style={{ fontSize: 26, fontWeight: 300, color: 'var(--card)', lineHeight: 1 }}>+</span>
+        <div style={{ width: 54, height: 54, borderRadius: 999, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: -26, boxShadow: 'var(--shadow-lift)', border: '5px solid var(--bg)' }}>
+          <span style={{ fontSize: 26, fontWeight: 300, color: 'var(--accent-text)', lineHeight: 1 }}>+</span>
         </div>
         <span style={{ fontSize: 10.5, fontWeight: 500, color: 'var(--text-muted)', paddingBottom: 10 }}>{addLabel}</span>
       </button>

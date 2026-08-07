@@ -7,6 +7,9 @@ body {
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.011em;
 }
+/* Fraunces carries headings; Inter carries everything else. */
+:root { --font-heading: Fraunces, 'Iowan Old Style', Georgia, serif; }
+.ct-heading { font-family: var(--font-heading); font-weight: 500; letter-spacing: -0.01em; }
 #root { height: 100%; }
 input, textarea, button, select { font-family: inherit; }
 textarea { resize: none; }
@@ -68,13 +71,17 @@ a { color: inherit; }
   display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--text-muted); margin-bottom: 8px;
 }
+.ct-eyebrow {
+  display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 10px;
+}
 .ct-label-muted {
   display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.05em;
   color: var(--text-muted); margin-bottom: 6px;
 }
 
 .ct-btn-primary {
-  height: 52px; border: none; border-radius: 16px; background: var(--text); color: var(--card);
+  height: 52px; border: none; border-radius: 16px; background: var(--accent); color: var(--accent-text);
   font-size: 15px; font-weight: 500; cursor: pointer; letter-spacing: -0.01em;
 }
 .ct-btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -105,7 +112,7 @@ a { color: inherit; }
   justify-content: center; cursor: pointer;
 }
 /* Headings run larger and lighter for a premium feel. */
-.ct-sheet-title { font-size: 26px; font-weight: 300; letter-spacing: -0.02em; margin-bottom: 22px; }
+.ct-sheet-title { font-family: var(--font-heading); font-size: 24px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 22px; }
 
 .ct-pill {
   font-size: 11px; font-weight: 500; color: var(--text-secondary); background: var(--surface);
@@ -118,7 +125,7 @@ a { color: inherit; }
   transition: background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
 }
 .ct-tab-btn.is-active {
-  background: var(--card); color: var(--text); font-weight: 500; box-shadow: var(--shadow-card);
+  background: var(--accent); color: var(--accent-text); font-weight: 500; box-shadow: var(--shadow-card);
 }
 
 .ct-footer {
@@ -145,6 +152,13 @@ a { color: inherit; }
   background: var(--card); border: none; border-radius: 22px; padding: 12px;
   box-shadow: var(--shadow-card);
   display: flex; flex-direction: column; min-width: 0; cursor: pointer;
+}
+
+/* Trailing fade so a clipped horizontal row reads as scrollable. */
+.ct-hscroll { position: relative; }
+.ct-hscroll::after {
+  content: ''; position: absolute; right: 0; top: 0; bottom: 4px; width: 36px; pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--bg));
 }
 
 .ct-fade-img {

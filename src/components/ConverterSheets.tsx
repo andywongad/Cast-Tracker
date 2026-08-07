@@ -33,7 +33,7 @@ function SwapPuck({ onClick }: { onClick: () => void }) {
         aria-label="Swap"
         style={{
           position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
-          width: 42, height: 42, borderRadius: 999, background: 'var(--text)', border: '4px solid var(--sheet)',
+          width: 42, height: 42, borderRadius: 999, background: 'var(--accent)', border: '4px solid var(--sheet)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
           boxShadow: 'var(--shadow-card)', padding: 0,
         }}
