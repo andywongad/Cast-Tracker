@@ -8,6 +8,13 @@ export interface Relationship {
   label: string;
 }
 
+/** A user-defined field on a cast member — their own title plus free text, e.g. "Allies" / "Enemies". */
+export interface CustomField {
+  id: string;
+  label: string;
+  value: string;
+}
+
 export interface CastVersion {
   id: string;
   name: string;
@@ -59,6 +66,9 @@ export interface CastMember {
   imdbUrl: string;
   versions: CastVersion[];
   relationships: Relationship[];
+  customFields?: CustomField[];
+  /** Which optional fields the user has switched on for this member — kept even when left blank. */
+  shownFields?: string[];
   // relationship-map state, keyed by "season_episodeLabel"
   relByEp?: Record<string, MapRelationship[]>;
   mapCellByEp?: Record<string, MapCell | null>;

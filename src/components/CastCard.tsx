@@ -21,6 +21,7 @@ export default function CastCard({ show, c, compact }: { show: Show; c: CastMemb
   const displayNickname = activeVersion?.nickname || c.nickname;
   const displayDesc = activeVersion?.desc || c.desc;
   const displayPhoto = activeVersion?.photo || c.photo;
+  const displayOtherNames = (c.otherNames || []).filter(Boolean);
 
   return (
     <div className="ct-card" onClick={() => openCastDetail(c.id)}>
@@ -43,6 +44,11 @@ export default function CastCard({ show, c, compact }: { show: Show; c: CastMemb
 
       <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2, letterSpacing: '-0.005em' }}>{displayName}</div>
       {displayNickname && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 4 }}>&ldquo;{displayNickname}&rdquo;</div>}
+      {displayOtherNames.length > 0 && (
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontWeight: 700 }}>AKA</span> {displayOtherNames.join(', ')}
+        </div>
+      )}
 
       {compact ? (
         displayDesc && <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.4, marginTop: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayDesc}</div>

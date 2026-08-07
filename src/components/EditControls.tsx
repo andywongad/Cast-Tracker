@@ -7,9 +7,11 @@ interface EditControlsProps {
   autoSave: boolean;
   isSaving?: boolean;
   hasChanges?: boolean;
+  /** Fade out while an overlapping popover is open — kept mounted so the "Saved" timer survives. */
+  hidden?: boolean;
 }
 
-export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSaving, hasChanges = true }: EditControlsProps) {
+export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSaving, hasChanges = true, hidden = false }: EditControlsProps) {
   const [savedMessage, setSavedMessage] = useState(false);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
         fontWeight: 700,
         color: 'var(--text-muted)',
         transition: 'opacity 0.3s ease',
-        opacity: savedMessage ? 1 : 0.5,
+        opacity: hidden ? 0 : savedMessage ? 1 : 0.5,
         pointerEvents: 'none',
       }}>
         {isSaving ? '⟳ Saving...' : '✓ Saved'}
@@ -49,6 +51,9 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
       gap: 8,
       alignItems: 'center',
       zIndex: 50,
+      opacity: hidden ? 0 : 1,
+      pointerEvents: hidden ? 'none' : 'auto',
+      transition: 'opacity 0.15s ease',
     }}>
       <button
         onClick={onUndo}

@@ -65,6 +65,13 @@ export default function CastDetailSheet() {
 
   const relatedList = (c.relationships || []).map((r) => ({ rel: r, target: show.cast.find((x) => x.id === r.targetId) })).filter((x) => x.target);
 
+  const termLower = isDrama ? 'character' : 'contestant';
+  const deleteCast = () => {
+    if (!window.confirm(`Delete this ${termLower}?`)) return;
+    updateData((d) => { const s = d.shows.find((x) => x.id === show.id); if (s) s.cast = s.cast.filter((x) => x.id !== c.id); });
+    closeCastDetail();
+  };
+
   return (
     <div className="ct-scrim" onClick={closeCastDetail}>
       <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
@@ -151,6 +158,12 @@ export default function CastDetailSheet() {
               <div style={{ fontSize: 14, color: 'var(--text-tertiary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{c.notes || '—'}</div>
             )}
           </div>
+          {(c.customFields || []).map((cf) => (
+            <div key={cf.id}>
+              <div style={fieldLabel}>{cf.label || 'Untitled'}</div>
+              <div style={{ fontSize: 14, color: 'var(--text-tertiary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{cf.value || '—'}</div>
+            </div>
+          ))}
         </div>
 
         {hasActorInfo && (
@@ -196,6 +209,8 @@ export default function CastDetailSheet() {
             )}
           </div>
         )}
+
+        <button onClick={deleteCast} style={{ width: '100%', height: 40, border: 'none', background: 'transparent', color: '#E08A80', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginTop: 12 }}>Delete {termLower}</button>
       </div>
     </div>
   );

@@ -1,13 +1,26 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
-import type { CastVersion, Relationship, Gender } from '../types';
+import type { CastVersion, Relationship, Gender, CustomField } from '../types';
 import { bgStyle, genId, initials, colorForIndex } from '../lib/utils';
 import { getAggregateCredits, getEpisodeCredits, getSeasonEpisodeCount, hasTmdbKey, type AggregateCastMember } from '../lib/tmdb';
 import CropModal from './CropModal';
 import EditControls from './EditControls';
 
 const SOCIAL_PLATFORMS = ['Instagram', 'TikTok', 'X', 'YouTube', 'Facebook', 'Snapchat', 'Other'];
+
+type OptionalField = 'versions' | 'relationships' | 'gender' | 'age' | 'hometown' | 'occupation' | 'firstEp' | 'customFields';
+
+const OPTIONAL_FIELDS: { key: OptionalField; label: string }[] = [
+  { key: 'versions', label: 'Other versions (young / teen)' },
+  { key: 'relationships', label: 'Related to' },
+  { key: 'gender', label: 'Gender' },
+  { key: 'age', label: 'Age' },
+  { key: 'hometown', label: 'Hometown' },
+  { key: 'occupation', label: 'Occupation' },
+  { key: 'firstEp', label: 'First seen' },
+  { key: 'customFields', label: 'Add your own…' },
+];
 
 interface FormState {
   name: string;
@@ -30,13 +43,29 @@ interface FormState {
   imdbUrl: string;
   versions: CastVersion[];
   relationships: Relationship[];
+  customFields: CustomField[];
+  activeFields: OptionalField[];
 }
 
 function blankForm(season: number): FormState {
   return {
     name: '', otherNames: [], nickname: '', desc: '', photo: null, gender: '', age: '', hometown: '', occupation: '',
     notes: '', firstEp: '', season, actorName: '', actorTmdbId: null, social: '', socialPlatform: 'Instagram',
-    wikiUrl: '', imdbUrl: '', versions: [], relationships: [],
+    wikiUrl: '', imdbUrl: '', versions: [], relationships: [], customFields: [], activeFields: [],
+  };
+}
+
+/** The shape actually written to storage — trimmed, with blank rows dropped. */
+function toSavedFields(f: FormState) {
+  return {
+    name: f.name.trim(), native: '', nickname: f.nickname.trim(), otherNames: f.otherNames.map((s) => s.trim()).filter(Boolean),
+    desc: f.desc.trim(), photo: f.photo, notes: f.notes.trim(), versions: f.versions,
+    relationships: f.relationships.filter((r) => r.targetId && r.label.trim()).map((r) => ({ ...r, label: r.label.trim() })),
+    customFields: f.customFields.map((cf) => ({ ...cf, label: cf.label.trim(), value: cf.value.trim() })).filter((cf) => cf.label || cf.value),
+    shownFields: [...f.activeFields],
+    gender: f.gender, age: f.age.trim(), hometown: f.hometown.trim(), occupation: f.occupation.trim(),
+    social: f.social.trim(), socialPlatform: f.socialPlatform, firstEp: f.firstEp.trim(), season: f.season || 1,
+    actorName: f.actorName.trim(), actorTmdbId: f.actorTmdbId, wikiUrl: f.wikiUrl.trim(), imdbUrl: f.imdbUrl.trim(),
   };
 }
 
@@ -52,7 +81,14 @@ export default function AddCastSheet() {
 
   const [form, setForm] = useState<FormState>(blankForm(show?.currentSeason || 1));
   const [showOtherNames, setShowOtherNames] = useState(false);
-  const [showMore, setShowMore] = useState(false);
+  const [fieldMenuOpen, setFieldMenuOpen] = useState(false);
+  const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
+  // Field-name keystrokes live here, outside `form`, so typing one doesn't mark the form dirty
+  // or trip auto-save. Only "Set" commits the text.
+  const [labelDraft, setLabelDraft] = useState<{ id: string; text: string } | null>(null);
+  const [savedSnapshot, setSavedSnapshot] = useState('');
+  // Once a brand-new member is created we keep saving into that record instead of adding duplicates.
+  const createdIdRef = useRef<string | null>(null);
   const [nameQuery, setNameQuery] = useState('');
   const [tmdbCast, setTmdbCast] = useState<AggregateCastMember[]>([]);
   const [crop, setCrop] = useState<{ file: File | null; target: 'main' | { versionId: string } }>({ file: null, target: 'main' });
@@ -87,17 +123,29 @@ export default function AddCastSheet() {
         actorName: editing.actorName || '', actorTmdbId: editing.actorTmdbId, social: editing.social,
         socialPlatform: editing.socialPlatform || 'Instagram', wikiUrl: editing.wikiUrl, imdbUrl: editing.imdbUrl,
         versions: (editing.versions || []).map((v) => ({ ...v })), relationships: (editing.relationships || []).map((r) => ({ ...r })),
+        customFields: (editing.customFields || []).map((cf) => ({ ...cf })),
+        activeFields: [],
       };
+      // Use the selection the user last confirmed, so fields they switched on stay put even when left blank.
+      // Members saved before that was tracked fall back to "reveal anything holding data".
+      const keys = OPTIONAL_FIELDS.map(({ key }) => key);
+      initial.activeFields = editing.shownFields
+        ? keys.filter((k) => editing.shownFields!.includes(k))
+        : keys.filter((k) => { const v = initial[k]; return Array.isArray(v) ? v.length > 0 : !!v; });
       setForm(initial);
       originalFormRef.current = structuredClone(initial);
+      setSavedSnapshot(JSON.stringify(toSavedFields(initial)));
       setShowOtherNames((editing.otherNames || []).length > 0);
-      setShowMore(!!(editing.nickname || editing.age || editing.hometown || editing.occupation || editing.firstEp || editing.notes || (editing.versions || []).length || editing.actorName || editing.social || editing.wikiUrl || editing.imdbUrl || (editing.otherNames || []).length));
     } else {
       const blank = blankForm(show?.currentSeason || 1);
       setForm(blank);
       originalFormRef.current = structuredClone(blank);
-      setShowMore(false);
+      setSavedSnapshot(JSON.stringify(toSavedFields(blank)));
     }
+    setFieldMenuOpen(false);
+    setEditingLabelId(null);
+    setLabelDraft(null);
+    createdIdRef.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addCastSheet.open, addCastSheet.editingId]);
 
@@ -125,10 +173,9 @@ export default function AddCastSheet() {
     return tmdbCast.filter((p) => (isDrama ? p.character.toLowerCase().includes(q) : p.name.toLowerCase().includes(q))).slice(0, 5);
   }, [nameQuery, tmdbCast, isDrama]);
 
-  const hasChanges = useMemo(() => {
-    if (!originalFormRef.current) return false;
-    return JSON.stringify(form) !== JSON.stringify(originalFormRef.current);
-  }, [form]);
+  // Compare what *would* be written, not raw form state — otherwise trailing spaces or an empty
+  // custom-field row leave the ✓ lit up forever after a save.
+  const hasChanges = useMemo(() => JSON.stringify(toSavedFields(form)) !== savedSnapshot, [form, savedSnapshot]);
 
   // Auto-save effect
   useEffect(() => {
@@ -146,26 +193,23 @@ export default function AddCastSheet() {
     if (!form.name.trim() || !show) return;
     setIsSaving(true);
     try {
-      const fields = {
-        name: form.name.trim(), native: '', nickname: form.nickname.trim(), otherNames: form.otherNames.map((s) => s.trim()).filter(Boolean),
-        desc: form.desc.trim(), photo: form.photo, notes: form.notes.trim(), versions: form.versions,
-        relationships: form.relationships.filter((r) => r.targetId && r.label.trim()).map((r) => ({ ...r, label: r.label.trim() })),
-        gender: form.gender, age: form.age.trim(), hometown: form.hometown.trim(), occupation: form.occupation.trim(),
-        social: form.social.trim(), socialPlatform: form.socialPlatform, firstEp: form.firstEp.trim(), season: form.season || 1,
-        actorName: form.actorName.trim(), actorTmdbId: form.actorTmdbId, wikiUrl: form.wikiUrl.trim(), imdbUrl: form.imdbUrl.trim(),
-      };
+      const fields = toSavedFields(form);
+      const targetId = editing?.id || createdIdRef.current;
+      const newId = targetId ? null : genId('c');
       updateData((d) => {
         const s = d.shows.find((x) => x.id === show.id);
         if (!s) return;
-        if (editing) {
-          const c = s.cast.find((x) => x.id === editing.id);
+        if (targetId) {
+          const c = s.cast.find((x) => x.id === targetId);
           if (c) Object.assign(c, fields);
         } else {
-          s.cast.push({ ...fields, id: genId('c'), color: colorForIndex(s.cast.length) } as any);
+          s.cast.push({ ...fields, id: newId!, color: colorForIndex(s.cast.length) } as any);
         }
       });
-      originalFormRef.current = structuredClone({ ...form, ...fields });
-      if (!settings.autoSave) closeAddCast();
+      if (newId) createdIdRef.current = newId;
+      originalFormRef.current = structuredClone(form);
+      // Stay on the sheet — the ✓ greys out on its own now that the form matches what's stored.
+      setSavedSnapshot(JSON.stringify(fields));
     } finally {
       setIsSaving(false);
     }
@@ -215,6 +259,41 @@ export default function AddCastSheet() {
     setCrop({ file: null, target: 'main' });
   };
 
+  const activeFields = form.activeFields;
+  const hasField = (k: OptionalField) => activeFields.includes(k);
+
+  // Turning a field off clears its value too, so what you see in the form is what gets saved.
+  const toggleField = (k: OptionalField) => {
+    if (hasField(k)) {
+      setForm((f) => ({ ...f, activeFields: f.activeFields.filter((x) => x !== k) }));
+      setForm((f) => {
+        switch (k) {
+          case 'versions': return { ...f, versions: [] };
+          case 'relationships': return { ...f, relationships: [] };
+          case 'gender': return { ...f, gender: '' as Gender };
+          case 'age': return { ...f, age: '' };
+          case 'hometown': return { ...f, hometown: '' };
+          case 'occupation': return { ...f, occupation: '' };
+          case 'firstEp': return { ...f, firstEp: '' };
+          case 'customFields': return { ...f, customFields: [] };
+        }
+      });
+    } else {
+      setForm((f) => ({ ...f, activeFields: [...f.activeFields, k] }));
+      if (k === 'relationships') setForm((f) => (f.relationships.length ? f : { ...f, relationships: [{ id: genId('r'), targetId: '', label: '' }] }));
+      if (k === 'customFields') setForm((f) => (f.customFields.length ? f : { ...f, customFields: [{ id: genId('cf'), label: '', value: '' }] }));
+    }
+  };
+
+  const addCustomField = () => setForm((f) => ({ ...f, customFields: [...f.customFields, { id: genId('cf'), label: '', value: '' }] }));
+  const removeCustomField = (id: string) => setForm((f) => ({ ...f, customFields: f.customFields.filter((cf) => cf.id !== id) }));
+  const setCustomField = (id: string, key: 'label' | 'value', val: string) => setForm((f) => ({ ...f, customFields: f.customFields.map((cf) => (cf.id === id ? { ...cf, [key]: val } : cf)) }));
+
+  // "Related to" is only offerable once there is somebody else in the show to relate to.
+  const canRelate = (show?.cast.length || 0) > (editing ? 1 : 0);
+  const availableFields = OPTIONAL_FIELDS.filter(({ key }) => key !== 'relationships' || canRelate);
+  const trioCount = (['gender', 'age', 'hometown'] as const).filter((k) => activeFields.includes(k)).length;
+
   const addRelationship = () => setForm((f) => ({ ...f, relationships: [...f.relationships, { id: genId('r'), targetId: '', label: '' }] }));
   const removeRelationship = (id: string) => setForm((f) => ({ ...f, relationships: f.relationships.filter((r) => r.id !== id) }));
   const setRelField = (id: string, key: 'targetId' | 'label', val: string) => setForm((f) => ({ ...f, relationships: f.relationships.map((r) => (r.id === id ? { ...r, [key]: val } : r)) }));
@@ -233,6 +312,8 @@ export default function AddCastSheet() {
       name: form.name.trim(), native: '', nickname: form.nickname.trim(), otherNames: form.otherNames.map((s) => s.trim()).filter(Boolean),
       desc: form.desc.trim(), photo: form.photo, notes: form.notes.trim(), versions: form.versions,
       relationships: form.relationships.filter((r) => r.targetId && r.label.trim()).map((r) => ({ ...r, label: r.label.trim() })),
+      customFields: form.customFields.map((cf) => ({ ...cf, label: cf.label.trim(), value: cf.value.trim() })).filter((cf) => cf.label || cf.value),
+      shownFields: [...form.activeFields],
       gender: form.gender, age: form.age.trim(), hometown: form.hometown.trim(), occupation: form.occupation.trim(),
       social: form.social.trim(), socialPlatform: form.socialPlatform, firstEp: form.firstEp.trim(), season: form.season || 1,
       actorName: form.actorName.trim(), actorTmdbId: form.actorTmdbId, wikiUrl: form.wikiUrl.trim(), imdbUrl: form.imdbUrl.trim(),
@@ -322,7 +403,7 @@ export default function AddCastSheet() {
           </div>
         ) : (
           <>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: showMore ? 6 : 16, overflowX: 'auto', paddingBottom: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: hasField('versions') ? 6 : 16, overflowX: 'auto', paddingBottom: 2 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 'none' }}>
                 <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(form.photo, 'contain') }}>
                   {!form.photo && <span style={{ fontSize: 22, fontWeight: 800, color: 'rgba(99,102,241,0.8)' }}>{initials(form.name)}</span>}
@@ -331,10 +412,10 @@ export default function AddCastSheet() {
                     <input type="file" accept="image/*" onChange={(e) => openCropFor(e.target.files?.[0], 'main')} style={{ display: 'none' }} />
                   </label>
                 </div>
-                {showMore && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Present</span>}
+                {hasField('versions') && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Present</span>}
               </div>
 
-              {showMore && form.versions.map((v) => (
+              {hasField('versions') && form.versions.map((v) => (
                 <div key={v.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 'none' }}>
                   <div onClick={() => setVersionCardId(v.id)} style={{ position: 'relative', width: 66, height: 66, flex: 'none', cursor: 'pointer' }}>
                     <button onClick={(e) => { e.stopPropagation(); removeVersion(v.id); }} style={{ position: 'absolute', top: -6, right: -6, zIndex: 1, width: 20, height: 20, borderRadius: 999, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 11, lineHeight: 1, cursor: 'pointer' }}>&times;</button>
@@ -346,9 +427,9 @@ export default function AddCastSheet() {
                 </div>
               ))}
 
-              {showMore && <button onClick={addVersion} style={{ width: 66, height: 66, flex: 'none', border: '1px dashed var(--input-border)', borderRadius: 16, background: 'transparent', color: 'var(--text-secondary)', fontSize: 24, fontWeight: 400, lineHeight: 1, cursor: 'pointer' }} title="Add a younger/older version">+</button>}
+              {hasField('versions') && <button onClick={addVersion} style={{ width: 66, height: 66, flex: 'none', border: '1px dashed var(--input-border)', borderRadius: 16, background: 'transparent', color: 'var(--text-secondary)', fontSize: 24, fontWeight: 400, lineHeight: 1, cursor: 'pointer' }} title="Add a younger/older version">+</button>}
             </div>
-            {showMore && <div style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.4, marginBottom: 16 }}>Tap + to add another version of this {termLower} — like a younger flashback — with its own photo and age. Tap a photo to edit it.</div>}
+            {hasField('versions') && <div style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.4, marginBottom: 16 }}>Tap + to add another version of this {termLower} — like a younger flashback — with its own photo and age. Tap a photo to edit it.</div>}
 
             <label className="ct-label">{term} NAME *</label>
             <div style={{ position: 'relative', marginBottom: 16 }}>
@@ -370,7 +451,7 @@ export default function AddCastSheet() {
 
             {showOtherNames ? (
               <>
-                <label className="ct-label">ALTERNATE NAMES</label>
+                <label className="ct-label">ALSO KNOWN AS</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
                   {form.otherNames.map((on, i) => (
                     <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -382,16 +463,39 @@ export default function AddCastSheet() {
                 <button onClick={() => setForm((f) => ({ ...f, otherNames: [...f.otherNames, ''] }))} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add another name</button>
               </>
             ) : (
-              <button onClick={() => { setShowOtherNames(true); setForm((f) => ({ ...f, otherNames: f.otherNames.length ? f.otherNames : [''] })); }} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add alternate names</button>
+              <button onClick={() => { setShowOtherNames(true); setForm((f) => ({ ...f, otherNames: f.otherNames.length ? f.otherNames : [''] })); }} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 16, cursor: 'pointer' }}>+ Add other names they go by</button>
             )}
 
-            <label className="ct-label">{term} NICKNAME</label>
+            <label className="ct-label">YOUR NICKNAME FOR THE {term}</label>
             <input value={form.nickname} onChange={(e) => setForm((f) => ({ ...f, nickname: e.target.value }))} placeholder="What do you call them?" className="ct-input" style={{ marginBottom: 16 }} />
 
             <label className="ct-label">{term} VISUAL DESCRIPTION</label>
             <textarea value={form.desc} onChange={(e) => setForm((f) => ({ ...f, desc: e.target.value }))} placeholder="Chunky glasses, pink hat, high cheekbones&hellip;" className="ct-textarea" style={{ marginBottom: 16 }} />
 
-            {show.cast.length > (editing ? 1 : 0) && (
+            <label className="ct-label">NOTES</label>
+            <textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Your own notes about this character&hellip;" rows={3} className="ct-textarea" style={{ marginBottom: 16 }} />
+
+            <div style={{ position: 'relative', marginBottom: 16 }}>
+              <button onClick={() => setFieldMenuOpen((o) => !o)} style={{ width: '100%', height: 44, border: '1px dashed var(--input-border)', borderRadius: 12, background: 'transparent', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                + Add more details<span style={{ fontSize: 9, opacity: 0.75 }}>{fieldMenuOpen ? '▲' : '▼'}</span>
+              </button>
+              {fieldMenuOpen && (
+                <>
+                  <div onClick={() => setFieldMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
+                  <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 31, border: '1px solid var(--input-border)', borderRadius: 12, background: 'var(--surface)', boxShadow: '0 12px 28px rgba(0,0,0,0.22)', padding: 5 }}>
+                    {availableFields.map(({ key, label }) => (
+                      <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 14, color: 'var(--text)' }}>
+                        <input type="checkbox" checked={hasField(key)} onChange={() => toggleField(key)} style={{ width: 16, height: 16, accentColor: '#6366F1', cursor: 'pointer' }} />
+                        {label}
+                      </label>
+                    ))}
+                    <button onClick={() => setFieldMenuOpen(false)} style={{ width: '100%', height: 38, marginTop: 4, border: 'none', borderRadius: 9, background: '#6366F1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Done</button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {hasField('relationships') && (
               <>
                 <label className="ct-label">RELATED TO</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
@@ -410,55 +514,95 @@ export default function AddCastSheet() {
               </>
             )}
 
-            {!showMore && (
-              <button onClick={() => setShowMore(true)} style={{ width: '100%', height: 44, border: '1px dashed var(--input-border)', borderRadius: 12, background: 'transparent', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 16 }}>+ Add more details</button>
-            )}
-
-            {showMore && (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+            {trioCount > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${trioCount}, 1fr)`, gap: 10, marginBottom: 12 }}>
+                {hasField('gender') && (
                   <div><label className="ct-label">GENDER</label>
                     <select value={form.gender} onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value as Gender }))} className="ct-input" style={{ padding: '0 10px', fontSize: 14 }}>
                       <option value="">Not set</option><option value="Female">Female</option><option value="Male">Male</option><option value="Non-binary">Non-binary</option>
                     </select>
                   </div>
-                  <div><label className="ct-label">AGE</label><input value={form.age} onChange={(e) => setForm((f) => ({ ...f, age: e.target.value }))} className="ct-input" /></div>
-                  <div><label className="ct-label">HOMETOWN</label><input value={form.hometown} onChange={(e) => setForm((f) => ({ ...f, hometown: e.target.value }))} className="ct-input" /></div>
-                </div>
-                <div style={{ marginBottom: 12 }}><label className="ct-label">OCCUPATION</label><input value={form.occupation} onChange={(e) => setForm((f) => ({ ...f, occupation: e.target.value }))} className="ct-input" /></div>
-                <div style={{ marginBottom: 12 }}>
-                  <label className="ct-label">FIRST SEEN</label>
-                  <select value={form.firstEp} onChange={(e) => setForm((f) => ({ ...f, firstEp: e.target.value }))} className="ct-input">
-                    <option value="">Not sure yet</option>
-                    {firstEpOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
-                  </select>
-                </div>
-                <div style={{ marginBottom: 16 }}><label className="ct-label">NOTES</label><textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Your own notes about this character&hellip;" rows={3} className="ct-textarea" /></div>
-
-                <div style={{ padding: '16px 14px', borderRadius: 14, background: 'color-mix(in oklch, var(--accent-soft) 8%, transparent)', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 4, height: 14, borderRadius: 2, background: 'var(--accent-soft)' }} /><div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--accent-soft)' }}>{isDrama ? 'ABOUT THE ACTOR' : 'MORE'}</div></div>
-                  {isDrama && <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: -6 }}>Real-world info — separate from the character</div>}
-                  {isDrama && (
-                    <div><label className="ct-label">ACTOR NAME</label><input value={form.actorName} onChange={(e) => setForm((f) => ({ ...f, actorName: e.target.value }))} placeholder="Real actor's name" className="ct-input" /></div>
-                  )}
-                  <div>
-                    <label className="ct-label">SOCIAL</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '108px 1fr', gap: 8 }}>
-                      <select value={form.socialPlatform} onChange={(e) => setForm((f) => ({ ...f, socialPlatform: e.target.value }))} style={{ width: '100%', height: 46, border: '1px solid var(--input-border)', borderRadius: 11, background: 'var(--surface)', padding: '0 8px', fontSize: 13, color: 'var(--text)' }}>
-                        {SOCIAL_PLATFORMS.map((sp) => <option key={sp} value={sp}>{sp}</option>)}
-                      </select>
-                      <input value={form.social} onChange={(e) => setForm((f) => ({ ...f, social: e.target.value }))} placeholder="@handle" className="ct-input" />
-                    </div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div><label className="ct-label">WIKIPEDIA LINK</label><input value={form.wikiUrl} onChange={(e) => setForm((f) => ({ ...f, wikiUrl: e.target.value }))} className="ct-input" /></div>
-                    <div><label className="ct-label">IMDB LINK</label><input value={form.imdbUrl} onChange={(e) => setForm((f) => ({ ...f, imdbUrl: e.target.value }))} className="ct-input" /></div>
-                  </div>
-                </div>
-
-                <button onClick={() => setShowMore(false)} style={{ width: '100%', height: 40, border: 'none', background: 'transparent', color: 'var(--text-muted)', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 4 }}>Show fewer details</button>
-              </>
+                )}
+                {hasField('age') && <div><label className="ct-label">AGE</label><input value={form.age} onChange={(e) => setForm((f) => ({ ...f, age: e.target.value }))} className="ct-input" /></div>}
+                {hasField('hometown') && <div><label className="ct-label">HOMETOWN</label><input value={form.hometown} onChange={(e) => setForm((f) => ({ ...f, hometown: e.target.value }))} className="ct-input" /></div>}
+              </div>
             )}
+            {hasField('occupation') && (
+              <div style={{ marginBottom: 12 }}><label className="ct-label">OCCUPATION</label><input value={form.occupation} onChange={(e) => setForm((f) => ({ ...f, occupation: e.target.value }))} className="ct-input" /></div>
+            )}
+            {hasField('firstEp') && (
+              <div style={{ marginBottom: 12 }}>
+                <label className="ct-label">FIRST SEEN</label>
+                <select value={form.firstEp} onChange={(e) => setForm((f) => ({ ...f, firstEp: e.target.value }))} className="ct-input">
+                  <option value="">Not sure yet</option>
+                  {firstEpOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
+                </select>
+              </div>
+            )}
+            {hasField('customFields') && (
+              <div style={{ marginBottom: 12 }}>
+                {form.customFields.map((cf) => {
+                  // A title stays editable until it has been confirmed once; the pencil brings it back.
+                  const titleEditing = editingLabelId === cf.id || !cf.label.trim();
+                  const draft = labelDraft?.id === cf.id ? labelDraft.text : cf.label;
+                  const commitLabel = () => {
+                    if (!draft.trim()) return;
+                    setCustomField(cf.id, 'label', draft.trim());
+                    setEditingLabelId(null);
+                    setLabelDraft(null);
+                  };
+                  return (
+                    <div key={cf.id} style={{ marginBottom: 10 }}>
+                      {titleEditing ? (
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                          <input
+                            value={draft}
+                            onChange={(e) => setLabelDraft({ id: cf.id, text: e.target.value })}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitLabel(); } }}
+                            placeholder="Field name — e.g. Allies, Enemies"
+                            className="ct-input"
+                            style={{ flex: 1, fontWeight: 700 }}
+                          />
+                          <button onClick={commitLabel} disabled={!draft.trim()} aria-label="Confirm field name" style={{ flex: 'none', height: 46, padding: '0 14px', border: 'none', borderRadius: 11, background: '#6366F1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: draft.trim() ? 'pointer' : 'not-allowed', opacity: draft.trim() ? 1 : 0.5 }}>Set</button>
+                          <button onClick={() => { removeCustomField(cf.id); setEditingLabelId(null); setLabelDraft(null); }} aria-label="Remove field" style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 20, lineHeight: 1, padding: 6, cursor: 'pointer' }}>&times;</button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
+                          <span className="ct-label" style={{ marginBottom: 0, textTransform: 'uppercase' }}>{cf.label}</span>
+                          <button onClick={() => { setEditingLabelId(cf.id); setLabelDraft({ id: cf.id, text: cf.label }); }} aria-label="Rename field" style={{ border: 'none', background: 'none', padding: 2, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5-8 8L3 13.5l.5-2.5 8-8z" stroke="#C9924A" strokeWidth="1.3" strokeLinejoin="round" /></svg>
+                          </button>
+                          <button onClick={() => removeCustomField(cf.id)} aria-label="Remove field" style={{ marginLeft: 'auto', border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 20, lineHeight: 1, padding: 6, cursor: 'pointer' }}>&times;</button>
+                        </div>
+                      )}
+                      <textarea value={cf.value} onChange={(e) => setCustomField(cf.id, 'value', e.target.value)} placeholder="What goes in this field?" rows={2} className="ct-textarea" />
+                    </div>
+                  );
+                })}
+                <button onClick={addCustomField} style={{ display: 'block', border: 'none', background: 'none', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, padding: 0, marginBottom: 4, cursor: 'pointer' }}>+ Add another field</button>
+              </div>
+            )}
+
+            <div style={{ padding: '16px 14px', borderRadius: 14, background: 'color-mix(in oklch, var(--accent-soft) 8%, transparent)', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 4, height: 14, borderRadius: 2, background: 'var(--accent-soft)' }} /><div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--accent-soft)' }}>{isDrama ? 'ABOUT THE ACTOR' : 'MORE'}</div></div>
+              {isDrama && <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: -6 }}>Real-world info — separate from the character</div>}
+              {isDrama && (
+                <div><label className="ct-label">ACTOR NAME</label><input value={form.actorName} onChange={(e) => setForm((f) => ({ ...f, actorName: e.target.value }))} placeholder="Real actor's name" className="ct-input" /></div>
+              )}
+              <div>
+                <label className="ct-label">SOCIAL</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '108px 1fr', gap: 8 }}>
+                  <select value={form.socialPlatform} onChange={(e) => setForm((f) => ({ ...f, socialPlatform: e.target.value }))} style={{ width: '100%', height: 46, border: '1px solid var(--input-border)', borderRadius: 11, background: 'var(--surface)', padding: '0 8px', fontSize: 13, color: 'var(--text)' }}>
+                    {SOCIAL_PLATFORMS.map((sp) => <option key={sp} value={sp}>{sp}</option>)}
+                  </select>
+                  <input value={form.social} onChange={(e) => setForm((f) => ({ ...f, social: e.target.value }))} placeholder="@handle" className="ct-input" />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div><label className="ct-label">WIKIPEDIA LINK</label><input value={form.wikiUrl} onChange={(e) => setForm((f) => ({ ...f, wikiUrl: e.target.value }))} className="ct-input" /></div>
+                <div><label className="ct-label">IMDB LINK</label><input value={form.imdbUrl} onChange={(e) => setForm((f) => ({ ...f, imdbUrl: e.target.value }))} className="ct-input" /></div>
+              </div>
+            </div>
 
             <EditControls
               onSave={handleSave}
@@ -467,6 +611,7 @@ export default function AddCastSheet() {
               autoSave={settings.autoSave}
               isSaving={isSaving}
               hasChanges={hasChanges}
+              hidden={fieldMenuOpen}
             />
             {editing && <button onClick={deleteCast} style={{ width: '100%', height: 40, border: 'none', background: 'transparent', color: '#E08A80', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginTop: 12 }}>Delete {termLower}</button>}
           </>
