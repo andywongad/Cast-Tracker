@@ -61,7 +61,8 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
-  if (req.header('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  // VercelRequest exposes a `headers` object, not Express's `header()` accessor.
+  if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
