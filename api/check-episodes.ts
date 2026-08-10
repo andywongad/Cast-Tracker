@@ -1,7 +1,10 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { kv } from '@vercel/kv';
 
-const TMDB_API_KEY = process.env.VITE_TMDB_API_KEY;
+// Server-only key. Deliberately NOT the VITE_-prefixed one: Vite inlines any VITE_* variable
+// into the client bundle, so that name is public by definition. Falls back to the old name so a
+// deploy that hasn't had TMDB_API_KEY added yet keeps working; drop the fallback once it's set.
+const TMDB_API_KEY = process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY;
 const FIREBASE_SERVER_KEY = process.env.FIREBASE_SERVER_KEY;
 
 async function sendPushNotification(subscription: any, title: string, body: string, showId: string) {
