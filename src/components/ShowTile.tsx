@@ -16,7 +16,7 @@ export function ShowTile({ show, columns, done = false }: { show: Show; columns:
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(150deg, rgba(255,255,255,0.14), rgba(0,0,0,0.32))' }} />
         <span style={{ position: 'absolute', top: 10, left: 10, maxWidth: 'calc(100% - 74px)', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.92)', background: 'rgba(0,0,0,0.28)', padding: '4px 8px', borderRadius: 999, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{typeLabel}</span>
         {!show.poster && <span style={{ position: 'absolute', right: 8, bottom: 6, fontSize: 60, fontWeight: 800, color: 'rgba(255,255,255,0.16)', lineHeight: 0.7 }}>{initials(show.title)}</span>}
-        <span style={{ position: 'absolute', left: 10, bottom: 10, fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>{show.cast.length} cast</span>
+        <span style={{ position: 'absolute', left: 10, bottom: 10, fontSize: 11, fontWeight: 600, color: '#fff', background: 'rgba(0,0,0,0.45)', padding: '3px 8px', borderRadius: 999, backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>{show.cast.length} cast</span>
         {caughtUpVisible && (
           <span style={{ position: 'absolute', left: 10, bottom: 30, fontSize: 9.5, fontWeight: 700, color: '#fff', background: 'var(--text-muted)', padding: '3px 7px', borderRadius: 999 }}>Caught up &middot; {show.caughtUpEp}</span>
         )}

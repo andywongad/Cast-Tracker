@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
+import { useAuth } from '../hooks/useAuth';
+import { isAuthPreviewEnabled } from '../lib/auth';
 
 export default function SettingsSheet() {
   const { settings, setTheme, setAutoSave, exportBackup, importBackup, resetAll } = useStore();
-  const { settingsOpen, closeSettings, goHome, openFeedback } = useUI();
+  const { session } = useAuth();
+  const { settingsOpen, closeSettings, goHome, openFeedback, openAuth } = useUI();
   const [resetConfirm, setResetConfirm] = useState(false);
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,6 +48,18 @@ export default function SettingsSheet() {
       <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="ct-sheet-grabber" />
         <div className="ct-sheet-title">Settings</div>
+
+        {isAuthPreviewEnabled() && (
+          <>
+            <label className="ct-label-muted">ACCOUNT</label>
+            <button onClick={openAuth} className="ct-btn-ghost" style={{ width: '100%', marginBottom: 6 }}>
+              {session ? `Signed in as ${session.email}` : 'Sign up or sign in'}
+            </button>
+            <div style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.45, marginBottom: 22 }}>
+              Preview of a future feature — no account is created yet.
+            </div>
+          </>
+        )}
 
         <label className="ct-label-muted">APPEARANCE</label>
         <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>

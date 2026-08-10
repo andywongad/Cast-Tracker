@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { StoreProvider, useStore } from './hooks/useStore';
 import { UIProvider, useUI } from './hooks/useUI';
+import { AuthProvider } from './hooks/useAuth';
 import { THEMES, themeVars } from './lib/theme';
 import { registerServiceWorker } from './lib/notifications';
 import TopBar from './components/TopBar';
@@ -15,6 +16,7 @@ import { ValueConverterSheet, TranslatorSheet } from './components/ConverterShee
 import { ShareSheet, RedeemSheet } from './components/ShareRedeem';
 import WebViewOverlay from './components/WebViewOverlay';
 import CastDetailSheet from './components/CastDetailSheet';
+import AuthSheet from './components/AuthSheet';
 
 function Shell() {
   const { settings } = useStore();
@@ -44,6 +46,7 @@ function Shell() {
       <RedeemSheet />
       <Footer />
       <SettingsSheet />
+      <AuthSheet />
       <FeedbackSheet />
       <ValueConverterSheet />
       <TranslatorSheet />
@@ -57,7 +60,9 @@ export default function App() {
   return (
     <StoreProvider>
       <UIProvider>
-        <Shell />
+        <AuthProvider>
+          <Shell />
+        </AuthProvider>
       </UIProvider>
     </StoreProvider>
   );
