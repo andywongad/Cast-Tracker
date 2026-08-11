@@ -258,7 +258,7 @@ export default function ShowScreen() {
                 <DensityToggle value={settings.castColumns || 2} options={[2, 3, 4]} onChange={setCastColumns} label="Cast columns" />
               </div>
               {showsPhotoMix && (
-                <div style={{ marginBottom: 12 }}>
+                <div style={{ marginTop: -2, marginBottom: 12 }}>
                   <button
                     onClick={() => setPhotoNoteOpen((v) => !v)}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
