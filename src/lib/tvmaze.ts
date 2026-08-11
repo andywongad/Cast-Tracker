@@ -126,6 +126,9 @@ export function matchCast(local: CastMember[], remote: TvmazeCastEntry[]): { ima
  * competing with TMDb's more complete one, so it adds a source without adding a kind of image.
  */
 export function displayPhoto(c: Pick<CastMember, 'characterPhoto' | 'photo'>): string | null {
+  // A photo the user cropped and uploaded themselves outranks everything — they chose it on
+  // purpose. Uploads are data: URIs; anything fetched from TMDb is an https URL.
+  if (c.photo?.startsWith('data:')) return c.photo;
   return c.characterPhoto || c.photo || null;
 }
 

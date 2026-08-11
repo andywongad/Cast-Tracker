@@ -21,7 +21,7 @@ export default function CastCard({ show, c, compact }: { show: Show; c: CastMemb
 
   return (
     <div className="ct-card" onClick={() => openCastDetail(c.id)}>
-      <div style={{ position: 'relative', aspectRatio: '1', borderRadius: 14, overflow: 'hidden', backgroundColor: 'var(--surface)', marginBottom: 10, ...bgStyle(shownPhoto, 'contain') }}>
+      <div style={{ position: 'relative', aspectRatio: '1', borderRadius: 14, overflow: 'hidden', backgroundColor: 'var(--surface)', marginBottom: 10, ...bgStyle(shownPhoto, '100% auto', 'center') }}>
         {!shownPhoto && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(displayName)}</div>
         )}

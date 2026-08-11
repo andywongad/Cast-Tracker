@@ -24,6 +24,7 @@ export default function ShowScreen() {
   const [mapHelpOpen, setMapHelpOpen] = useState(false);
   const [castQuery, setCastQuery] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [photoNoteOpen, setPhotoNoteOpen] = useState(false);
 
   useEffect(() => { if (activeShowId) pushRecent(activeShowId); }, [activeShowId, pushRecent]);
 
@@ -47,36 +48,51 @@ export default function ShowScreen() {
   }, [show?.tmdbId]);
 
   // In-character stills from TVmaze. Scripted only — TVmaze's cast endpoint returns hosts and
-  // judges for reality, never contestants, so a lookup there is a guaranteed miss. Runs once per
-  // show: tvmazeId is persisted, including `null` for "checked, no match".
+  // judges for reality, never contestants, so a lookup there is a guaranteed miss.
+  //
+  // Keyed on unresolved *cast members*, not on the show. Gating this on `tvmazeId === undefined`
+  // meant it fired once when a show was created — while the cast list was still empty — matched
+  // nothing, and never ran again, so every cast member added afterwards silently missed out.
+  // characterPhoto tri-states: undefined = never checked, null = checked with no match, string =
+  // resolved. Only `undefined` triggers work, so this settles and won't loop.
+  const unresolvedCast = show?.cast.some((c) => c.characterPhoto === undefined) ?? false;
   useEffect(() => {
     const id = show?.id;
     const tmdbId = show?.tmdbId;
-    if (!id || !tmdbId || show?.type !== 'DRAMA') return;
-    if (show?.tvmazeId !== undefined) return;
+    if (!id || !tmdbId || show?.type !== 'DRAMA' || !unresolvedCast) return;
+
+    // Show already checked and known absent from TVmaze: mark the newcomers resolved rather than
+    // re-fetching a lookup that can't succeed.
+    if (show.tvmazeId === null) {
+      updateData((d) => {
+        const sh = d.shows.find((x) => x.id === id);
+        sh?.cast.forEach((c) => { if (c.characterPhoto === undefined) c.characterPhoto = null; });
+      });
+      return;
+    }
 
     let alive = true;
+    // Cheap to repeat: the route is edge-cached for 24h and TVmaze image URLs are immutable.
     fetchTvmazeCast(tmdbId).then((result) => {
       if (!alive || !result) return;
       updateData((d) => {
-        const s = d.shows.find((x) => x.id === id);
-        if (!s) return;
-        s.tvmazeId = result.tvmazeId;
-        if (!result.tvmazeId || !result.cast.length) return;
-        const { images, report } = matchCast(s.cast, result.cast);
-        s.cast.forEach((c) => { const img = images.get(c.id); if (img) c.characterPhoto = img; });
-        if (report.unmatchedLocal.length || report.unmatchedRemote.length) {
-          // Surfaced rather than swallowed, so bad matching is visible instead of looking like
-          // thin coverage.
-          console.info('[tvmaze] matched %d/%d, %d with images', report.matched, s.cast.length, report.withImage);
-          if (report.unmatchedLocal.length) console.info('[tvmaze] no TVmaze entry for:', report.unmatchedLocal);
-          if (report.unmatchedRemote.length) console.info('[tvmaze] unused TVmaze entries:', report.unmatchedRemote);
-        }
+        const sh = d.shows.find((x) => x.id === id);
+        if (!sh) return;
+        sh.tvmazeId = result.tvmazeId;
+
+        const { images, report } = matchCast(sh.cast, result.cast);
+        // Write every member, not just hits — a null records "checked, nothing there" and stops
+        // this from re-running forever on cast TVmaze doesn't have.
+        sh.cast.forEach((c) => { c.characterPhoto = images.get(c.id) ?? c.characterPhoto ?? null; });
+
+        console.info('[tvmaze] %s: matched %d/%d, %d with images', sh.title, report.matched, sh.cast.length, report.withImage);
+        if (report.unmatchedLocal.length) console.info('[tvmaze] no TVmaze entry for:', report.unmatchedLocal);
+        if (report.unmatchedRemote.length) console.info('[tvmaze] unused TVmaze entries:', report.unmatchedRemote);
       });
     });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show?.id, show?.tmdbId, show?.type, show?.tvmazeId]);
+  }, [show?.id, show?.tmdbId, show?.type, show?.tvmazeId, unresolvedCast]);
 
   const currentSeason = show?.currentSeason || 1;
 
@@ -111,6 +127,10 @@ export default function ShowScreen() {
     updateData((d) => { const s = d.shows.find((x) => x.id === show.id); if (s) s.mapEpisode = val; });
   };
 
+  // Only worth explaining when the grid actually shows a mix — not when every card is one kind.
+  const inCharacterCount = visibleCast.filter((c) => c.characterPhoto).length;
+  const showsPhotoMix = show.type === 'DRAMA' && inCharacterCount > 0 && inCharacterCount < visibleCast.length;
+
   const bulkEp = epNumFromLabel(show.caughtUpEp || 'Ep 1');
   const bulkAdd = async () => {
     if (!show?.tmdbId || !hasTmdbKey()) return;
@@ -132,6 +152,9 @@ export default function ShowScreen() {
             actorName: isDrama ? p.name : '', actorTmdbId: p.id || null, wikiUrl: '', imdbUrl: '', versions: [], relationships: [],
           });
         });
+        // Adding an episode's cast means you've watched it — reflect that in "Caught up through"
+        // rather than leaving it on the em-dash and making the user set it again by hand.
+        s.caughtUpEp = `Ep ${bulkEp}`;
       });
     } finally {
       setBulkBusy(false);
@@ -219,6 +242,31 @@ export default function ShowScreen() {
                 {showBulk && <button onClick={bulkAdd} disabled={bulkBusy} style={{ flex: 1, minWidth: 0, height: 42, border: '1px dashed var(--border)', borderRadius: 12, background: 'transparent', color: 'var(--accent-soft)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>{bulkAddLabel}</button>}
                 <DensityToggle value={settings.castColumns || 2} options={[2, 3, 4]} onChange={setCastColumns} label="Cast columns" />
               </div>
+              {showsPhotoMix && (
+                <div style={{ marginBottom: 12 }}>
+                  <button
+                    onClick={() => setPhotoNoteOpen((v) => !v)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                      Why do some photos show the actor?
+                    </span>
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" style={{ transform: photoNoteOpen ? 'rotate(180deg)' : 'none', flex: 'none' }}>
+                      <path d="M3 5.5L8 10.5L13 5.5" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  {photoNoteOpen && (
+                    <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 8, background: 'var(--surface)', borderRadius: 12, padding: '12px 14px' }}>
+                      In-character photos come from{' '}
+                      <a href={show.tvmazeId ? `https://www.tvmaze.com/shows/${show.tvmazeId}` : 'https://www.tvmaze.com'} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-soft)', fontWeight: 700, textDecoration: 'none' }}>TVmaze</a>
+                      , which lists <strong style={{ color: 'var(--text)' }}>{inCharacterCount}</strong> of these {visibleCast.length}. TMDb, where the rest of this
+                      cast comes from, doesn&rsquo;t allow in-character profile photos — so anyone TVmaze
+                      doesn&rsquo;t list falls back to the actor&rsquo;s headshot. Minor and one-episode roles
+                      are the usual gap.
+                    </div>
+                  )}
+                </div>
+              )}
               <CastGrid show={show} cast={visibleCast} />
             </>
           )}

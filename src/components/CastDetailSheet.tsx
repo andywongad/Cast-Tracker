@@ -86,7 +86,7 @@ export default function CastDetailSheet() {
         </button>
 
         <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
-          <div style={{ position: 'relative', width: 84, height: 84, borderRadius: 18, flex: 'none', overflow: 'hidden', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(activeVersion?.photo || displayPhoto(c), 'contain') }}>
+          <div style={{ position: 'relative', width: 84, height: 84, borderRadius: 18, flex: 'none', overflow: 'hidden', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(activeVersion?.photo || displayPhoto(c), '100% auto', 'center') }}>
             {!(activeVersion?.photo || displayPhoto(c)) && <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(activeVersion?.name || c.name)}</span>}
           </div>
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -99,14 +99,14 @@ export default function CastDetailSheet() {
         {c.versions.length > 0 && (
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', marginBottom: 16, paddingBottom: 2 }}>
             <button onClick={() => setActiveVersionId(null)} style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${!activeVersionId ? 'var(--accent)' : 'transparent'}`, ...bgStyle(displayPhoto(c), 'contain') }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${!activeVersionId ? 'var(--accent)' : 'transparent'}`, ...bgStyle(displayPhoto(c), '100% auto', 'center') }}>
                 {!displayPhoto(c) && <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(c.name)}</span>}
               </div>
               <span style={{ fontSize: 10, fontWeight: 700, color: !activeVersionId ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Present</span>
             </button>
             {c.versions.map((v) => (
               <button key={v.id} onClick={() => setActiveVersionId(v.id)} style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
-                <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${activeVersionId === v.id ? 'var(--accent)' : 'transparent'}`, ...bgStyle(v.photo, 'contain') }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${activeVersionId === v.id ? 'var(--accent)' : 'transparent'}`, ...bgStyle(v.photo, '100% auto', 'center') }}>
                   {!v.photo && <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(v.name)}</span>}
                 </div>
                 <span style={{ fontSize: 10, fontWeight: 700, color: activeVersionId === v.id ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.age || v.name || 'Version'}</span>

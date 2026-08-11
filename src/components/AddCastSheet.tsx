@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import type { CastVersion, Relationship, Gender, CustomField } from '../types';
 import { bgStyle, genId, initials, colorForIndex } from '../lib/utils';
+import { displayPhoto } from '../lib/tvmaze';
 import { getAggregateCredits, getEpisodeCredits, getSeasonEpisodeCount, hasTmdbKey, type AggregateCastMember } from '../lib/tmdb';
 import CropModal from './CropModal';
 import EditControls from './EditControls';
@@ -102,6 +103,11 @@ export default function AddCastSheet() {
   const [afEpisodeCount, setAfEpisodeCount] = useState(12);
   const [afPreview, setAfPreview] = useState<{ name: string; character: string; photo: string | null; id: number }[]>([]);
   const [afLoading, setAfLoading] = useState(false);
+
+  // Mirror what the show page and detail sheet render, so the edit form doesn't show a different
+  // face than the card you tapped. An upload still wins the moment it's made — displayPhoto
+  // prefers data: URIs — so the tile updates immediately when you crop a new one.
+  const previewPhoto = displayPhoto({ photo: form.photo, characterPhoto: editing?.characterPhoto });
 
   const isDrama = show?.type === 'DRAMA';
   const term = isDrama ? 'CHARACTER' : 'CONTESTANT';
@@ -405,8 +411,8 @@ export default function AddCastSheet() {
           <>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: hasField('versions') ? 6 : 16, overflowX: 'auto', paddingBottom: 2 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 'none' }}>
-                <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(form.photo, 'contain') }}>
-                  {!form.photo && <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(form.name)}</span>}
+                <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(previewPhoto, '100% auto', 'center') }}>
+                  {!previewPhoto && <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(form.name)}</span>}
                   <label style={{ position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 999, background: 'var(--accent)', border: '2px solid var(--sheet)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5-8 8L3 13.5l.5-2.5 8-8z" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg>
                     <input type="file" accept="image/*" onChange={(e) => openCropFor(e.target.files?.[0], 'main')} style={{ display: 'none' }} />

@@ -29,6 +29,11 @@ export function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
-export function bgStyle(url: string | null | undefined, size: 'cover' | 'contain' = 'cover') {
-  return url ? { backgroundImage: `url("${url}")`, backgroundSize: size, backgroundPosition: 'center', backgroundRepeat: 'no-repeat' as const } : {};
+/**
+ * `size` accepts any background-size value, not just cover/contain — cast cards use '100% auto'
+ * to scale a portrait still to the card's full width and let the bottom overflow.
+ * `position` defaults to centre; pass 'top' to anchor the crop so faces are never cut off.
+ */
+export function bgStyle(url: string | null | undefined, size: string = 'cover', position: string = 'center') {
+  return url ? { backgroundImage: `url("${url}")`, backgroundSize: size, backgroundPosition: position, backgroundRepeat: 'no-repeat' as const } : {};
 }
