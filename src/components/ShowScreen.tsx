@@ -257,8 +257,10 @@ export default function ShowScreen() {
                 {showBulk && <button onClick={bulkAdd} disabled={bulkBusy} style={{ flex: 1, minWidth: 0, height: 42, border: '1px dashed var(--border)', borderRadius: 12, background: 'transparent', color: 'var(--accent-soft)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>{bulkAddLabel}</button>}
                 <DensityToggle value={settings.castColumns || 2} options={[2, 3, 4]} onChange={setCastColumns} label="Cast columns" />
               </div>
+              {/* The cast cards' action buttons hang 11px above the card edge, so a 12px bottom gap
+                  left roughly 1px of real clearance. This clears the buttons, not the cards. */}
               {showsPhotoMix && (
-                <div style={{ marginTop: -2, marginBottom: 12 }}>
+                <div style={{ marginTop: -2, marginBottom: 24 }}>
                   <button
                     onClick={() => setPhotoNoteOpen((v) => !v)}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
