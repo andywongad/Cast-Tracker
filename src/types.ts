@@ -67,6 +67,12 @@ export interface CastMember {
   versions: CastVersion[];
   relationships: Relationship[];
   customFields?: CustomField[];
+  /**
+   * In-character still from TVmaze, preferred over `photo` (a TMDb actor headshot) when present.
+   * TVmaze image URLs are immutable — a changed primary image gets a new URL — so this is safe
+   * to persist indefinitely.
+   */
+  characterPhoto?: string | null;
   /** Which optional fields the user has switched on for this member — kept even when left blank. */
   shownFields?: string[];
   // relationship-map state, keyed by "season_episodeLabel"
@@ -90,6 +96,12 @@ export interface Show {
   currentSeason?: number;
   caughtUpEp?: string;
   mapEpisode?: string;
+  /**
+   * Resolved TVmaze show id. `number` = matched, `null` = looked up and no match exists,
+   * `undefined` = never looked up. The null/undefined distinction is what stops us retrying
+   * a lookup that will never succeed.
+   */
+  tvmazeId?: number | null;
 }
 
 export interface AppData {

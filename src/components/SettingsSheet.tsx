@@ -108,6 +108,13 @@ export default function SettingsSheet() {
           <div style={{ fontSize: 10.5, color: 'var(--text-faint)', lineHeight: 1.5, textAlign: 'center' }}>
             Show &amp; cast data provided by TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.
           </div>
+          {/* TVmaze data is CC BY-SA, which requires visible credit and a link back. */}
+          <div style={{ fontSize: 10.5, color: 'var(--text-faint)', lineHeight: 1.5, textAlign: 'center', marginTop: 8 }}>
+            In-character images from{' '}
+            <a href="https://www.tvmaze.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-soft)', fontWeight: 700, textDecoration: 'none' }}>TVmaze</a>
+            , licensed under{' '}
+            <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-soft)', fontWeight: 700, textDecoration: 'none' }}>CC BY-SA 4.0</a>.
+          </div>
         </div>
       </div>
     </div>

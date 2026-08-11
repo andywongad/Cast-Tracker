@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { bgStyle, epNumFromLabel, initials } from '../lib/utils';
 import { getShowDetails, getSeasonEpisodeCount, getEpisodeCredits, hasTmdbKey } from '../lib/tmdb';
+import { fetchTvmazeCast, matchCast } from '../lib/tvmaze';
 import CastGrid from './CastGrid';
 import RelationshipMap from './RelationshipMap';
 import NotificationToggle from './NotificationToggle';
@@ -44,6 +45,38 @@ export default function ShowScreen() {
     });
     return () => { alive = false; };
   }, [show?.tmdbId]);
+
+  // In-character stills from TVmaze. Scripted only — TVmaze's cast endpoint returns hosts and
+  // judges for reality, never contestants, so a lookup there is a guaranteed miss. Runs once per
+  // show: tvmazeId is persisted, including `null` for "checked, no match".
+  useEffect(() => {
+    const id = show?.id;
+    const tmdbId = show?.tmdbId;
+    if (!id || !tmdbId || show?.type !== 'DRAMA') return;
+    if (show?.tvmazeId !== undefined) return;
+
+    let alive = true;
+    fetchTvmazeCast(tmdbId).then((result) => {
+      if (!alive || !result) return;
+      updateData((d) => {
+        const s = d.shows.find((x) => x.id === id);
+        if (!s) return;
+        s.tvmazeId = result.tvmazeId;
+        if (!result.tvmazeId || !result.cast.length) return;
+        const { images, report } = matchCast(s.cast, result.cast);
+        s.cast.forEach((c) => { const img = images.get(c.id); if (img) c.characterPhoto = img; });
+        if (report.unmatchedLocal.length || report.unmatchedRemote.length) {
+          // Surfaced rather than swallowed, so bad matching is visible instead of looking like
+          // thin coverage.
+          console.info('[tvmaze] matched %d/%d, %d with images', report.matched, s.cast.length, report.withImage);
+          if (report.unmatchedLocal.length) console.info('[tvmaze] no TVmaze entry for:', report.unmatchedLocal);
+          if (report.unmatchedRemote.length) console.info('[tvmaze] unused TVmaze entries:', report.unmatchedRemote);
+        }
+      });
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show?.id, show?.tmdbId, show?.type, show?.tvmazeId]);
 
   const currentSeason = show?.currentSeason || 1;
 

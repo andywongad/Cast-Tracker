@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CastMember, Show } from '../types';
 import { initials, bgStyle } from '../lib/utils';
+import { displayPhoto } from '../lib/tvmaze';
 import { useUI } from '../hooks/useUI';
 import { useStore } from '../hooks/useStore';
 import CardActions from './CardActions';
@@ -14,13 +15,14 @@ export default function CastCard({ show, c, compact }: { show: Show; c: CastMemb
   const displayName = activeVersion?.name || c.name;
   const displayNickname = activeVersion?.nickname || c.nickname;
   const displayDesc = activeVersion?.desc || c.desc;
-  const displayPhoto = activeVersion?.photo || c.photo;
+  // Versions carry their own uploaded photo and always win; otherwise character still > actor headshot.
+  const shownPhoto = activeVersion?.photo || displayPhoto(c);
   const displayOtherNames = (c.otherNames || []).filter(Boolean);
 
   return (
     <div className="ct-card" onClick={() => openCastDetail(c.id)}>
-      <div style={{ position: 'relative', aspectRatio: '1', borderRadius: 14, overflow: 'hidden', backgroundColor: 'var(--surface)', marginBottom: 10, ...bgStyle(displayPhoto, 'contain') }}>
-        {!displayPhoto && (
+      <div style={{ position: 'relative', aspectRatio: '1', borderRadius: 14, overflow: 'hidden', backgroundColor: 'var(--surface)', marginBottom: 10, ...bgStyle(shownPhoto, 'contain') }}>
+        {!shownPhoto && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(displayName)}</div>
         )}
       </div>
