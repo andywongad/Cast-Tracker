@@ -278,6 +278,10 @@ export default function ShowScreen() {
                       cast comes from, doesn&rsquo;t allow in-character profile photos — so anyone TVmaze
                       doesn&rsquo;t list falls back to the actor&rsquo;s headshot. Minor and one-episode roles
                       are the usual gap.
+                      <br /><br />
+                      You can always set your own: tap a card&rsquo;s pencil, then the photo to reframe it,
+                      or the badge to upload your own picture. Anything you upload stays put and won&rsquo;t
+                      be replaced.
                     </div>
                   )}
                 </div>
