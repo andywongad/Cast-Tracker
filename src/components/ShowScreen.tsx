@@ -34,14 +34,17 @@ export default function ShowScreen() {
     getShowDetails(show.tmdbId).then((d) => {
       if (!alive || !d) return;
       if (d.seasons.length) setSeasons(d.seasons);
-      if (!show.wikiUrl || !show.imdbUrl) {
-        updateData((data2) => {
-          const s = data2.shows.find((x) => x.id === show.id);
-          if (!s) return;
-          if (d.imdbId && !s.imdbUrl) s.imdbUrl = `https://www.imdb.com/title/${d.imdbId}/`;
-          if (d.wikiGuess && !s.wikiUrl) s.wikiUrl = d.wikiGuess;
-        });
-      }
+      updateData((data2) => {
+        const s = data2.shows.find((x) => x.id === show.id);
+        if (!s) return;
+        if (d.imdbId && !s.imdbUrl) s.imdbUrl = `https://www.imdb.com/title/${d.imdbId}/`;
+        if (d.wikiGuess && !s.wikiUrl) s.wikiUrl = d.wikiGuess;
+        // Land on the newest season rather than season 1 — that's what someone is most likely
+        // watching. Set here rather than at render because `seasons` holds a 1..8 placeholder
+        // until TMDb answers, which would briefly select season 8 for a three-season show.
+        // Only fills an unset value, so an explicit choice is never overwritten.
+        if (!s.currentSeason && d.seasons.length) s.currentSeason = Math.max(...d.seasons);
+      });
       // eslint-disable-next-line react-hooks/exhaustive-deps
     });
     return () => { alive = false; };
