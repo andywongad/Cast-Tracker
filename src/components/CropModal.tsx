@@ -77,7 +77,14 @@ export default function CropModal({ file, onCancel, onConfirm }: { file: File | 
   };
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'rgba(0,0,0,0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    // Callers render this inside a scrim whose onClick closes the parent sheet, and this modal is
+    // a sibling of the sheet rather than a child — so without stopping propagation here, releasing
+    // the zoom slider or finishing a drag bubbles a click up and closes everything mid-crop.
+    <div
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'rgba(0,0,0,0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    >
       <div style={{ background: 'var(--sheet)', borderRadius: 20, padding: 20, width: 280, maxWidth: '88vw', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 14, textAlign: 'center' }}>Adjust photo</div>
         <div

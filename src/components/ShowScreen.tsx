@@ -113,7 +113,22 @@ export default function ShowScreen() {
   // Keep the latest season pinned first, descending (Season 1 last).
   // Static order — selecting a season only changes the highlight, never the ordering.
   const orderedSeasons = [...seasons].sort((a, b) => b - a);
-  const visibleCastAll = hasSeasons ? show.cast.filter((c) => (c.season || 1) === currentSeason) : show.cast;
+  /**
+   * `season` records the season a cast member was *added* in — there's only one number per
+   * person, so "every season they appear in" isn't stored anywhere.
+   *
+   * Scripted shows carry their cast forward, so a season shows everyone introduced by then:
+   * someone who joined in S1 is assumed still around in S3. Right for regulars, wrong for
+   * characters who get written out.
+   *
+   * Reality replaces its cast each season — Survivor S1 and S50 share nobody — so those stay
+   * filtered to the exact season. Carrying them forward would pile 17 season-1 contestants into
+   * season 50.
+   */
+  const cumulativeSeasons = show.type === 'DRAMA';
+  const visibleCastAll = hasSeasons
+    ? show.cast.filter((c) => (cumulativeSeasons ? (c.season || 1) <= currentSeason : (c.season || 1) === currentSeason))
+    : show.cast;
   const cq = castQuery.trim().toLowerCase();
   const visibleCast = cq ? visibleCastAll.filter((c) => c.name.toLowerCase().includes(cq) || (c.nickname || '').toLowerCase().includes(cq)) : visibleCastAll;
 
