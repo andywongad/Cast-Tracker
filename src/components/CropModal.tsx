@@ -43,6 +43,13 @@ export default function CropModal({
   const [failed, setFailed] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  /** Live pointers by id — two down means a pinch, one means a pan. */
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
+  // Pointer handlers fire faster than React re-renders; reading offset from a ref keeps a pinch
+  // from snapping back to a stale position mid-gesture.
+  const offsetRef = useRef(offset);
 
   useEffect(() => {
     setNatural(null);
@@ -56,6 +63,8 @@ export default function CropModal({
     }
     setSrc(srcProp ? corsUrl(srcProp) : null);
   }, [file, srcProp, initial]);
+
+  useEffect(() => { offsetRef.current = offset; }, [offset]);
 
   if ((!file && !srcProp) || !src) return null;
 
@@ -85,26 +94,82 @@ export default function CropModal({
     });
   };
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    (e.target as Element).setPointerCapture(e.pointerId);
-    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: offset.x, origY: offset.y };
+  /**
+   * Zoom about a fixed point so the image grows from where the fingers are rather than the
+   * corner. The slider anchors at the frame centre; a pinch anchors at the midpoint between the
+   * two touches, which is what makes it feel attached to your fingers.
+   */
+  const applyZoom = (next: number, anchor: { x: number; y: number }) => {
+    const z0 = zoom;
+    const z1 = Math.min(3, Math.max(1, next));
+    setZoom(z1);
+    if (!natural) return;
+    const k = z1 / z0;
+    const dw = FRAME * z1;
+    const dh = dw * (natural.h / natural.w);
+    const o = offsetRef.current;
+    setOffset({
+      x: Math.min(0, Math.max(FRAME - dw, anchor.x - (anchor.x - o.x) * k)),
+      y: Math.min(0, Math.max(FRAME - dh, anchor.y - (anchor.y - o.y) * k)),
+    });
   };
+
+  /** Pointer position relative to the crop frame, which is the space anchors live in. */
+  const localPoint = (e: React.PointerEvent) => {
+    const r = frameRef.current?.getBoundingClientRect();
+    return r ? { x: e.clientX - r.left, y: e.clientY - r.top } : { x: e.clientX, y: e.clientY };
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    // Capture keeps a drag alive when the finger leaves the frame, but it throws if the pointer
+    // isn't active — and an exception here would abort the gesture before it's even recorded.
+    try { frameRef.current?.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pts = [...pointersRef.current.values()];
+    if (pts.length === 2) {
+      // Second finger down: start a pinch and stop panning, or the image fights itself.
+      pinchRef.current = { dist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y), zoom };
+      dragRef.current = null;
+    } else if (pts.length === 1) {
+      dragRef.current = { startX: e.clientX, startY: e.clientY, origX: offsetRef.current.x, origY: offsetRef.current.y };
+    }
+  };
+
   const onPointerMove = (e: React.PointerEvent) => {
+    if (!pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    const pts = [...pointersRef.current.values()];
+    if (pts.length >= 2 && pinchRef.current && pinchRef.current.dist > 0) {
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      const r = frameRef.current?.getBoundingClientRect();
+      const mid = {
+        x: (pts[0].x + pts[1].x) / 2 - (r?.left ?? 0),
+        y: (pts[0].y + pts[1].y) / 2 - (r?.top ?? 0),
+      };
+      // Scale from the gesture's start, not the last frame — incremental ratios accumulate drift.
+      applyZoom(pinchRef.current.zoom * (dist / pinchRef.current.dist), mid);
+      return;
+    }
+
     if (!dragRef.current) return;
     setOffset(clamp({
       x: dragRef.current.origX + (e.clientX - dragRef.current.startX),
       y: dragRef.current.origY + (e.clientY - dragRef.current.startY),
     }));
   };
-  const onPointerUp = () => { dragRef.current = null; };
 
-  const onZoom = (v: number) => {
-    setZoom(v);
-    if (!natural) return;
-    const dw = FRAME * v;
-    const dh = dw * (natural.h / natural.w);
-    setOffset((o) => ({ x: Math.min(0, Math.max(FRAME - dw, o.x)), y: Math.min(0, Math.max(FRAME - dh, o.y)) }));
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId);
+    const rest = [...pointersRef.current.entries()];
+    if (rest.length < 2) pinchRef.current = null;
+    // Lifting one finger of a pinch hands control back to the other without a jump.
+    dragRef.current = rest.length === 1
+      ? { startX: rest[0][1].x, startY: rest[0][1].y, origX: offsetRef.current.x, origY: offsetRef.current.y }
+      : null;
   };
+
+  const onZoom = (v: number) => applyZoom(v, { x: FRAME / 2, y: FRAME / 2 });
 
   const confirm = () => {
     if (!natural) return;
@@ -144,9 +209,11 @@ export default function CropModal({
     >
       <div style={{ background: 'var(--sheet)', borderRadius: 20, padding: 20, width: 280, maxWidth: '88vw', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, textAlign: 'center' }}>{file ? 'Adjust photo' : 'Reframe photo'}</div>
-        <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 14, textAlign: 'center' }}>Drag to move &middot; slider to zoom</div>
+        <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 14, textAlign: 'center' }}>Drag to move &middot; pinch or use the slider to zoom</div>
         <div
-          onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
+          ref={frameRef}
+          onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onPointerLeave={onPointerUp}
           style={{ position: 'relative', width: FRAME, height: FRAME, margin: '0 auto 16px', borderRadius: 26, overflow: 'hidden', background: '#000', cursor: 'grab', touchAction: 'none' }}
         >
           <img
