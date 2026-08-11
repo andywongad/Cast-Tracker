@@ -1,26 +1,18 @@
 import type { ShowType } from '../types';
 
-const API = 'https://api.themoviedb.org/3';
-
 /**
- * Dev-only direct key. `npm run dev` runs Vite alone, which doesn't serve /api, so local work
- * would otherwise lose TMDb entirely. In a production build this reads `undefined` — provided
- * VITE_TMDB_API_KEY is NOT set on the host — and the branch below is dead.
+ * Whether TMDb-backed features should be offered at all.
  *
- * Use `vercel dev` instead of `npm run dev` if you want to exercise the proxy locally.
- */
-function devKey(): string {
-  if (!import.meta.env.DEV) return '';
-  return (import.meta.env.VITE_TMDB_API_KEY as string | undefined)?.trim() || '';
-}
-
-/**
- * In production the key lives on the server, so the client can't know whether it's configured.
- * Assume it is: a misconfigured proxy degrades exactly like a missing key did before — requests
+ * Always true now: the key lives on the server in production, and locally vite.config.ts proxies
+ * /api to a deployed origin, so dev has the same routes. The client can't see server config
+ * either way, and a misconfigured proxy degrades exactly like a missing key always did — requests
  * return null and the UI falls back to manual entry.
+ *
+ * This previously required a local VITE_TMDB_API_KEY in dev, which silently disabled show search
+ * for anyone developing without a key on their machine — the case the proxy was added to remove.
  */
 export function hasTmdbKey(): boolean {
-  return import.meta.env.DEV ? devKey().length > 0 : true;
+  return true;
 }
 
 export function img(path: string | null | undefined, size: string = 'w300'): string | null {
@@ -36,15 +28,17 @@ export interface TmdbShowResult {
   origin_country?: string[];
 }
 
+/**
+ * Always through /api/tmdb, which holds the key server-side. Locally, vite.config.ts proxies
+ * /api to a deployed origin, so dev and production take the identical path.
+ *
+ * There used to be a dev branch that called TMDb directly when VITE_TMDB_API_KEY was present.
+ * It silently outranked the proxy, so a stale key left in .env — a rotated one, returning 401 —
+ * made search fail with no error anywhere. One path is worth more than offline convenience.
+ */
 async function get<T>(path: string, params: Record<string, string | number> = {}): Promise<T | null> {
   const flat = Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]));
-  const key = devKey();
-
-  // Dev without a serverless runtime: go straight to TMDb with the local key.
-  // Everywhere else: through /api/tmdb, which holds the key server-side.
-  const url = key
-    ? `${API}${path}?${new URLSearchParams({ api_key: key, ...flat }).toString()}`
-    : `/api/tmdb?${new URLSearchParams({ path, ...flat }).toString()}`;
+  const url = `/api/tmdb?${new URLSearchParams({ path, ...flat }).toString()}`;
 
   try {
     const res = await fetch(url);
