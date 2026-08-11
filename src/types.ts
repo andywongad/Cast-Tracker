@@ -8,6 +8,20 @@ export interface Relationship {
   label: string;
 }
 
+/**
+ * Non-destructive framing for a photo. Stored as CSS-ready percentages and applied at render
+ * time, so the source image is never modified — sliding zoom back to 1 restores the original
+ * framing, and reopening the cropper resumes exactly where it left off.
+ *
+ * `size` is background-size as a percentage of the container width (100 = image width fills the
+ * box). `x`/`y` are background-position percentages, 0–100.
+ */
+export interface PhotoCrop {
+  size: number;
+  x: number;
+  y: number;
+}
+
 /** A user-defined field on a cast member — their own title plus free text, e.g. "Allies" / "Enemies". */
 export interface CustomField {
   id: string;
@@ -73,6 +87,8 @@ export interface CastMember {
    * to persist indefinitely.
    */
   characterPhoto?: string | null;
+  /** Framing applied to whichever photo is displayed. Absent = default centred framing. */
+  photoCrop?: PhotoCrop | null;
   /** Which optional fields the user has switched on for this member — kept even when left blank. */
   shownFields?: string[];
   // relationship-map state, keyed by "season_episodeLabel"

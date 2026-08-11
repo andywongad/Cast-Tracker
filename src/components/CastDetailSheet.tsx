@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
-import { initials, bgStyle } from '../lib/utils';
+import { initials, bgStyle, cropStyle } from '../lib/utils';
 import { displayPhoto } from '../lib/tvmaze';
 import { getPersonCredits, type PersonCredit } from '../lib/tmdb';
 
@@ -86,7 +86,7 @@ export default function CastDetailSheet() {
         </button>
 
         <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
-          <div style={{ position: 'relative', width: 84, height: 84, borderRadius: 18, flex: 'none', overflow: 'hidden', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(activeVersion?.photo || displayPhoto(c), '100% auto', 'center') }}>
+          <div style={{ position: 'relative', width: 84, height: 84, borderRadius: 18, flex: 'none', overflow: 'hidden', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...cropStyle(activeVersion?.photo || displayPhoto(c), activeVersion ? null : c.photoCrop) }}>
             {!(activeVersion?.photo || displayPhoto(c)) && <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(activeVersion?.name || c.name)}</span>}
           </div>
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -99,7 +99,7 @@ export default function CastDetailSheet() {
         {c.versions.length > 0 && (
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', marginBottom: 16, paddingBottom: 2 }}>
             <button onClick={() => setActiveVersionId(null)} style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${!activeVersionId ? 'var(--accent)' : 'transparent'}`, ...bgStyle(displayPhoto(c), '100% auto', 'center') }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${!activeVersionId ? 'var(--accent)' : 'transparent'}`, ...cropStyle(displayPhoto(c), c.photoCrop) }}>
                 {!displayPhoto(c) && <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(c.name)}</span>}
               </div>
               <span style={{ fontSize: 10, fontWeight: 700, color: !activeVersionId ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Present</span>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CastMember, Show } from '../types';
-import { initials, bgStyle } from '../lib/utils';
+import { initials, cropStyle } from '../lib/utils';
 import { displayPhoto } from '../lib/tvmaze';
 import { useUI } from '../hooks/useUI';
 import { useStore } from '../hooks/useStore';
@@ -21,7 +21,7 @@ export default function CastCard({ show, c, compact }: { show: Show; c: CastMemb
 
   return (
     <div className="ct-card" onClick={() => openCastDetail(c.id)}>
-      <div style={{ position: 'relative', aspectRatio: '1', borderRadius: 14, overflow: 'hidden', backgroundColor: 'var(--surface)', marginBottom: 10, ...bgStyle(shownPhoto, '100% auto', 'center') }}>
+      <div style={{ position: 'relative', aspectRatio: '1', borderRadius: 14, overflow: 'hidden', backgroundColor: 'var(--surface)', marginBottom: 10, ...cropStyle(shownPhoto, activeVersion ? null : c.photoCrop) }}>
         {!shownPhoto && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(displayName)}</div>
         )}

@@ -34,6 +34,23 @@ export function clamp(n: number, min: number, max: number): number {
  * to scale a portrait still to the card's full width and let the bottom overflow.
  * `position` defaults to centre; pass 'top' to anchor the crop so faces are never cut off.
  */
+import type { PhotoCrop } from '../types';
+
+/**
+ * Background style for a photo plus its stored framing. With no crop, falls back to the default
+ * full-width centred framing used everywhere else.
+ */
+export function cropStyle(url: string | null | undefined, crop: PhotoCrop | null | undefined) {
+  if (!url) return {};
+  if (!crop) return bgStyle(url, '100% auto', 'center');
+  return {
+    backgroundImage: `url("${url}")`,
+    backgroundSize: `${crop.size}% auto`,
+    backgroundPosition: `${crop.x}% ${crop.y}%`,
+    backgroundRepeat: 'no-repeat' as const,
+  };
+}
+
 export function bgStyle(url: string | null | undefined, size: string = 'cover', position: string = 'center') {
   return url ? { backgroundImage: `url("${url}")`, backgroundSize: size, backgroundPosition: position, backgroundRepeat: 'no-repeat' as const } : {};
 }

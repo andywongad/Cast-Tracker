@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
-import type { CastVersion, Relationship, Gender, CustomField } from '../types';
-import { bgStyle, genId, initials, colorForIndex } from '../lib/utils';
+import type { CastVersion, Relationship, Gender, CustomField, PhotoCrop } from '../types';
+import { bgStyle, cropStyle, genId, initials, colorForIndex } from '../lib/utils';
 import { displayPhoto } from '../lib/tvmaze';
 import { getAggregateCredits, getEpisodeCredits, getSeasonEpisodeCount, hasTmdbKey, type AggregateCastMember } from '../lib/tmdb';
 import CropModal from './CropModal';
@@ -29,6 +29,7 @@ interface FormState {
   nickname: string;
   desc: string;
   photo: string | null;
+  photoCrop: PhotoCrop | null;
   gender: Gender;
   age: string;
   hometown: string;
@@ -50,7 +51,7 @@ interface FormState {
 
 function blankForm(season: number): FormState {
   return {
-    name: '', otherNames: [], nickname: '', desc: '', photo: null, gender: '', age: '', hometown: '', occupation: '',
+    name: '', otherNames: [], nickname: '', desc: '', photo: null, photoCrop: null, gender: '', age: '', hometown: '', occupation: '',
     notes: '', firstEp: '', season, actorName: '', actorTmdbId: null, social: '', socialPlatform: 'Instagram',
     wikiUrl: '', imdbUrl: '', versions: [], relationships: [], customFields: [], activeFields: [],
   };
@@ -60,7 +61,7 @@ function blankForm(season: number): FormState {
 function toSavedFields(f: FormState) {
   return {
     name: f.name.trim(), native: '', nickname: f.nickname.trim(), otherNames: f.otherNames.map((s) => s.trim()).filter(Boolean),
-    desc: f.desc.trim(), photo: f.photo, notes: f.notes.trim(), versions: f.versions,
+    desc: f.desc.trim(), photo: f.photo, photoCrop: f.photoCrop, notes: f.notes.trim(), versions: f.versions,
     relationships: f.relationships.filter((r) => r.targetId && r.label.trim()).map((r) => ({ ...r, label: r.label.trim() })),
     customFields: f.customFields.map((cf) => ({ ...cf, label: cf.label.trim(), value: cf.value.trim() })).filter((cf) => cf.label || cf.value),
     shownFields: [...f.activeFields],
@@ -92,7 +93,7 @@ export default function AddCastSheet() {
   const createdIdRef = useRef<string | null>(null);
   const [nameQuery, setNameQuery] = useState('');
   const [tmdbCast, setTmdbCast] = useState<AggregateCastMember[]>([]);
-  const [crop, setCrop] = useState<{ file: File | null; target: 'main' | { versionId: string } }>({ file: null, target: 'main' });
+  const [crop, setCrop] = useState<{ file: File | null; src: string | null; target: 'main' | { versionId: string } }>({ file: null, src: null, target: 'main' });
   const [versionCardId, setVersionCardId] = useState<string | null>(null);
   const [mode, setMode] = useState<'manual' | 'autofill'>('manual');
   const [afSeason, setAfSeason] = useState(show?.currentSeason || 1);
@@ -124,7 +125,7 @@ export default function AddCastSheet() {
     if (editing) {
       const initial: FormState = {
         name: editing.name, otherNames: editing.otherNames || [], nickname: editing.nickname, desc: editing.desc,
-        photo: editing.photo, gender: editing.gender || '', age: editing.age, hometown: editing.hometown,
+        photo: editing.photo, photoCrop: editing.photoCrop ?? null, gender: editing.gender || '', age: editing.age, hometown: editing.hometown,
         occupation: editing.occupation, notes: editing.notes || '', firstEp: editing.firstEp, season: editing.season || 1,
         actorName: editing.actorName || '', actorTmdbId: editing.actorTmdbId, social: editing.social,
         socialPlatform: editing.socialPlatform || 'Instagram', wikiUrl: editing.wikiUrl, imdbUrl: editing.imdbUrl,
@@ -251,18 +252,62 @@ export default function AddCastSheet() {
     setNameQuery('');
   };
 
+  /** Reframe a photo already on the record — TVmaze stills are auto-framed and sometimes crop badly. */
+  const openReframe = (src: string | null, target: 'main' | { versionId: string }) => {
+    if (src) setCrop({ file: null, src, target });
+  };
+
   const openCropFor = (file: File | undefined, target: 'main' | { versionId: string }) => {
     if (!file) return;
-    setCrop({ file, target });
+    setCrop({ file, src: null, target });
   };
-  const confirmCrop = (dataUrl: string) => {
-    if (crop.target === 'main') {
-      setForm((f) => ({ ...f, photo: dataUrl }));
-    } else {
-      const versionId = crop.target.versionId;
+  /**
+   * "Use photo" is its own confirmation, so the photo is written straight through to storage —
+   * the card, summary sheet and any other thumbnail update immediately without needing the ✓.
+   *
+   * Only the photo fields are persisted. Anything else half-typed in this form stays unsaved,
+   * and the saved-snapshot is patched to match so the ✓ doesn't light up for a change that's
+   * already on disk.
+   */
+  const confirmCrop = ({ dataUrl, crop: framing }: { dataUrl?: string; crop: PhotoCrop }) => {
+    const targetId = editing?.id || createdIdRef.current;
+    const isMain = crop.target === 'main';
+    const versionId = isMain ? null : (crop.target as { versionId: string }).versionId;
+    // dataUrl only arrives for uploads; a reframe leaves the existing source alone.
+    const nextPhoto = dataUrl ?? form.photo;
+
+    if (isMain) {
+      setForm((f) => ({ ...f, photo: dataUrl ?? f.photo, photoCrop: framing }));
+    } else if (dataUrl && versionId) {
       setForm((f) => ({ ...f, versions: f.versions.map((v) => (v.id === versionId ? { ...v, photo: dataUrl } : v)) }));
     }
-    setCrop({ file: null, target: 'main' });
+
+    // No record yet for a member that's never been saved — form state is the only home for it.
+    if (targetId && show) {
+      updateData((d) => {
+        const sh = d.shows.find((x) => x.id === show.id);
+        const c = sh?.cast.find((x) => x.id === targetId);
+        if (!c) return;
+        if (isMain) {
+          c.photo = nextPhoto;
+          c.photoCrop = framing;
+        } else if (dataUrl && versionId) {
+          const v = c.versions.find((x) => x.id === versionId);
+          if (v) v.photo = dataUrl;
+        }
+      });
+
+      if (isMain) {
+        try {
+          const base = JSON.parse(savedSnapshot);
+          setSavedSnapshot(JSON.stringify({ ...base, photo: nextPhoto, photoCrop: framing }));
+        } catch {
+          /* snapshot unreadable — worst case the ✓ stays lit, which is harmless */
+        }
+      }
+    }
+
+    setCrop({ file: null, src: null, target: 'main' });
   };
 
   const activeFields = form.activeFields;
@@ -411,13 +456,25 @@ export default function AddCastSheet() {
           <>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: hasField('versions') ? 6 : 16, overflowX: 'auto', paddingBottom: 2 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 'none' }}>
-                <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(previewPhoto, '100% auto', 'center') }}>
+                {/* Tile reframes an existing photo; the badge below picks a new one. Stills pulled
+                    from TVmaze are auto-framed and sometimes cut off, so reframing has to work on
+                    photos the user never uploaded. */}
+                <div
+                  onClick={() => openReframe(previewPhoto, 'main')}
+                  role={previewPhoto ? 'button' : undefined}
+                  aria-label={previewPhoto ? 'Reframe photo' : undefined}
+                  title={previewPhoto ? 'Reframe photo' : undefined}
+                  style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: previewPhoto ? 'pointer' : 'default', ...cropStyle(previewPhoto, form.photoCrop) }}
+                >
                   {!previewPhoto && <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(form.name)}</span>}
                   <label style={{ position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 999, background: 'var(--accent)', border: '2px solid var(--sheet)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5-8 8L3 13.5l.5-2.5 8-8z" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg>
                     <input type="file" accept="image/*" onChange={(e) => openCropFor(e.target.files?.[0], 'main')} style={{ display: 'none' }} />
                   </label>
                 </div>
+                {previewPhoto && (
+                  <button onClick={() => openReframe(previewPhoto, 'main')} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 10.5, fontWeight: 600, color: 'var(--accent-soft)' }}>Reframe</button>
+                )}
                 {hasField('versions') && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Present</span>}
               </div>
 
@@ -634,7 +691,7 @@ export default function AddCastSheet() {
         />
       )}
 
-      <CropModal file={crop.file} onCancel={() => setCrop({ file: null, target: 'main' })} onConfirm={confirmCrop} />
+      <CropModal file={crop.file} src={crop.src} initial={crop.target === 'main' ? form.photoCrop : null} onCancel={() => setCrop({ file: null, src: null, target: 'main' })} onConfirm={confirmCrop} />
     </div>
   );
 }
