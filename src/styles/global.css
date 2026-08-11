@@ -68,15 +68,15 @@ a { color: inherit; }
 .ct-input:focus, .ct-textarea:focus { box-shadow: 0 0 0 2px var(--divider); }
 
 .ct-label {
-  display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+  display: block; font-size: 13px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--text-muted); margin-bottom: 8px;
 }
 .ct-eyebrow {
-  display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
+  display: block; font-size: 13px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
   color: var(--accent); margin-bottom: 10px;
 }
 .ct-label-muted {
-  display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.05em;
+  display: block; font-size: 13px; font-weight: 500; letter-spacing: 0.05em;
   color: var(--text-muted); margin-bottom: 6px;
 }
 
@@ -115,7 +115,7 @@ a { color: inherit; }
 .ct-sheet-title { font-family: var(--font-heading); font-size: 24px; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 22px; }
 
 .ct-pill {
-  font-size: 11px; font-weight: 500; color: var(--text-secondary); background: var(--surface);
+  font-size: 13px; font-weight: 500; color: var(--text-secondary); background: var(--surface);
   padding: 6px 12px; border-radius: 999px; border: none; cursor: pointer;
 }
 /* Pill toggle: white raised when active, flat gray when not. */
@@ -146,7 +146,7 @@ a { color: inherit; }
   display: flex; flex-direction: column; align-items: center; gap: 5px; border: none;
   background: none; padding: 10px 6px; cursor: pointer; color: var(--text-muted);
 }
-.ct-footer-label { font-size: 10.5px; font-weight: 500; color: var(--text-muted); }
+.ct-footer-label { font-size: 12.5px; font-weight: 500; color: var(--text-muted); }
 
 .ct-card {
   position: relative; /* anchors the corner-hung action buttons */

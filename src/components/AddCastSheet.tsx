@@ -446,9 +446,9 @@ export default function AddCastSheet() {
               </div>
             </div>
             {afLoading ? (
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>Loading cast&hellip;</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>Loading cast&hellip;</div>
             ) : afPreview.length > 0 ? (
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>{afPreview.length} people found: {afPreview.slice(0, 6).map((p) => isDrama ? p.character || p.name : p.name).join(', ')}{afPreview.length > 6 ? '…' : ''}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>{afPreview.length} people found: {afPreview.slice(0, 6).map((p) => isDrama ? p.character || p.name : p.name).join(', ')}{afPreview.length > 6 ? '…' : ''}</div>
             ) : null}
             <button onClick={addAllAutofill} disabled={afPreview.length === 0} className="ct-btn-primary" style={{ width: '100%' }}>Add {afPreview.length || ''} people</button>
           </div>
@@ -473,26 +473,26 @@ export default function AddCastSheet() {
                   </label>
                 </div>
                 {previewPhoto && (
-                  <button onClick={() => openReframe(previewPhoto, 'main')} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 10.5, fontWeight: 600, color: 'var(--accent-soft)' }}>Reframe</button>
+                  <button onClick={() => openReframe(previewPhoto, 'main')} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: 'var(--accent-soft)' }}>Reframe</button>
                 )}
-                {hasField('versions') && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Present</span>}
+                {hasField('versions') && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Present</span>}
               </div>
 
               {hasField('versions') && form.versions.map((v) => (
                 <div key={v.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flex: 'none' }}>
                   <div onClick={() => setVersionCardId(v.id)} style={{ position: 'relative', width: 66, height: 66, flex: 'none', cursor: 'pointer' }}>
-                    <button onClick={(e) => { e.stopPropagation(); removeVersion(v.id); }} style={{ position: 'absolute', top: -6, right: -6, zIndex: 1, width: 20, height: 20, borderRadius: 999, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 11, lineHeight: 1, cursor: 'pointer' }}>&times;</button>
+                    <button onClick={(e) => { e.stopPropagation(); removeVersion(v.id); }} style={{ position: 'absolute', top: -6, right: -6, zIndex: 1, width: 20, height: 20, borderRadius: 999, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1, cursor: 'pointer' }}>&times;</button>
                     <div style={{ position: 'relative', width: '100%', height: '100%', borderRadius: 16, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...bgStyle(v.photo, 'contain') }}>
                       {!v.photo && <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(v.name)}</span>}
                     </div>
                   </div>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.03em', maxWidth: 66, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.age || 'Version'}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.03em', maxWidth: 66, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.age || 'Version'}</span>
                 </div>
               ))}
 
               {hasField('versions') && <button onClick={addVersion} style={{ width: 66, height: 66, flex: 'none', border: '1px dashed var(--input-border)', borderRadius: 16, background: 'transparent', color: 'var(--text-secondary)', fontSize: 24, fontWeight: 400, lineHeight: 1, cursor: 'pointer' }} title="Add a younger/older version">+</button>}
             </div>
-            {hasField('versions') && <div style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.4, marginBottom: 16 }}>Tap + to add another version of this {termLower} — like a younger flashback — with its own photo and age. Tap a photo to edit it.</div>}
+            {hasField('versions') && <div style={{ fontSize: 13, color: 'var(--text-faint)', lineHeight: 1.4, marginBottom: 16 }}>Tap + to add another version of this {termLower} — like a younger flashback — with its own photo and age. Tap a photo to edit it.</div>}
 
             <label className="ct-label">{term} NAME *</label>
             <div style={{ position: 'relative', marginBottom: 16 }}>
@@ -504,7 +504,7 @@ export default function AddCastSheet() {
                       <div style={{ width: 28, height: 28, borderRadius: 999, flex: 'none', background: 'var(--border)', ...bgStyle(p.photo) }} />
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isDrama ? (p.character || p.name) : p.name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isDrama ? `Played by ${p.name}` : ''}</div>
+                        <div style={{ fontSize: 13, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isDrama ? `Played by ${p.name}` : ''}</div>
                       </div>
                     </button>
                   ))}
@@ -540,7 +540,7 @@ export default function AddCastSheet() {
 
             <div style={{ position: 'relative', marginBottom: 16 }}>
               <button onClick={() => setFieldMenuOpen((o) => !o)} style={{ width: '100%', height: 44, border: '1px dashed var(--input-border)', borderRadius: 12, background: 'transparent', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-                + Add more details<span style={{ fontSize: 9, opacity: 0.75 }}>{fieldMenuOpen ? '▲' : '▼'}</span>
+                + Add more details<span style={{ fontSize: 11, opacity: 0.75 }}>{fieldMenuOpen ? '▲' : '▼'}</span>
               </button>
               {fieldMenuOpen && (
                 <>
@@ -647,8 +647,8 @@ export default function AddCastSheet() {
             )}
 
             <div style={{ padding: '16px 14px', borderRadius: 14, background: 'color-mix(in oklch, var(--accent-soft) 8%, transparent)', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 4, height: 14, borderRadius: 2, background: 'var(--accent-soft)' }} /><div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--accent-soft)' }}>{isDrama ? 'ABOUT THE ACTOR' : 'MORE'}</div></div>
-              {isDrama && <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: -6 }}>Real-world info — separate from the character</div>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 4, height: 14, borderRadius: 2, background: 'var(--accent-soft)' }} /><div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--accent-soft)' }}>{isDrama ? 'ABOUT THE ACTOR' : 'MORE'}</div></div>
+              {isDrama && <div style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: -6 }}>Real-world info — separate from the character</div>}
               {isDrama && (
                 <div><label className="ct-label">ACTOR NAME</label><input value={form.actorName} onChange={(e) => setForm((f) => ({ ...f, actorName: e.target.value }))} placeholder="Real actor's name" className="ct-input" /></div>
               )}
@@ -708,7 +708,7 @@ function VersionCardPanel({ version, onChange, onUpload, onRemove, onClose }: {
       <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="ct-sheet-grabber" />
         <div className="ct-sheet-title" style={{ marginBottom: 4 }}>Character version</div>
-        <div style={{ fontSize: 12, color: 'var(--text-faint)', marginBottom: 18 }}>Edit freely for this version — a younger/older look with its own photo.</div>
+        <div style={{ fontSize: 14, color: 'var(--text-faint)', marginBottom: 18 }}>Edit freely for this version — a younger/older look with its own photo.</div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
           <div style={{ position: 'relative', width: 66, height: 66, borderRadius: 16, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(version.photo, 'contain') }}>
@@ -731,8 +731,8 @@ function VersionCardPanel({ version, onChange, onUpload, onRemove, onClose }: {
         <textarea value={version.desc} onChange={(e) => onChange({ desc: e.target.value })} placeholder="Chunky glasses, pink hat, high cheekbones&hellip;" className="ct-textarea" style={{ marginBottom: 20 }} />
 
         <div style={{ padding: '16px 14px', borderRadius: 14, background: 'color-mix(in oklch, var(--accent-soft) 8%, transparent)', marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}><div style={{ width: 4, height: 14, borderRadius: 2, background: 'var(--accent-soft)' }} /><div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--accent-soft)' }}>ABOUT THE ACTOR</div></div>
-          <div style={{ fontSize: 11, color: 'var(--text-faint)', margin: '0 0 12px' }}>Real-world info — separate from the character</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}><div style={{ width: 4, height: 14, borderRadius: 2, background: 'var(--accent-soft)' }} /><div style={{ fontSize: 14, fontWeight: 800, letterSpacing: '0.05em', color: 'var(--accent-soft)' }}>ABOUT THE ACTOR</div></div>
+          <div style={{ fontSize: 13, color: 'var(--text-faint)', margin: '0 0 12px' }}>Real-world info — separate from the character</div>
           <div style={{ marginBottom: 12 }}>
             <label className="ct-label">SOCIAL</label>
             <div style={{ display: 'grid', gridTemplateColumns: '108px 1fr', gap: 8 }}>

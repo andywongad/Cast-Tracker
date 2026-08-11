@@ -6,7 +6,7 @@ import { displayPhoto } from '../lib/tvmaze';
 import { getPersonCredits, type PersonCredit } from '../lib/tmdb';
 
 // Softer, sentence-case field labels — less shouting for a glanceable sheet
-const fieldLabel: CSSProperties = { fontSize: 11.5, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 };
+const fieldLabel: CSSProperties = { fontSize: 13.5, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 };
 const fieldValue: CSSProperties = { fontSize: 14, color: 'var(--text-tertiary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 };
 
 function EditIcon() {
@@ -91,7 +91,7 @@ export default function CastDetailSheet() {
           </div>
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.2 }}>{activeVersion?.name || c.name}</div>
-            {c.otherNames.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}><span style={{ fontWeight: 700 }}>AKA</span> {c.otherNames.join(', ')}</div>}
+            {c.otherNames.length > 0 && <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 3 }}><span style={{ fontWeight: 700 }}>AKA</span> {c.otherNames.join(', ')}</div>}
             {(activeVersion?.nickname || c.nickname) && <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 4 }}>&ldquo;{activeVersion?.nickname || c.nickname}&rdquo;</div>}
           </div>
         </div>
@@ -102,14 +102,14 @@ export default function CastDetailSheet() {
               <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${!activeVersionId ? 'var(--accent)' : 'transparent'}`, ...cropStyle(displayPhoto(c), c.photoCrop) }}>
                 {!displayPhoto(c) && <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(c.name)}</span>}
               </div>
-              <span style={{ fontSize: 10, fontWeight: 700, color: !activeVersionId ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Present</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: !activeVersionId ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Present</span>
             </button>
             {c.versions.map((v) => (
               <button key={v.id} onClick={() => setActiveVersionId(v.id)} style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}>
                 <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', outline: `2px solid ${activeVersionId === v.id ? 'var(--accent)' : 'transparent'}`, ...bgStyle(v.photo, '100% auto', 'center') }}>
                   {!v.photo && <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-muted)' }}>{initials(v.name)}</span>}
                 </div>
-                <span style={{ fontSize: 10, fontWeight: 700, color: activeVersionId === v.id ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.age || v.name || 'Version'}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: activeVersionId === v.id ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.age || v.name || 'Version'}</span>
               </button>
             ))}
           </div>
@@ -179,7 +179,7 @@ export default function CastDetailSheet() {
               <div style={{ width: 4, height: 14, borderRadius: 2, background: 'var(--accent-soft)' }} />
               <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.01em', color: 'var(--accent-soft)' }}>{isDrama ? 'About the actor' : 'More'}</div>
             </div>
-            {isDrama && <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: -8 }}>Real-world info — separate from the character</div>}
+            {isDrama && <div style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: -8 }}>Real-world info — separate from the character</div>}
             {isDrama && actorName && (
               <div><div style={fieldLabel}>Actor name</div><div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{actorName}</div></div>
             )}

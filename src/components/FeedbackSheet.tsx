@@ -51,7 +51,7 @@ export default function FeedbackSheet() {
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.07em', color: '#C9924A', marginBottom: 7 }}>NAME</label>
+              <label style={{ display: 'block', fontSize: 13.5, fontWeight: 800, letterSpacing: '0.07em', color: '#C9924A', marginBottom: 7 }}>NAME</label>
               <input
                 type="text"
                 value={name}
@@ -63,7 +63,7 @@ export default function FeedbackSheet() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.07em', color: '#C9924A', marginBottom: 7 }}>EMAIL</label>
+              <label style={{ display: 'block', fontSize: 13.5, fontWeight: 800, letterSpacing: '0.07em', color: '#C9924A', marginBottom: 7 }}>EMAIL</label>
               <input
                 type="email"
                 value={email}
@@ -75,7 +75,7 @@ export default function FeedbackSheet() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.07em', color: '#C9924A', marginBottom: 7 }}>MESSAGE</label>
+              <label style={{ display: 'block', fontSize: 13.5, fontWeight: 800, letterSpacing: '0.07em', color: '#C9924A', marginBottom: 7 }}>MESSAGE</label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}

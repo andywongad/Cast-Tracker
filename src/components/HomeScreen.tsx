@@ -82,7 +82,7 @@ export default function HomeScreen() {
 
       {isSearching && (
         <>
-          <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 10 }}>RESULTS &middot; {searchResults.length}</div>
+          <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 10 }}>RESULTS &middot; {searchResults.length}</div>
           <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>
             {searchResults.map((s) => <ShowTile key={s.id} show={s} columns={cols} done={s.status === 'completed'} />)}
           </div>
@@ -95,14 +95,14 @@ export default function HomeScreen() {
           {tmdbSearching && <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 18 }}>Searching TMDb&hellip;</div>}
           {tmdbResults.length > 0 && (
             <>
-              <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '20px 0 10px' }}>FROM TMDB &middot; TAP TO ADD</div>
+              <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--text-muted)', margin: '20px 0 10px' }}>FROM TMDB &middot; TAP TO ADD</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {tmdbResults.map((r) => (
                   <button key={r.id} onClick={() => openTmdbAsShow(r)} style={{ display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', border: '1px solid var(--border)', background: 'var(--surface)', padding: 8, borderRadius: 12, cursor: 'pointer', color: 'var(--text)' }}>
                     <div style={{ width: 40, height: 40, borderRadius: 10, flex: 'none', background: 'var(--border)', ...bgStyle(img(r.poster_path)) }} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{(r.first_air_date || '').slice(0, 4) || '—'}</div>
+                      <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>{(r.first_air_date || '').slice(0, 4) || '—'}</div>
                     </div>
                   </button>
                 ))}
@@ -128,7 +128,7 @@ export default function HomeScreen() {
                     numerals read as one string ("3 2 3 4"). */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
                   <span className="ct-eyebrow" style={{ marginBottom: 0 }}>Currently watching</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{currentShows.length}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700 }}>{currentShows.length}</span>
                 </div>
                 <DensityToggle value={cols} options={[2, 3, 4]} onChange={setShowColumns} label="Show columns" />
               </div>
@@ -139,7 +139,7 @@ export default function HomeScreen() {
 
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
                 <span className="ct-eyebrow" style={{ marginBottom: 0 }}>Completed</span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{completedShows.length}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700 }}>{completedShows.length}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>
                 {completedShows.map((s) => <ShowTile key={s.id} show={s} columns={cols} done />)}

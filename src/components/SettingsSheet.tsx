@@ -55,7 +55,7 @@ export default function SettingsSheet() {
             <button onClick={openAuth} className="ct-btn-ghost" style={{ width: '100%', marginBottom: 6 }}>
               {session ? `Signed in as ${session.email}` : 'Sign up or sign in'}
             </button>
-            <div style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.45, marginBottom: 22 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-faint)', lineHeight: 1.45, marginBottom: 22 }}>
               Preview of a future feature — no account is created yet.
             </div>
           </>
@@ -76,13 +76,13 @@ export default function SettingsSheet() {
         <div style={{ borderTop: '1px solid var(--border)', margin: '20px 0 16px' }} />
 
         <label className="ct-label-muted">BACKUP</label>
-        <div style={{ fontSize: 11.5, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 10 }}>Your data lives only on this device. Export a backup file to keep it safe or move it to another device.</div>
+        <div style={{ fontSize: 13.5, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 10 }}>Your data lives only on this device. Export a backup file to keep it safe or move it to another device.</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
           <button onClick={doExport} className="ct-btn-ghost" style={{ flex: 1, height: 44 }}>⬇ Export</button>
           <button onClick={() => fileInputRef.current?.click()} className="ct-btn-ghost" style={{ flex: 1, height: 44 }}>⬆ Import</button>
           <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={onImportFile} style={{ display: 'none' }} />
         </div>
-        {importMsg && <div style={{ fontSize: 12, fontWeight: 700, color: importMsg.ok ? 'var(--accent-soft)' : '#C24B4B', marginBottom: 14 }}>{importMsg.text}</div>}
+        {importMsg && <div style={{ fontSize: 14, fontWeight: 700, color: importMsg.ok ? 'var(--accent-soft)' : '#C24B4B', marginBottom: 14 }}>{importMsg.text}</div>}
 
         <div style={{ borderTop: '1px solid var(--border)', margin: '16px 0' }} />
 
@@ -103,13 +103,13 @@ export default function SettingsSheet() {
         <div style={{ borderTop: '1px solid var(--border)', margin: '20px 0 0', paddingTop: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="tmdbGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#90cea1" /><stop offset="0.56" stopColor="#3cbec9" /><stop offset="1" stopColor="#00b3e5" /></linearGradient></defs><rect width="24" height="24" rx="5" fill="url(#tmdbGrad)" /></svg>
-            <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent-soft)', textDecoration: 'none' }}>The Movie Database</a>
+            <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent-soft)', textDecoration: 'none' }}>The Movie Database</a>
           </div>
-          <div style={{ fontSize: 10.5, color: 'var(--text-faint)', lineHeight: 1.5, textAlign: 'center' }}>
+          <div style={{ fontSize: 12.5, color: 'var(--text-faint)', lineHeight: 1.5, textAlign: 'center' }}>
             Show &amp; cast data provided by TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.
           </div>
           {/* TVmaze data is CC BY-SA, which requires visible credit and a link back. */}
-          <div style={{ fontSize: 10.5, color: 'var(--text-faint)', lineHeight: 1.5, textAlign: 'center', marginTop: 8 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--text-faint)', lineHeight: 1.5, textAlign: 'center', marginTop: 8 }}>
             In-character images from{' '}
             <a href="https://www.tvmaze.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-soft)', fontWeight: 700, textDecoration: 'none' }}>TVmaze</a>
             , licensed under{' '}

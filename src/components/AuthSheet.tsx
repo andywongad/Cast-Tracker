@@ -14,7 +14,7 @@ function PreviewBanner() {
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--accent-tint)', borderRadius: 14, padding: '12px 14px', marginBottom: 20 }}>
       <span aria-hidden="true" style={{ fontSize: 14, lineHeight: 1.3 }}>🚧</span>
-      <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+      <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
         <strong style={{ color: 'var(--text)' }}>Preview only.</strong> No account is created and nothing leaves this device.
         Your library still lives in this browser — sign-in doesn&rsquo;t back it up yet.
       </div>
@@ -84,7 +84,7 @@ export default function AuthSheet() {
               style={{ marginBottom: 8 }}
             />
             {/* No password field, by design — a stub can't protect one. */}
-            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.45, marginBottom: 18 }}>
+            <div style={{ fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.45, marginBottom: 18 }}>
               No password — you&rsquo;d get a one-time sign-in link by email.
             </div>
 

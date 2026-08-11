@@ -29,7 +29,7 @@ export default function EditControls({ onSave, onCancel, onUndo, autoSave, isSav
         position: 'fixed',
         bottom: 90,
         right: 'calc(50% - 69px + 148px + 8px)',
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: 700,
         color: 'var(--text-muted)',
         transition: 'opacity 0.3s ease',

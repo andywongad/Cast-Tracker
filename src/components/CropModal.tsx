@@ -144,7 +144,7 @@ export default function CropModal({
     >
       <div style={{ background: 'var(--sheet)', borderRadius: 20, padding: 20, width: 280, maxWidth: '88vw', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, textAlign: 'center' }}>{file ? 'Adjust photo' : 'Reframe photo'}</div>
-        <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 14, textAlign: 'center' }}>Drag to move &middot; slider to zoom</div>
+        <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 14, textAlign: 'center' }}>Drag to move &middot; slider to zoom</div>
         <div
           onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}
           style={{ position: 'relative', width: FRAME, height: FRAME, margin: '0 auto 16px', borderRadius: 26, overflow: 'hidden', background: '#000', cursor: 'grab', touchAction: 'none' }}
@@ -166,14 +166,14 @@ export default function CropModal({
           <button
             onClick={() => onZoom(1)}
             disabled={zoom === 1}
-            style={{ flex: 'none', border: 'none', background: 'none', padding: 0, fontSize: 11, fontWeight: 600, color: zoom === 1 ? 'var(--text-faint)' : 'var(--accent-soft)', cursor: zoom === 1 ? 'default' : 'pointer' }}
+            style={{ flex: 'none', border: 'none', background: 'none', padding: 0, fontSize: 13, fontWeight: 600, color: zoom === 1 ? 'var(--text-faint)' : 'var(--accent-soft)', cursor: zoom === 1 ? 'default' : 'pointer' }}
           >
             Original
           </button>
         </div>
 
         {failed && (
-          <div style={{ fontSize: 11.5, color: '#C24B4B', lineHeight: 1.45, marginBottom: 12, textAlign: 'center' }}>
+          <div style={{ fontSize: 13.5, color: '#C24B4B', lineHeight: 1.45, marginBottom: 12, textAlign: 'center' }}>
             This image can&rsquo;t be reframed here. Upload your own copy instead.
           </div>
         )}

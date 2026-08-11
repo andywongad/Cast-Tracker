@@ -16,7 +16,7 @@ function SwapArrowsVertical() {
 }
 
 const cardStyle: React.CSSProperties = { background: 'var(--card)', border: 'none', borderRadius: 22, padding: 20, boxShadow: 'var(--shadow-card)' };
-const cardLabel: React.CSSProperties = { fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 };
+const cardLabel: React.CSSProperties = { fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 };
 // Oversized, ultra-light numerals are the anchor of the fintech look.
 const valueText: React.CSSProperties = { fontSize: 34, fontWeight: 200, letterSpacing: '-0.02em', textAlign: 'right', minWidth: 0, flex: 1 };
 const pickerStyle: React.CSSProperties = { flex: 'none', maxWidth: '58%', border: 'none', background: 'transparent', fontSize: 14, fontWeight: 500, color: 'var(--text)', padding: 0, outline: 'none' };
@@ -149,7 +149,7 @@ export function ValueConverterSheet() {
           )}
         </div>
 
-        <div style={{ fontSize: 10.5, color: 'var(--text-faint)', lineHeight: 1.4, marginBottom: 14 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--text-faint)', lineHeight: 1.4, marginBottom: 14 }}>
           Approximate — exchange rates are live (updated hourly); inflation uses historical US CPI.
         </div>
 
@@ -216,7 +216,7 @@ export function TranslatorSheet() {
           </div>
         </div>
 
-        {error && <div style={{ fontSize: 12, color: '#E08A80', textAlign: 'center', marginBottom: 10 }}>{error}</div>}
+        {error && <div style={{ fontSize: 14, color: '#E08A80', textAlign: 'center', marginBottom: 10 }}>{error}</div>}
         <button onClick={run} disabled={!text.trim() || loading} className="ct-btn-primary" style={{ width: '100%' }}>{loading ? 'Translating…' : 'Translate'}</button>
       </div>
     </div>

@@ -197,8 +197,8 @@ export default function ShowScreen() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
           {isRealityShow && (
             <div style={{ display: 'inline-flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: 3 }}>
-              <button onClick={() => setGridMode(true)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', background: gridMode ? 'var(--accent)' : 'transparent', color: gridMode ? '#fff' : 'var(--text-secondary)' }}>Grid</button>
-              <button onClick={() => setGridMode(false)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', background: !gridMode ? 'var(--accent)' : 'transparent', color: !gridMode ? '#fff' : 'var(--text-secondary)' }}>
+              <button onClick={() => setGridMode(true)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', background: gridMode ? 'var(--accent)' : 'transparent', color: gridMode ? '#fff' : 'var(--text-secondary)' }}>Grid</button>
+              <button onClick={() => setGridMode(false)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', background: !gridMode ? 'var(--accent)' : 'transparent', color: !gridMode ? '#fff' : 'var(--text-secondary)' }}>
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ marginRight: 5 }}><circle cx="4" cy="4" r="2" fill="currentColor" /><circle cx="12" cy="4" r="2" fill="currentColor" /><circle cx="8" cy="12" r="2" fill="currentColor" /><path d="M5.5 5.3L6.7 10.3M10.5 5.3L9.3 10.3M6 4h4" stroke="currentColor" strokeWidth="1.2" /></svg>
                 Relationship map
               </button>
@@ -206,13 +206,13 @@ export default function ShowScreen() {
           )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Caught up through:</span>
-            <select value={show.caughtUpEp || ''} onChange={(e) => setCaughtUp(e.target.value)} style={{ border: '1px solid var(--input-border)', borderRadius: 9, background: 'var(--surface)', color: 'var(--text)', fontSize: 11.5, fontWeight: 700, padding: '4px 8px' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Caught up through:</span>
+            <select value={show.caughtUpEp || ''} onChange={(e) => setCaughtUp(e.target.value)} style={{ border: '1px solid var(--input-border)', borderRadius: 9, background: 'var(--surface)', color: 'var(--text)', fontSize: 13.5, fontWeight: 700, padding: '4px 8px' }}>
               <option value="">&mdash;</option>
               {episodeOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
             </select>
           </div>
-          <button onClick={() => openRedeem('cast')} style={{ background: 'none', border: 'none', padding: 0, marginTop: 6, fontSize: 11.5, fontWeight: 700, color: 'var(--accent-soft)', cursor: 'pointer' }}>Have a character code? Redeem it &rarr;</button>
+          <button onClick={() => openRedeem('cast')} style={{ background: 'none', border: 'none', padding: 0, marginTop: 6, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', cursor: 'pointer' }}>Have a character code? Redeem it &rarr;</button>
         </div>
       </div>
 
@@ -229,7 +229,7 @@ export default function ShowScreen() {
       {mapOpen && hasSeasons && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px', marginBottom: 18 }}>
           {episodeOptions.map((ep) => (
-            <button key={ep} onClick={() => setMapEpisode(ep)} style={{ border: 'none', background: 'none', padding: '2px 0', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: (show.mapEpisode || 'Ep 1') === ep ? 'var(--accent-soft)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>{ep}</button>
+            <button key={ep} onClick={() => setMapEpisode(ep)} style={{ border: 'none', background: 'none', padding: '2px 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: (show.mapEpisode || 'Ep 1') === ep ? 'var(--accent-soft)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>{ep}</button>
           ))}
         </div>
       )}
@@ -242,7 +242,7 @@ export default function ShowScreen() {
                 <circle cx="20" cy="22" r="8" stroke="var(--icon-muted)" strokeWidth="2" /><circle cx="38" cy="22" r="8" stroke="var(--icon-muted)" strokeWidth="2" />
                 <path d="M6 46c1.5-9 7-14 14-14s12.5 5 14 14" stroke="var(--icon-muted)" strokeWidth="2" strokeLinecap="round" /><path d="M28 46c1.5-9 7-14 14-14" stroke="var(--icon-muted)" strokeWidth="2" strokeLinecap="round" />
               </svg>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-faint)', marginBottom: 6 }}>No cast yet</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-faint)', marginBottom: 6 }}>No cast yet</div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 22, maxWidth: 240 }}>Add the people you're trying to keep straight while you watch.</div>
               <button onClick={() => openAddCast()} className="ct-btn-primary" style={{ padding: '0 22px', height: 46, borderRadius: 13, fontSize: 14 }}>+ Add first cast member</button>
               {showBulk && <button onClick={bulkAdd} disabled={bulkBusy} style={{ marginTop: 10, height: 44, padding: '0 22px', border: '1.5px solid var(--text)', borderRadius: 13, background: 'transparent', color: 'var(--text)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>{bulkAddLabel}</button>}
@@ -263,7 +263,7 @@ export default function ShowScreen() {
                     onClick={() => setPhotoNoteOpen((v) => !v)}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
                   >
-                    <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                    <span style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
                       Why do some photos show the actor?
                     </span>
                     <svg width="10" height="10" viewBox="0 0 16 16" fill="none" style={{ transform: photoNoteOpen ? 'rotate(180deg)' : 'none', flex: 'none' }}>
@@ -271,7 +271,7 @@ export default function ShowScreen() {
                     </svg>
                   </button>
                   {photoNoteOpen && (
-                    <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 8, background: 'var(--surface)', borderRadius: 12, padding: '12px 14px' }}>
+                    <div style={{ fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 8, background: 'var(--surface)', borderRadius: 12, padding: '12px 14px' }}>
                       In-character photos come from{' '}
                       <a href={show.tvmazeId ? `https://www.tvmaze.com/shows/${show.tvmazeId}` : 'https://www.tvmaze.com'} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-soft)', fontWeight: 700, textDecoration: 'none' }}>TVmaze</a>
                       , which lists <strong style={{ color: 'var(--text)' }}>{inCharacterCount}</strong> of these {visibleCast.length}. TMDb, where the rest of this

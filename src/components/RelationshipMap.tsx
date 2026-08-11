@@ -261,29 +261,29 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   return (
     <div>
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Relationship map for {mapEpisode}</div>
-        <button onClick={onToggleHelp} aria-expanded={mapHelpOpen} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', background: 'none', padding: '2px 0', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700, marginBottom: mapHelpOpen ? 6 : 8 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Relationship map for {mapEpisode}</div>
+        <button onClick={onToggleHelp} aria-expanded={mapHelpOpen} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', background: 'none', padding: '2px 0', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, fontWeight: 700, marginBottom: mapHelpOpen ? 6 : 8 }}>
           <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ transform: mapHelpOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }}><path d="M3 5.5L8 10.5L13 5.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <span>How to use the map</span>
         </button>
         {mapHelpOpen && (
-          <ul style={{ margin: '0 0 8px', padding: '0 0 0 14px', fontSize: 12, color: 'var(--text-faint)', lineHeight: 1.4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <ul style={{ margin: '0 0 8px', padding: '0 0 0 14px', fontSize: 14, color: 'var(--text-faint)', lineHeight: 1.4, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <li>Drag from one contestant to another to show interest — the line starts at the person who's interested</li>
             <li>Press and hold a contestant to reposition them</li>
             <li>Drag a line's end to reconnect it, or drop it away from everyone to delete</li>
           </ul>
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12, color: 'var(--text-faint)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 14, color: 'var(--text-faint)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="15" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /></svg><span>interested in</span></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13.6s-5.6-3.4-5.6-7.3C2.4 3.9 4.2 2.3 6.3 2.3c1.1 0 2.1.5 2.9 1.4.7-.9 1.7-1.4 2.8-1.4 2.1 0 3.9 1.6 3.9 4 0 3.9-5.6 7.3-5.6 7.3z" fill={MAP_HEART} /></svg><span>mutual</span></div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            {hasImportable && <button onClick={importPrevLines} style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Import from {episodeOptions[prevIdx]}</button>}
+            {hasImportable && <button onClick={importPrevLines} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Import from {episodeOptions[prevIdx]}</button>}
             {hasLines && (
               <>
                 <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)' }} />
-                <button onClick={resetLines} style={{ flexShrink: 0, fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', background: 'none', border: '1px solid transparent', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Reset lines</button>
+                <button onClick={resetLines} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--text-muted)', background: 'none', border: '1px solid transparent', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Reset lines</button>
               </>
             )}
           </div>
@@ -351,9 +351,9 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
                 <div style={{ width: 44, height: 44, borderRadius: 999, backgroundColor: c.color, border: '2px solid var(--sheet)', boxShadow: '0 0 0 1px var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'rgba(255,255,255,0.85)', overflow: 'hidden', fontSize: 13, ...bgStyle(c.photo, 'cover') }}>
                   {!c.photo && initials(c.name)}
                 </div>
-                <button onPointerDown={(e) => { e.stopPropagation(); toggleHide(c.id); }} aria-label="Remove from map" style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 999, border: '1px solid var(--border)', background: 'var(--sheet)', color: 'var(--text-muted)', fontSize: 10, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>&times;</button>
+                <button onPointerDown={(e) => { e.stopPropagation(); toggleHide(c.id); }} aria-label="Remove from map" style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 999, border: '1px solid var(--border)', background: 'var(--sheet)', color: 'var(--text-muted)', fontSize: 12, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>&times;</button>
               </div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text)', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 60 }}>{c.name}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 60 }}>{c.name}</div>
             </div>
           );
         })}
@@ -361,9 +361,9 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
 
       {hiddenCast.length > 0 && (
         <>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 12, marginBottom: 6 }}>Not shown on map:</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 12, marginBottom: 6 }}>Not shown on map:</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {hiddenCast.map((c) => <button key={c.id} onClick={() => toggleHide(c.id)} style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '5px 10px', cursor: 'pointer' }}>+ {c.name}</button>)}
+            {hiddenCast.map((c) => <button key={c.id} onClick={() => toggleHide(c.id)} style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '5px 10px', cursor: 'pointer' }}>+ {c.name}</button>)}
           </div>
         </>
       )}

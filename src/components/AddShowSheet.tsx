@@ -107,7 +107,7 @@ export default function AddShowSheet() {
         {form.poster && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div style={{ width: 40, height: 56, borderRadius: 8, flex: 'none', ...bgStyle(form.poster) }} />
-            <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Matched from TMDb</span>
+            <span style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>Matched from TMDb</span>
           </div>
         )}
         <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value, poster: null, tmdbId: null }))} placeholder="Search TMDb or type a title" className="ct-input" style={{ marginBottom: 8 }} />
@@ -118,14 +118,14 @@ export default function AddShowSheet() {
                 <div style={{ width: 32, height: 46, flex: 'none', borderRadius: 6, ...bgStyle(img(r.poster_path)) }} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{(r.first_air_date || '').slice(0, 4) || '—'}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{(r.first_air_date || '').slice(0, 4) || '—'}</div>
                 </div>
               </button>
             ))}
           </div>
         )}
-        {!hasTmdbKey() && <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 16 }}>Add a TMDb API key (VITE_TMDB_API_KEY) to search real shows — you can still add one manually.</div>}
-        {searching && <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginBottom: 12 }}>Searching TMDb&hellip;</div>}
+        {!hasTmdbKey() && <div style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 16 }}>Add a TMDb API key (VITE_TMDB_API_KEY) to search real shows — you can still add one manually.</div>}
+        {searching && <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 12 }}>Searching TMDb&hellip;</div>}
 
         <label className="ct-label-muted" style={{ marginTop: 8 }}>TYPE</label>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>

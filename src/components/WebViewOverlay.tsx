@@ -26,7 +26,7 @@ export default function WebViewOverlay() {
         </a>
       </div>
       {slow && (
-        <div style={{ flex: 'none', padding: '8px 14px', fontSize: 12, color: 'var(--text-faint)', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ flex: 'none', padding: '8px 14px', fontSize: 14, color: 'var(--text-faint)', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>
           Taking a while, or blocked from loading here? Use &ldquo;Open externally&rdquo; above.
         </div>
       )}
