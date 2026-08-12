@@ -8,6 +8,46 @@ import CastGrid from './CastGrid';
 import RelationshipMap from './RelationshipMap';
 import DensityToggle from './DensityToggle';
 
+/**
+ * Select with a chevron we control. Chrome draws the native arrow at a fixed offset from the
+ * border box and ignores padding-right, so nudging it means `appearance: none` plus our own
+ * icon. Inherits colour from the wrapper, so it works on both the accent and surface fills.
+ */
+function SelectField({ value, onChange, label, width, bg, fg, children }: {
+  value: string | number;
+  onChange: (v: string) => void;
+  label: string;
+  width: string;
+  bg: string;
+  fg: string;
+  children: React.ReactNode;
+}) {
+  return (
+    // fontSize must match the select's: `width` is in ch units, which resolve against *this*
+    // element's font. Inheriting the 16px body size made every dropdown ~10px too wide.
+    <div style={{ position: 'relative', width, flex: 'none', display: 'inline-flex', color: fg, fontSize: 13.5 }}>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        style={{
+          appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+          width: '100%', height: 38, border: 'none', borderRadius: 11, background: bg, color: fg,
+          padding: '0 30px 0 10px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
+        }}
+      >
+        {children}
+      </select>
+      <svg
+        width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"
+        style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+      >
+        <path d="M3 5.5L8 10.5L13 5.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  );
+}
+
 export default function ShowScreen() {
   const { data, settings, updateData, showById, pushRecent, setCastColumns } = useStore();
   const { activeShowId, openAddCast } = useUI();
@@ -125,6 +165,14 @@ export default function ShowScreen() {
   const visibleCastAll = hasSeasons
     ? show.cast.filter((c) => (cumulativeSeasons ? (c.season || 1) <= currentSeason : (c.season || 1) === currentSeason))
     : show.cast;
+  // Width from the widest label each dropdown will actually render, so a 6-season show doesn't
+  // reserve room for Survivor's 51. "Season " is 7 characters, "Ep " is 3; the +42px covers the
+  // side padding and the native dropdown arrow (box-sizing is border-box globally).
+  const seasonDigits = String(Math.max(1, ...orderedSeasons)).length;
+  const episodeDigits = String(Math.max(1, episodeOptions.length)).length;
+  const seasonSelW = `calc(${7 + seasonDigits}ch + 42px)`;
+  const episodeSelW = `calc(${3 + episodeDigits}ch + 42px)`;
+
   const cq = castQuery.trim().toLowerCase();
   const visibleCast = cq ? visibleCastAll.filter((c) => c.name.toLowerCase().includes(cq) || (c.nickname || '').toLowerCase().includes(cq)) : visibleCastAll;
 
@@ -193,22 +241,26 @@ export default function ShowScreen() {
           while scrolling a long cast list or dragging lines on the map. */}
       {hasSeasons && (
         <div style={{ position: 'sticky', top: 0, zIndex: 6, background: 'var(--bg)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, margin: '0 -16px 12px', padding: '8px 16px' }}>
-          <select
+          <SelectField
             value={currentSeason}
-            onChange={(e) => setSeason(parseInt(e.target.value))}
-            aria-label="Season"
-            style={{ flex: 'none', width: 'calc(9ch + 42px)', height: 38, border: 'none', borderRadius: 11, background: 'var(--accent)', color: 'var(--accent-text)', padding: '0 10px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
+            onChange={(v) => setSeason(parseInt(v))}
+            label="Season"
+            width={seasonSelW}
+            bg="var(--accent)"
+            fg="var(--accent-text)"
           >
             {orderedSeasons.map((sn) => <option key={sn} value={sn}>Season {sn}</option>)}
-          </select>
-          <select
+          </SelectField>
+          <SelectField
             value={show.mapEpisode || episodeOptions[0] || 'Ep 1'}
-            onChange={(e) => setMapEpisode(e.target.value)}
-            aria-label="Episode"
-            style={{ flex: 'none', width: 'calc(5ch + 42px)', height: 38, border: 'none', borderRadius: 11, background: 'var(--surface)', color: 'var(--text)', padding: '0 10px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
+            onChange={setMapEpisode}
+            label="Episode"
+            width={episodeSelW}
+            bg="var(--surface)"
+            fg="var(--text)"
           >
             {episodeOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
-          </select>
+          </SelectField>
         </div>
       )}
 
