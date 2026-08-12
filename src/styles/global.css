@@ -18,7 +18,8 @@ a { color: inherit; }
 
 .ct-app {
   position: relative;
-  height: 100dvh;
+  /* --app-h tracks visualViewport (see App.tsx); 100dvh is the pre-JS fallback. */
+  height: var(--app-h, 100dvh);
   width: 100%;
   max-width: 560px;
   margin: 0 auto;
@@ -128,6 +129,7 @@ a { color: inherit; }
   background: var(--accent); color: var(--accent-text); font-weight: 500; box-shadow: var(--shadow-card);
 }
 
+.ct-app[data-keyboard='open'] .ct-footer { display: none; }
 .ct-footer {
   flex: none; height: 76px; padding: 0 12px calc(env(safe-area-inset-bottom, 0px));
   display: flex; align-items: flex-end; justify-content: space-around;

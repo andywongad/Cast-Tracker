@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { StoreProvider, useStore } from './hooks/useStore';
 import { UIProvider, useUI } from './hooks/useUI';
 import { AuthProvider } from './hooks/useAuth';
@@ -22,21 +22,56 @@ import ShowMenuSheet from './components/ShowMenuSheet';
 function Shell() {
   const { settings } = useStore();
   const { screen, activeShowId } = useUI();
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   useEffect(() => {
     registerServiceWorker();
   }, []);
 
+  /**
+   * Size the app to the *visual* viewport rather than 100dvh.
+   *
+   * On iOS Safari an open keyboard doesn't shrink the layout viewport, so 100dvh keeps reporting
+   * the full screen and the keyboard simply covers the bottom of the app — search results included.
+   * visualViewport reports what's actually visible and fires on keyboard open/close.
+   *
+   * The keyboard flag drives hiding the bottom nav while typing: it sits under the keyboard, so
+   * it's unreachable anyway, and dropping it returns ~76px to the results.
+   */
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const apply = () => {
+      const h = vv?.height ?? window.innerHeight;
+      document.documentElement.style.setProperty('--app-h', `${Math.round(h)}px`);
+      // A large gap between layout and visual viewport means a software keyboard, not a browser
+      // chrome change — 120px is comfortably above toolbar hide/show, below any real keyboard.
+      setKeyboardOpen(vv ? window.innerHeight - vv.height > 120 : false);
+    };
+    apply();
+    vv?.addEventListener('resize', apply);
+    vv?.addEventListener('scroll', apply);
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', apply);
+    return () => {
+      vv?.removeEventListener('resize', apply);
+      vv?.removeEventListener('scroll', apply);
+      window.removeEventListener('resize', apply);
+      window.removeEventListener('orientationchange', apply);
+    };
+  }, []);
+
   const themeName = settings.theme ?? 'Light';
   const t = THEMES[themeName];
   const rootStyle = useMemo(() => ({
-    position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+    // Height deliberately omitted: .ct-app uses height: var(--app-h, 100dvh), and an inline
+    // height here would override it — which is exactly why the visual-viewport sizing had no effect.
+    position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden',
     background: t.bg, color: t.text,
     ...themeVars(t),
   }) as React.CSSProperties, [t]);
 
   return (
-    <div className="ct-app" style={rootStyle}>
+    <div className="ct-app" data-keyboard={keyboardOpen ? 'open' : undefined} style={rootStyle}>
       <TopBar />
       <div id="ct-scroll" className="ct-scroll">
         {screen === 'home' ? <HomeScreen /> : <ShowScreen key={activeShowId} />}
