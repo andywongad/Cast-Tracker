@@ -110,6 +110,8 @@ export interface Show {
   wikiUrl: string;
   imdbUrl: string;
   currentSeason?: number;
+  /** Retired: the caught-up dropdown was replaced by the episode strip. Kept so existing
+   * records stay valid and the ShowTile badge still renders for anyone who set one. */
   caughtUpEp?: string;
   mapEpisode?: string;
   /**

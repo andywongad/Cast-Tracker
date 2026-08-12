@@ -131,7 +131,7 @@ export default function ShowScreen() {
   const visibleCast = cq ? visibleCastAll.filter((c) => c.name.toLowerCase().includes(cq) || (c.nickname || '').toLowerCase().includes(cq)) : visibleCastAll;
 
   const setSeason = (n: number) => {
-    updateData((d) => { const s = d.shows.find((x) => x.id === show.id); if (s) { s.currentSeason = n; s.caughtUpEp = ''; } });
+    updateData((d) => { const s = d.shows.find((x) => x.id === show.id); if (s) { s.currentSeason = n; s.mapEpisode = ''; } });
   };
   const setMapEpisode = (val: string) => {
     updateData((d) => { const s = d.shows.find((x) => x.id === show.id); if (s) s.mapEpisode = val; });
@@ -141,7 +141,10 @@ export default function ShowScreen() {
   const inCharacterCount = visibleCast.filter((c) => c.characterPhoto).length;
   const showsPhotoMix = show.type === 'DRAMA' && inCharacterCount > 0 && inCharacterCount < visibleCast.length;
 
-  const bulkEp = epNumFromLabel(show.caughtUpEp || 'Ep 1');
+  // Reads the episode strip's selection, so "+ Add all cast from Ep N" always names the episode
+  // that's visibly highlighted. `mapEpisode` predates the strip appearing in grid view — it's the
+  // show's current episode now, not a map-only setting.
+  const bulkEp = epNumFromLabel(show.mapEpisode || episodeOptions[0] || 'Ep 1');
   const bulkAdd = async () => {
     if (!show?.tmdbId || !hasTmdbKey()) return;
     setBulkBusy(true);
@@ -162,9 +165,6 @@ export default function ShowScreen() {
             actorName: isDrama ? p.name : '', actorTmdbId: p.id || null, wikiUrl: '', imdbUrl: '', versions: [], relationships: [],
           });
         });
-        // Adding an episode's cast means you've watched it — reflect that in "Caught up through"
-        // rather than leaving it on the em-dash and making the user set it again by hand.
-        s.caughtUpEp = `Ep ${bulkEp}`;
       });
     } finally {
       setBulkBusy(false);
@@ -199,7 +199,7 @@ export default function ShowScreen() {
         </div>
       )}
 
-      {mapOpen && hasSeasons && (
+      {hasSeasons && (
         // Sticky so the episode you're editing stays reachable while dragging lines further down
         // the map. Negative side margins cancel the screen's 16px padding so the bar spans edge to
         // edge when pinned; top: 0 lands it directly under the sticky top bar, which sits outside
