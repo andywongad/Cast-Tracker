@@ -56,7 +56,8 @@ export default function HomeScreen() {
         {isSearching && <button onClick={() => setQuery('')} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', padding: 0 }}>&times;</button>}
       </div>
 
-      <button onClick={() => openRedeem('show')} style={{ background: 'none', border: 'none', padding: 0, margin: '-10px 0 18px', fontSize: 12.5, fontWeight: 700, color: 'var(--accent-soft)', cursor: 'pointer' }}>Have a show code? Redeem it &rarr;</button>
+      {/* Hidden while searching — it's unrelated to the query and pushes results toward the keyboard. */}
+      {!isSearching && <button onClick={() => openRedeem('show')} style={{ background: 'none', border: 'none', padding: 0, margin: '-10px 0 18px', fontSize: 12.5, fontWeight: 700, color: 'var(--accent-soft)', cursor: 'pointer' }}>Have a show code? Redeem it &rarr;</button>}
 
       {showBackupNudge && !isSearching && (
         <div style={{ background: 'var(--card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, padding: 16, marginBottom: 22 }}>
