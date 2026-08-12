@@ -217,7 +217,7 @@ export default function ShowScreen() {
     }
   };
 
-  const bulkAddLabel = bulkBusy ? 'Adding…' : `+ Add all cast from S${currentSeason} E${bulkEp}`;
+  const bulkAddLabel = bulkBusy ? 'Adding…' : `+ Add all cast (S${currentSeason}E${bulkEp})`;
   const showBulk = !!show.tmdbId && hasTmdbKey();
 
   return (
