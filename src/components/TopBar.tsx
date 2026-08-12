@@ -3,7 +3,7 @@ import { useUI } from '../hooks/useUI';
 
 export default function TopBar() {
   const { showById } = useStore();
-  const { screen, activeShowId, goHome, openSettings } = useUI();
+  const { screen, activeShowId, goHome, openSettings, openShowMenu } = useUI();
   const show = showById(activeShowId);
   const showBack = screen === 'show';
 
@@ -22,6 +22,15 @@ export default function TopBar() {
           </div>
         )}
       </div>
+      {showBack && (
+        <button className="ct-iconbtn bordered" onClick={openShowMenu} aria-label="Show options">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <circle cx="5" cy="12" r="1.7" fill="var(--text-secondary)" />
+            <circle cx="12" cy="12" r="1.7" fill="var(--text-secondary)" />
+            <circle cx="19" cy="12" r="1.7" fill="var(--text-secondary)" />
+          </svg>
+        </button>
+      )}
       <button className="ct-iconbtn bordered" onClick={openSettings} aria-label="Settings">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
           <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="var(--text-secondary)" strokeWidth="1.6" />

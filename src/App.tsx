@@ -17,6 +17,7 @@ import { ShareSheet, RedeemSheet } from './components/ShareRedeem';
 import WebViewOverlay from './components/WebViewOverlay';
 import CastDetailSheet from './components/CastDetailSheet';
 import AuthSheet from './components/AuthSheet';
+import ShowMenuSheet from './components/ShowMenuSheet';
 
 function Shell() {
   const { settings } = useStore();
@@ -47,6 +48,7 @@ function Shell() {
       <Footer />
       <SettingsSheet />
       <AuthSheet />
+      <ShowMenuSheet />
       <FeedbackSheet />
       <ValueConverterSheet />
       <TranslatorSheet />

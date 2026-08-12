@@ -47,6 +47,9 @@ interface UIValue {
   authOpen: boolean;
   openAuth: () => void;
   closeAuth: () => void;
+  showMenuOpen: boolean;
+  openShowMenu: () => void;
+  closeShowMenu: () => void;
 
   feedbackOpen: boolean;
   openFeedback: () => void;
@@ -87,6 +90,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [castDetailId, setCastDetailId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [showMenuOpen, setShowMenuOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [converterOpen, setConverterOpen] = useState(false);
   const [converterPrefill, setConverterPrefill] = useState<{ fromCcy?: string; toCcy?: string; amount?: string } | null>(null);
@@ -114,6 +118,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const openAuth = useCallback(() => { setSettingsOpen(false); setAuthOpen(true); }, []);
   const closeAuth = useCallback(() => setAuthOpen(false), []);
+
+  const openShowMenu = useCallback(() => setShowMenuOpen(true), []);
+  const closeShowMenu = useCallback(() => setShowMenuOpen(false), []);
 
   const openFeedback = useCallback(() => setFeedbackOpen(true), []);
   const closeFeedback = useCallback(() => setFeedbackOpen(false), []);
@@ -144,13 +151,14 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     castDetailId, openCastDetail, closeCastDetail,
     settingsOpen, openSettings, closeSettings,
     authOpen, openAuth, closeAuth,
+    showMenuOpen, openShowMenu, closeShowMenu,
     feedbackOpen, openFeedback, closeFeedback,
     converterOpen, converterPrefill, openConverter, closeConverter,
     translatorOpen, openTranslator, closeTranslator,
     shareSheet, openShareSheet, closeShareSheet,
     redeem, openRedeem, closeRedeem,
     webView, openWebView, closeWebView,
-  }), [screen, activeShowId, query, addShowSheet, addShowPrefill, addCastSheet, castDetailId, settingsOpen, authOpen, openAuth, closeAuth, feedbackOpen, converterOpen,
+  }), [screen, activeShowId, query, addShowSheet, addShowPrefill, addCastSheet, castDetailId, settingsOpen, authOpen, openAuth, closeAuth, showMenuOpen, openShowMenu, closeShowMenu, feedbackOpen, converterOpen,
       converterPrefill, translatorOpen, shareSheet, redeem, webView, openShow, goHome, openAddShow, openEditShow,
       closeAddShow, openAddCast, openEditCast, closeAddCast, openCastDetail, closeCastDetail, openSettings,
       closeSettings, openFeedback, closeFeedback, openConverter, closeConverter, openTranslator, closeTranslator, openShareSheet,

@@ -1,21 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
-import { bgStyle, epNumFromLabel, initials } from '../lib/utils';
+import { epNumFromLabel } from '../lib/utils';
 import { getShowDetails, getSeasonEpisodeCount, getEpisodeCredits, hasTmdbKey } from '../lib/tmdb';
 import { fetchTvmazeCast, matchCast } from '../lib/tvmaze';
 import CastGrid from './CastGrid';
 import RelationshipMap from './RelationshipMap';
-import NotificationToggle from './NotificationToggle';
 import DensityToggle from './DensityToggle';
 
-function ShareIcon() {
-  return <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1.8" stroke="#fff" strokeWidth="1.3" /><circle cx="12" cy="3.5" r="1.8" stroke="#fff" strokeWidth="1.3" /><circle cx="12" cy="12.5" r="1.8" stroke="#fff" strokeWidth="1.3" /><path d="M5.6 7.2l4.6-3.2M5.6 8.8l4.6 3.2" stroke="#fff" strokeWidth="1.3" /></svg>;
-}
-
 export default function ShowScreen() {
-  const { data, settings, updateData, showById, pushRecent, shareShow, setCastColumns } = useStore();
-  const { activeShowId, openWebView, openShareSheet, openRedeem, openAddCast } = useUI();
+  const { data, settings, updateData, showById, pushRecent, setCastColumns } = useStore();
+  const { activeShowId, openAddCast } = useUI();
   const show = showById(activeShowId);
 
   const [seasons, setSeasons] = useState<number[]>(Array.from({ length: 8 }, (_, i) => i + 1));
@@ -138,9 +133,6 @@ export default function ShowScreen() {
   const setSeason = (n: number) => {
     updateData((d) => { const s = d.shows.find((x) => x.id === show.id); if (s) { s.currentSeason = n; s.caughtUpEp = ''; } });
   };
-  const setCaughtUp = (val: string) => {
-    updateData((d) => { const s = d.shows.find((x) => x.id === show.id); if (s) s.caughtUpEp = val; });
-  };
   const setMapEpisode = (val: string) => {
     updateData((d) => { const s = d.shows.find((x) => x.id === show.id); if (s) s.mapEpisode = val; });
   };
@@ -184,40 +176,18 @@ export default function ShowScreen() {
 
   return (
     <div data-screen-label="Show" style={{ padding: '16px 16px 100px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 18 }}>
-        <div style={{ width: 72, height: 72, borderRadius: 14, flex: 'none', backgroundColor: show.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, color: 'rgba(255,255,255,0.85)', ...bgStyle(show.poster) }}>
-          {!show.poster && initials(show.title)}
+      {/* Poster, link pills, notifications, caught-up and the redeem link all moved into the
+          top bar's ⋯ menu — they cost ~150px above the fold and are all occasional. Only the view
+          switch stays inline, because it changes what the whole screen is. */}
+      {isRealityShow && (
+        <div style={{ display: 'inline-flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: 3, marginBottom: 10 }}>
+          <button onClick={() => setGridMode(true)} style={{ height: 30, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer', background: gridMode ? 'var(--accent)' : 'transparent', color: gridMode ? 'var(--accent-text)' : 'var(--text-secondary)' }}>Grid</button>
+          <button onClick={() => setGridMode(false)} style={{ height: 30, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', background: !gridMode ? 'var(--accent)' : 'transparent', color: !gridMode ? 'var(--accent-text)' : 'var(--text-secondary)' }}>
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ marginRight: 5 }}><circle cx="4" cy="4" r="2" fill="currentColor" /><circle cx="12" cy="4" r="2" fill="currentColor" /><circle cx="8" cy="12" r="2" fill="currentColor" /><path d="M5.5 5.3L6.7 10.3M10.5 5.3L9.3 10.3M6 4h4" stroke="currentColor" strokeWidth="1.2" /></svg>
+            Relationship map
+          </button>
         </div>
-        <div style={{ minWidth: 0, marginTop: -7 }}>
-          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-            {show.wikiUrl && <button className="ct-pill" onClick={() => openWebView(show.wikiUrl, 'Wikipedia')}>Wikipedia</button>}
-            {show.imdbUrl && <button className="ct-pill" onClick={() => openWebView(show.imdbUrl, 'IMDb')}>IMDb</button>}
-            <button className="ct-pill" onClick={() => openShareSheet(shareShow(show.id))}>Share</button>
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <NotificationToggle showId={show.id} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-          {isRealityShow && (
-            <div style={{ display: 'inline-flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: 3 }}>
-              <button onClick={() => setGridMode(true)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', background: gridMode ? 'var(--accent)' : 'transparent', color: gridMode ? '#fff' : 'var(--text-secondary)' }}>Grid</button>
-              <button onClick={() => setGridMode(false)} style={{ height: 32, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', background: !gridMode ? 'var(--accent)' : 'transparent', color: !gridMode ? '#fff' : 'var(--text-secondary)' }}>
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ marginRight: 5 }}><circle cx="4" cy="4" r="2" fill="currentColor" /><circle cx="12" cy="4" r="2" fill="currentColor" /><circle cx="8" cy="12" r="2" fill="currentColor" /><path d="M5.5 5.3L6.7 10.3M10.5 5.3L9.3 10.3M6 4h4" stroke="currentColor" strokeWidth="1.2" /></svg>
-                Relationship map
-              </button>
-            </div>
-          )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Caught up through:</span>
-            <select value={show.caughtUpEp || ''} onChange={(e) => setCaughtUp(e.target.value)} style={{ border: '1px solid var(--input-border)', borderRadius: 9, background: 'var(--surface)', color: 'var(--text)', fontSize: 13.5, fontWeight: 700, padding: '4px 8px' }}>
-              <option value="">&mdash;</option>
-              {episodeOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
-            </select>
-          </div>
-          <button onClick={() => openRedeem('cast')} style={{ background: 'none', border: 'none', padding: 0, marginTop: 6, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', cursor: 'pointer' }}>Have a character code? Redeem it &rarr;</button>
-        </div>
-      </div>
+      )}
 
       {hasSeasons && (
         <div className="ct-hscroll" style={{ marginBottom: 8 }}>
