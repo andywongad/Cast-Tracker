@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CastMember, MapCell, MapRelationship, Show } from '../types';
 import { useStore } from '../hooks/useStore';
 import { bgStyle, genId, initials } from '../lib/utils';
@@ -13,35 +13,60 @@ function epKeyFor(season: number, ep: string) { return `${season}_${ep}`; }
 function getEpRel(c: CastMember, epKey: string): MapRelationship[] { return c.relByEp?.[epKey] || []; }
 function getEpCell(c: CastMember, epKey: string): MapCell | null { return c.mapCellByEp?.[epKey] || null; }
 
-function assignDefaultCells(cast: CastMember[]): Record<string, MapCell> {
-  const out: Record<string, MapCell> = {};
-  // Lay a list out evenly, spread across the column range [colMin, colMax] and vertically centered.
-  const place = (list: CastMember[], colMin: number, colMax: number) => {
-    const n = list.length;
-    if (!n) return;
-    const width = colMax - colMin;
-    const numCols = Math.min(width + 1, n);
-    list.forEach((m, i) => {
-      const slotCol = i % numCols;
-      const slotRow = Math.floor(i / numCols);
-      const c = numCols > 1 ? colMin + Math.round((slotCol / (numCols - 1)) * width) : Math.round((colMin + colMax) / 2);
-      const r = DEFAULT_TOP_ROW + slotRow; // stack downward from the top
-      out[m.id] = { r, c };
-    });
-  };
-  const female = cast.filter((c) => c.gender === 'Female');
-  const male = cast.filter((c) => c.gender === 'Male');
-  const other = cast.filter((c) => c.gender !== 'Female' && c.gender !== 'Male');
-  if (female.length && male.length) {
-    // Dating-show style: women on the left, men on the right, everyone else centered
-    place(female, 0, 2);
-    place(other, 3, 3);
-    place(male, 4, COLS - 1);
-  } else {
-    // No clear gender split — one even, orderly grid across the whole map
-    place(cast, 0, COLS - 1);
+const cellKey = (cell: MapCell) => `${cell.r}:${cell.c}`;
+
+/** Dating-show split: women left, men right, everyone else centred. Falls back to the full width. */
+function colRange(c: CastMember, split: boolean): [number, number] {
+  if (!split) return [0, COLS - 1];
+  if (c.gender === 'Female') return [0, 2];
+  if (c.gender === 'Male') return [4, COLS - 1];
+  return [3, 3];
+}
+
+/** First unoccupied cell, scanning the preferred columns top-down before widening to all of them. */
+function firstFreeCell(occupied: Set<string>, colMin: number, colMax: number): MapCell {
+  for (const [lo, hi] of [[colMin, colMax], [0, COLS - 1]] as [number, number][]) {
+    for (let r = DEFAULT_TOP_ROW; r < DEFAULT_TOP_ROW + ROWS * 4; r++) {
+      for (let c = lo; c <= hi; c++) {
+        if (!occupied.has(`${r}:${c}`)) return { r, c };
+      }
+    }
   }
-  return out;
+  return { r: DEFAULT_TOP_ROW, c: 0 };
+}
+
+/**
+ * Resolve every visible cast member to a cell for this episode.
+ *
+ * Positions used to be derived from each person's index in the list, so adding or removing anyone
+ * recomputed the whole layout and shuffled people who hadn't moved. Now a cell is claimed once and
+ * persisted, and newcomers only ever take cells nobody holds — so existing people never move, and
+ * nobody lands on top of anyone.
+ *
+ * Returns the full map for rendering plus just the newly claimed cells, which the caller persists.
+ */
+function resolveCells(cast: CastMember[], epKey: string): { byId: Record<string, MapCell>; toPersist: Record<string, MapCell> } {
+  const byId: Record<string, MapCell> = {};
+  const toPersist: Record<string, MapCell> = {};
+  const occupied = new Set<string>();
+
+  // Lock in saved positions first so a newcomer can never be handed an occupied cell.
+  cast.forEach((c) => {
+    const cell = getEpCell(c, epKey);
+    if (cell) { byId[c.id] = cell; occupied.add(cellKey(cell)); }
+  });
+
+  const split = cast.some((c) => c.gender === 'Female') && cast.some((c) => c.gender === 'Male');
+  cast.forEach((c) => {
+    if (byId[c.id]) return;
+    const [lo, hi] = colRange(c, split);
+    const cell = firstFreeCell(occupied, lo, hi);
+    occupied.add(cellKey(cell));
+    byId[c.id] = cell;
+    toPersist[c.id] = cell;
+  });
+
+  return { byId, toPersist };
 }
 
 export default function RelationshipMap({ show, seasonCast, currentSeason, episodeOptions, mapHelpOpen, onToggleHelp }: {
@@ -59,7 +84,24 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   const hiddenCast = useMemo(() => seasonCast.filter((c) => c.hideFromMap), [seasonCast]);
 
   const rows = ROWS;
-  const defaultCells = useMemo(() => assignDefaultCells(visibleCast), [visibleCast]);
+  const { byId: cellById, toPersist } = useMemo(() => resolveCells(visibleCast, epKey), [visibleCast, epKey]);
+
+  // Write newly claimed cells straight away. Until a position is saved it would be recomputed on
+  // the next render, which is exactly the shuffling this replaces. Settles after one pass: once
+  // persisted, toPersist comes back empty.
+  useEffect(() => {
+    const ids = Object.keys(toPersist);
+    if (!ids.length) return;
+    updateData((d) => {
+      const sh = d.shows.find((x) => x.id === show.id);
+      if (!sh) return;
+      ids.forEach((id) => {
+        const c = sh.cast.find((x) => x.id === id);
+        if (c) c.mapCellByEp = { ...(c.mapCellByEp || {}), [epKey]: toPersist[id] };
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toPersist, epKey, show.id]);
 
   const cellPct = (cell: MapCell) => ({
     x: COLS > 1 ? 8 + (cell.c / (COLS - 1)) * 84 : 50,
@@ -69,12 +111,12 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   const posById = useMemo(() => {
     const m: Record<string, { x: number; y: number; cell: MapCell }> = {};
     visibleCast.forEach((c) => {
-      const cell = getEpCell(c, epKey) || defaultCells[c.id] || { r: 0, c: 0 };
+      const cell = cellById[c.id] || { r: DEFAULT_TOP_ROW, c: 0 };
       m[c.id] = { ...cellPct(cell), cell };
     });
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleCast, epKey, defaultCells, rows]);
+  }, [visibleCast, epKey, cellById, rows]);
 
   const containerH = Math.max(260, rows * 46 + 40) * 3;
 
@@ -132,9 +174,9 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
       }
     }
     if (!best) return;
-    const occupant = visibleCast.find((c) => c.id !== castId && (getEpCell(c, epKey) || defaultCells[c.id])?.r === best!.r && (getEpCell(c, epKey) || defaultCells[c.id])?.c === best!.c);
+    const occupant = visibleCast.find((c) => c.id !== castId && cellById[c.id]?.r === best!.r && cellById[c.id]?.c === best!.c);
     const mover = visibleCast.find((c) => c.id === castId);
-    const moverOldCell = mover ? (getEpCell(mover, epKey) || defaultCells[mover.id]) : null;
+    const moverOldCell = mover ? cellById[mover.id] : null;
     setEpCell(castId, best);
     if (occupant && moverOldCell) setEpCell(occupant.id, moverOldCell);
   };

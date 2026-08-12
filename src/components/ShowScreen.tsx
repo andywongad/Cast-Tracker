@@ -230,7 +230,11 @@ export default function ShowScreen() {
       )}
 
       {mapOpen && hasSeasons && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 10px', marginBottom: 18 }}>
+        // Sticky so the episode you're editing stays reachable while dragging lines further down
+        // the map. Negative side margins cancel the screen's 16px padding so the bar spans edge to
+        // edge when pinned; top: 0 lands it directly under the sticky top bar, which sits outside
+        // this scroll container.
+        <div style={{ position: 'sticky', top: 0, zIndex: 6, background: 'var(--bg)', borderBottom: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: '2px 10px', margin: '0 -16px 18px', padding: '10px 16px' }}>
           {episodeOptions.map((ep) => (
             <button key={ep} onClick={() => setMapEpisode(ep)} style={{ border: 'none', background: 'none', padding: '2px 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: (show.mapEpisode || 'Ep 1') === ep ? 'var(--accent-soft)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>{ep}</button>
           ))}
