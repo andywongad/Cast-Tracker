@@ -217,7 +217,7 @@ export default function ShowScreen() {
     }
   };
 
-  const bulkAddLabel = bulkBusy ? 'Adding…' : `+ Add all cast from Ep ${bulkEp}`;
+  const bulkAddLabel = bulkBusy ? 'Adding…' : `+ Add all cast from S${currentSeason} E${bulkEp}`;
   const showBulk = !!show.tmdbId && hasTmdbKey();
 
   return (
@@ -240,7 +240,10 @@ export default function ShowScreen() {
           horizontal scroll strip — and collapses two rows into one. Sticky so both stay reachable
           while scrolling a long cast list or dragging lines on the map. */}
       {hasSeasons && (
-        <div style={{ position: 'sticky', top: 0, zIndex: 6, background: 'var(--bg)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, margin: '0 -16px 12px', padding: '8px 16px' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 6, background: 'var(--bg)', borderBottom: '1px solid var(--border)', margin: '0 -16px 12px', padding: '8px 16px' }}>
+          <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 6 }}>Pick a season and episode</div>
+          {/* Wraps rather than squeezing: three controls don't fit one line on a narrow phone. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <SelectField
             value={currentSeason}
             onChange={(v) => setSeason(parseInt(v))}
@@ -261,6 +264,10 @@ export default function ShowScreen() {
           >
             {episodeOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
           </SelectField>
+          {showBulk && (
+            <button onClick={bulkAdd} disabled={bulkBusy} style={{ flex: 'none', height: 38, border: '1px dashed var(--border)', borderRadius: 11, background: 'transparent', color: 'var(--accent-soft)', fontSize: 12.5, fontWeight: 700, cursor: bulkBusy ? 'default' : 'pointer', padding: '0 14px', whiteSpace: 'nowrap' }}>{bulkAddLabel}</button>
+          )}
+          </div>
         </div>
       )}
 
@@ -284,7 +291,6 @@ export default function ShowScreen() {
               {/* flex-end keeps the toggle right-aligned when there's no TMDb key and the
                   bulk-add button isn't rendered at all. */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 14 }}>
-                {showBulk && <button onClick={bulkAdd} disabled={bulkBusy} style={{ flex: 1, minWidth: 0, height: 42, border: '1px dashed var(--border)', borderRadius: 12, background: 'transparent', color: 'var(--accent-soft)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>{bulkAddLabel}</button>}
                 <DensityToggle value={settings.castColumns || 2} options={[2, 3, 4]} onChange={setCastColumns} label="Cast columns" />
               </div>
               {/* The cast cards' action buttons hang 11px above the card edge, so a 12px bottom gap
