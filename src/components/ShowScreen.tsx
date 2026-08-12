@@ -34,11 +34,6 @@ export default function ShowScreen() {
         if (!s) return;
         if (d.imdbId && !s.imdbUrl) s.imdbUrl = `https://www.imdb.com/title/${d.imdbId}/`;
         if (d.wikiGuess && !s.wikiUrl) s.wikiUrl = d.wikiGuess;
-        // Land on the newest season rather than season 1 — that's what someone is most likely
-        // watching. Set here rather than at render because `seasons` holds a 1..8 placeholder
-        // until TMDb answers, which would briefly select season 8 for a three-season show.
-        // Only fills an unset value, so an explicit choice is never overwritten.
-        if (!s.currentSeason && d.seasons.length) s.currentSeason = Math.max(...d.seasons);
       });
       // eslint-disable-next-line react-hooks/exhaustive-deps
     });
@@ -92,6 +87,8 @@ export default function ShowScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show?.id, show?.tmdbId, show?.type, show?.tvmazeId, unresolvedCast]);
 
+  // Shows open on Season 1 and you work forward from there. `currentSeason` is only set once you
+  // pick one, so there's no auto-jump to the newest season.
   const currentSeason = show?.currentSeason || 1;
 
   useEffect(() => {
@@ -108,9 +105,10 @@ export default function ShowScreen() {
   const isRealityShow = show.type === 'REALITY' || show.type === 'VARIETY';
   const mapOpen = isRealityShow && !gridMode;
   const hasSeasons = seasons.length > 0;
-  // Keep the latest season pinned first, descending (Season 1 last).
-  // Static order — selecting a season only changes the highlight, never the ordering.
-  const orderedSeasons = [...seasons].sort((a, b) => b - a);
+  // Ascending, matching the episode list beside it — Season 1 first, then 2, and so on. The old
+  // descending order made sense when these were pills competing for horizontal space; in a
+  // dropdown, counting up is what people expect.
+  const orderedSeasons = [...seasons].sort((a, b) => a - b);
   /**
    * `season` records the season a cast member was *added* in — there's only one number per
    * person, so "every season they appear in" isn't stored anywhere.
@@ -189,25 +187,28 @@ export default function ShowScreen() {
         </div>
       )}
 
+      {/* Season and episode as native selects rather than pill rows. iOS renders these as its
+          wheel picker, which handles Survivor's 50 seasons and a 24-episode run without a
+          horizontal scroll strip — and collapses two rows into one. Sticky so both stay reachable
+          while scrolling a long cast list or dragging lines on the map. */}
       {hasSeasons && (
-        <div className="ct-hscroll" style={{ marginBottom: 8 }}>
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-          {orderedSeasons.map((sn) => (
-            <button key={sn} onClick={() => setSeason(sn)} style={{ flex: 'none', height: 32, padding: '0 14px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: currentSeason === sn ? 'none' : '1px solid var(--border)', background: currentSeason === sn ? 'var(--accent)' : 'transparent', color: currentSeason === sn ? 'var(--accent-text)' : 'var(--text-secondary)' }}>Season {sn}</button>
-          ))}
-          </div>
-        </div>
-      )}
-
-      {hasSeasons && (
-        // Sticky so the episode you're editing stays reachable while dragging lines further down
-        // the map. Negative side margins cancel the screen's 16px padding so the bar spans edge to
-        // edge when pinned; top: 0 lands it directly under the sticky top bar, which sits outside
-        // this scroll container.
-        <div style={{ position: 'sticky', top: 0, zIndex: 6, background: 'var(--bg)', borderBottom: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: '2px 10px', margin: '0 -16px 18px', padding: '10px 16px' }}>
-          {episodeOptions.map((ep) => (
-            <button key={ep} onClick={() => setMapEpisode(ep)} style={{ border: 'none', background: 'none', padding: '2px 0', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: (show.mapEpisode || 'Ep 1') === ep ? 'var(--accent-soft)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>{ep}</button>
-          ))}
+        <div style={{ position: 'sticky', top: 0, zIndex: 6, background: 'var(--bg)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, margin: '0 -16px 12px', padding: '8px 16px' }}>
+          <select
+            value={currentSeason}
+            onChange={(e) => setSeason(parseInt(e.target.value))}
+            aria-label="Season"
+            style={{ flex: 1, minWidth: 0, height: 38, border: 'none', borderRadius: 11, background: 'var(--accent)', color: 'var(--accent-text)', padding: '0 10px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
+          >
+            {orderedSeasons.map((sn) => <option key={sn} value={sn}>Season {sn}</option>)}
+          </select>
+          <select
+            value={show.mapEpisode || episodeOptions[0] || 'Ep 1'}
+            onChange={(e) => setMapEpisode(e.target.value)}
+            aria-label="Episode"
+            style={{ flex: 1, minWidth: 0, height: 38, border: 'none', borderRadius: 11, background: 'var(--surface)', color: 'var(--text)', padding: '0 10px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
+          >
+            {episodeOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
+          </select>
         </div>
       )}
 
