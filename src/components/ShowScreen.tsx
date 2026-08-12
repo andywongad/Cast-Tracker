@@ -197,7 +197,7 @@ export default function ShowScreen() {
             value={currentSeason}
             onChange={(e) => setSeason(parseInt(e.target.value))}
             aria-label="Season"
-            style={{ flex: 1, minWidth: 0, height: 38, border: 'none', borderRadius: 11, background: 'var(--accent)', color: 'var(--accent-text)', padding: '0 10px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
+            style={{ flex: 'none', width: 'calc(9ch + 42px)', height: 38, border: 'none', borderRadius: 11, background: 'var(--accent)', color: 'var(--accent-text)', padding: '0 10px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
           >
             {orderedSeasons.map((sn) => <option key={sn} value={sn}>Season {sn}</option>)}
           </select>
@@ -205,7 +205,7 @@ export default function ShowScreen() {
             value={show.mapEpisode || episodeOptions[0] || 'Ep 1'}
             onChange={(e) => setMapEpisode(e.target.value)}
             aria-label="Episode"
-            style={{ flex: 1, minWidth: 0, height: 38, border: 'none', borderRadius: 11, background: 'var(--surface)', color: 'var(--text)', padding: '0 10px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
+            style={{ flex: 'none', width: 'calc(5ch + 42px)', height: 38, border: 'none', borderRadius: 11, background: 'var(--surface)', color: 'var(--text)', padding: '0 10px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}
           >
             {episodeOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
           </select>
