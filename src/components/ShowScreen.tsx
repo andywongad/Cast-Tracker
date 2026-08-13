@@ -202,7 +202,32 @@ export default function ShowScreen() {
         if (!s) return;
         list.forEach((p) => {
           const name = isDrama && p.character ? p.character : p.name;
-          if (!name || s.cast.some((c) => c.name === name)) return;
+          if (!name) return;
+
+          /**
+           * Low-water mark. Someone already in the cast keeps the *earliest* episode they've been
+           * imported from, and an import from further back moves them earlier.
+           *
+           * Before this, the first import won permanently: adding everyone from S5 E8 stamped the
+           * entire cast season 5, and a later import from S1 E1 skipped them silently — so the
+           * season filter, which reads this field, showed nobody in seasons 1-4. Now the record
+           * corrects itself as you work backwards or watch forwards.
+           */
+          const existing = s.cast.find((c) => c.name === name);
+          if (existing) {
+            const knownSeason = existing.season || 1;
+            // epNumFromLabel defaults to 1 on an unparseable label, which would read as "episode 1"
+            // and block every correction. No recorded episode means unknown, so anything beats it.
+            const knownEp = existing.firstEp ? epNumFromLabel(existing.firstEp) : Infinity;
+            const isEarlier =
+              currentSeason < knownSeason || (currentSeason === knownSeason && bulkEp < knownEp);
+            if (isEarlier) {
+              existing.season = currentSeason;
+              existing.firstEp = `Ep ${bulkEp}`;
+            }
+            return;
+          }
+
           const color = ['#5B4FD6', '#3F5FA8', '#8B4FA0', '#4F8B7A', '#A0574F', '#4F6BA0', '#7A4FA0'][s.cast.length % 7];
           s.cast.push({
             id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6), color, name, native: '', nickname: '',

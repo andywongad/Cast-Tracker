@@ -19,7 +19,7 @@ const OPTIONAL_FIELDS: { key: OptionalField; label: string }[] = [
   { key: 'age', label: 'Age' },
   { key: 'hometown', label: 'Hometown' },
   { key: 'occupation', label: 'Occupation' },
-  { key: 'firstEp', label: 'First seen' },
+  { key: 'firstEp', label: 'Added from' },
   { key: 'customFields', label: 'Add your own…' },
 ];
 
@@ -595,7 +595,7 @@ export default function AddCastSheet() {
             )}
             {hasField('firstEp') && (
               <div style={{ marginBottom: 12 }}>
-                <label className="ct-label">FIRST SEEN</label>
+                <label className="ct-label">ADDED FROM</label>
                 <select value={form.firstEp} onChange={(e) => setForm((f) => ({ ...f, firstEp: e.target.value }))} className="ct-input">
                   <option value="">Not sure yet</option>
                   {firstEpOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
