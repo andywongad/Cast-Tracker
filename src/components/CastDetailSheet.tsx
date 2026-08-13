@@ -3,7 +3,7 @@ import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { initials, bgStyle, cropStyle } from '../lib/utils';
 import { displayPhoto } from '../lib/tvmaze';
-import { getPersonCredits, type PersonCredit } from '../lib/tmdb';
+import { getPersonCredits, getPersonWikiImdb, type PersonCredit } from '../lib/tmdb';
 import { fetchEnrichment, type EnrichmentState } from '../lib/enrichment/client';
 import type { RoleTag } from '../lib/enrichment/types';
 
@@ -40,6 +40,7 @@ export default function CastDetailSheet() {
   const [credits, setCredits] = useState<PersonCredit[]>([]);
   const [bio, setBio] = useState<EnrichmentState>({ status: 'idle' });
   const [bioAttempt, setBioAttempt] = useState(0);
+  const [lookedUpImdbUrl, setLookedUpImdbUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveVersionId(null);
@@ -47,6 +48,7 @@ export default function CastDetailSheet() {
     setCreditsExpanded(false);
     setCredits([]);
     setBioAttempt(0);
+    setLookedUpImdbUrl(null);
   }, [castDetailId]);
 
   /**
@@ -70,6 +72,23 @@ export default function CastDetailSheet() {
     return () => { cancelled = true; };
   }, [castDetailId, characterName, showTmdbId, showTitle, bioActorId, bioAttempt]);
 
+  /**
+   * Resolve the actor's real IMDb page from their TMDb id. Version-aware, because a "young Tony"
+   * version can be played by a different actor than the present-day one.
+   */
+  const lookupActorId =
+    (activeVersionId ? c?.versions.find((v) => v.id === activeVersionId)?.actorTmdbId : c?.actorTmdbId) ?? null;
+
+  useEffect(() => {
+    setLookedUpImdbUrl(null);
+    if (!lookupActorId) return;
+    let cancelled = false;
+    getPersonWikiImdb(lookupActorId)
+      .then((r) => { if (!cancelled) setLookedUpImdbUrl(r?.imdbUrl ?? null); })
+      .catch(() => { /* no link is a fine outcome — the pill just doesn't render */ });
+    return () => { cancelled = true; };
+  }, [lookupActorId]);
+
   if (!show || !c) return null;
 
   const activeVersion = activeVersionId ? c.versions.find((v) => v.id === activeVersionId) : null;
@@ -81,7 +100,23 @@ export default function CastDetailSheet() {
   const wikiUrl = activeVersion?.wikiUrl || c.wikiUrl;
   const imdbUrl = activeVersion?.imdbUrl || c.imdbUrl;
   const actorTmdbId = activeVersion?.actorTmdbId ?? c.actorTmdbId;
-  const hasActorInfo = !!(actorName || social || wikiUrl || imdbUrl);
+
+  /**
+   * These links used to appear only for hand-entered cast, because wikiUrl/imdbUrl are written
+   * solely by the Add-cast form — anything imported from TMDb arrived with both blank, which is
+   * every character in a library built by searching. Resolved on the fly instead.
+   *
+   * A typed-in link always wins: the user picked that one deliberately.
+   *
+   * IMDb is exact, from TMDb's external_ids. Wikipedia is a name-guess — TMDb doesn't carry a
+   * Wikipedia link, and the same guess is already how show-level wiki links are built. It lands on
+   * the right article for most actors and on a search-style miss for the rest, which is why it's
+   * offered as a link to follow rather than presented as verified.
+   */
+  const effectiveImdbUrl = imdbUrl || lookedUpImdbUrl;
+  const effectiveWikiUrl =
+    wikiUrl || (actorName ? `https://en.wikipedia.org/wiki/${encodeURIComponent(actorName.replace(/ /g, '_'))}` : '');
+  const hasActorInfo = !!(actorName || social || effectiveWikiUrl || effectiveImdbUrl);
 
   const toggleCredits = () => {
     const next = !creditsExpanded;
@@ -260,10 +295,13 @@ export default function CastDetailSheet() {
             {social && (
               <div><div style={fieldLabel}>Social</div><div style={{ fontSize: 13, color: 'var(--accent-soft)' }}>{socialPlatform} &middot; {social}</div></div>
             )}
-            {(wikiUrl || imdbUrl) && (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {wikiUrl && <button className="ct-pill" style={{ padding: '8px 14px' }} onClick={() => openWebView(wikiUrl, 'Wikipedia')}>Wikipedia</button>}
-                {imdbUrl && <button className="ct-pill" style={{ padding: '8px 14px' }} onClick={() => openWebView(imdbUrl, 'IMDb')}>IMDb</button>}
+            {(effectiveWikiUrl || effectiveImdbUrl) && (
+              <div>
+                <div style={{ ...fieldLabel, marginBottom: 6 }}>Read more about them</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {effectiveWikiUrl && <button className="ct-pill" style={{ padding: '8px 14px' }} onClick={() => openWebView(effectiveWikiUrl, 'Wikipedia')}>Wikipedia</button>}
+                  {effectiveImdbUrl && <button className="ct-pill" style={{ padding: '8px 14px' }} onClick={() => openWebView(effectiveImdbUrl, 'IMDb')}>IMDb</button>}
+                </div>
               </div>
             )}
             {actorTmdbId && (
