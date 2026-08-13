@@ -41,6 +41,8 @@ export default function CastDetailSheet() {
   const [bio, setBio] = useState<EnrichmentState>({ status: 'idle' });
   const [bioAttempt, setBioAttempt] = useState(0);
   const [lookedUpImdbUrl, setLookedUpImdbUrl] = useState<string | null>(null);
+  const [akaEditing, setAkaEditing] = useState(false);
+  const [akaDraft, setAkaDraft] = useState('');
   const [bioExpanded, setBioExpanded] = useState(false);
   const [bioOverflows, setBioOverflows] = useState(false);
   const bioRef = useRef<HTMLDivElement>(null);
@@ -53,6 +55,8 @@ export default function CastDetailSheet() {
     setBioAttempt(0);
     setLookedUpImdbUrl(null);
     setBioExpanded(false);
+    setAkaEditing(false);
+    setAkaDraft('');
   }, [castDetailId]);
 
   /**
@@ -168,6 +172,30 @@ export default function CastDetailSheet() {
     }
   };
 
+  /**
+   * Adds one alternate name in place. Previously this closed the sheet and opened the edit form,
+   * which is a lot of ceremony for one short string — and it dropped the user out of the page
+   * they were reading to do it.
+   *
+   * Silently ignores a name already on the record, or the character's own name, rather than
+   * erroring: the user's intent is satisfied either way, and a validation message here would be
+   * louder than the thing it's complaining about.
+   */
+  const saveAka = () => {
+    const value = akaDraft.trim();
+    setAkaEditing(false);
+    setAkaDraft('');
+    if (!value) return;
+    updateData((d) => {
+      const s = d.shows.find((x) => x.id === show.id);
+      const cc = s?.cast.find((x) => x.id === c.id);
+      if (!cc) return;
+      const existing = [cc.name, ...(cc.otherNames || [])].map((n) => n.trim().toLowerCase());
+      if (existing.includes(value.toLowerCase())) return;
+      cc.otherNames = [...(cc.otherNames || []), value];
+    });
+  };
+
   const startNotesEdit = () => { setNotesDraft(c.notes || ''); setNotesEditing(true); };
   const saveNotes = () => {
     updateData((d) => { const s = d.shows.find((x) => x.id === show.id); const cc = s?.cast.find((x) => x.id === c.id); if (cc) cc.notes = notesDraft.trim(); });
@@ -210,14 +238,36 @@ export default function CastDetailSheet() {
                 suggestions; the user still needs a way to add the ones only they know — a fan
                 nickname, what their household calls the character. Same wording as the Add-cast
                 form so the two read as one feature. */}
-            <button
-              onClick={() => { closeCastDetail(); openEditCast(c.id); }}
-              // Matched to the identical button on the Character Details form: same accent, size
-              // and weight, so the two read as one control in two places rather than two controls.
-              style={{ display: 'block', border: 'none', background: 'none', padding: '3px 0 0', textAlign: 'left', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--accent-soft)' }}
-            >
-              + Add other names they go by
-            </button>
+            {akaEditing ? (
+              <div style={{ marginTop: 5 }}>
+                <input
+                  autoFocus
+                  value={akaDraft}
+                  onChange={(e) => setAkaDraft(e.target.value)}
+                  // Enter to commit, Escape to abandon — the shortcuts a one-field form implies.
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveAka();
+                    if (e.key === 'Escape') { setAkaEditing(false); setAkaDraft(''); }
+                  }}
+                  placeholder="Another name they go by"
+                  className="ct-input"
+                  style={{ height: 34, fontSize: 13, marginBottom: 6 }}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { setAkaEditing(false); setAkaDraft(''); }} style={{ flex: 1, height: 30, border: '1px solid var(--input-border)', borderRadius: 8, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={saveAka} style={{ flex: 1, height: 30, border: 'none', borderRadius: 8, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setAkaEditing(true)}
+                // Matched to the identical button on the Character Details form: same accent, size
+                // and weight, so the two read as one control in two places rather than two controls.
+                style={{ display: 'block', border: 'none', background: 'none', padding: '3px 0 0', textAlign: 'left', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--accent-soft)' }}
+              >
+                + Add other names they go by
+              </button>
+            )}
             {(activeVersion?.nickname || c.nickname) && <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 4 }}>&ldquo;{activeVersion?.nickname || c.nickname}&rdquo;</div>}
           </div>
         </div>
