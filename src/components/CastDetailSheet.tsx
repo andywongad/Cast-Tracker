@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { initials, bgStyle, cropStyle } from '../lib/utils';
@@ -41,6 +41,9 @@ export default function CastDetailSheet() {
   const [bio, setBio] = useState<EnrichmentState>({ status: 'idle' });
   const [bioAttempt, setBioAttempt] = useState(0);
   const [lookedUpImdbUrl, setLookedUpImdbUrl] = useState<string | null>(null);
+  const [bioExpanded, setBioExpanded] = useState(false);
+  const [bioOverflows, setBioOverflows] = useState(false);
+  const bioRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setActiveVersionId(null);
@@ -49,7 +52,25 @@ export default function CastDetailSheet() {
     setCredits([]);
     setBioAttempt(0);
     setLookedUpImdbUrl(null);
+    setBioExpanded(false);
   }, [castDetailId]);
+
+  /**
+   * Only offer the toggle when the text is actually clipped. A "Show more" on a bio that already
+   * fits is the classic version of this control done badly — it promises hidden content and then
+   * reveals nothing.
+   *
+   * Measured only while collapsed: expanded, scrollHeight equals clientHeight, so re-measuring
+   * would conclude there's no overflow and the "Show less" affordance would vanish under the
+   * user's finger. Layout effect so the measurement lands before paint and the button doesn't
+   * flicker in.
+   */
+  useLayoutEffect(() => {
+    if (bio.status !== 'ready') { setBioOverflows(false); return; }
+    const el = bioRef.current;
+    if (!el || bioExpanded) return;
+    setBioOverflows(el.scrollHeight > el.clientHeight + 1);
+  }, [bio, bioExpanded]);
 
   /**
    * Generation happens here and nowhere else — one character, on open. A first view costs a few
@@ -217,12 +238,38 @@ export default function CastDetailSheet() {
 
             {bio.status === 'ready' && (
               <>
-                <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{bio.data.bio}</div>
+                {/* Clamped to three lines rather than truncated with an ellipsis mid-sentence:
+                    line-clamp cuts on a line boundary, so the visible part still reads as prose.
+                    The full text stays in the DOM, so find-in-page and screen readers reach it. */}
+                <div
+                  ref={bioRef}
+                  style={{
+                    fontSize: 13.5,
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.5,
+                    ...(bioExpanded
+                      ? {}
+                      : { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 3, overflow: 'hidden' }),
+                  }}
+                >
+                  {bio.data.bio}
+                </div>
+                {bioOverflows && (
+                  <button
+                    onClick={() => setBioExpanded((v) => !v)}
+                    aria-expanded={bioExpanded}
+                    // 44px of vertical reach on a control whose text is only ~16px tall — the label
+                    // stays tight to the bio, the tap target doesn't.
+                    style={{ display: 'block', border: 'none', background: 'none', padding: '4px 0', marginTop: 1, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: 'var(--accent-soft)', textAlign: 'left', minHeight: 28 }}
+                  >
+                    {bioExpanded ? 'Show less' : 'Show more'}
+                  </button>
+                )}
                 {/* Said plainly, because a summary a machine wrote from one source shouldn't be
                     mistaken for something the user wrote or for an authoritative fact. */}
                 <button
                   onClick={() => openWebView(bio.data.sourceUrl, 'Wikipedia')}
-                  style={{ border: 'none', background: 'none', padding: '5px 0 0', cursor: 'pointer', fontSize: 12, color: 'var(--text-faint)', textAlign: 'left' }}
+                  style={{ display: 'block', border: 'none', background: 'none', padding: '5px 0 0', cursor: 'pointer', fontSize: 12, color: 'var(--text-faint)', textAlign: 'left' }}
                 >
                   AI summary of its <span style={{ textDecoration: 'underline' }}>Wikipedia page</span>
                 </button>
