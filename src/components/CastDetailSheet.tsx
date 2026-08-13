@@ -212,7 +212,9 @@ export default function CastDetailSheet() {
                 form so the two read as one feature. */}
             <button
               onClick={() => { closeCastDetail(); openEditCast(c.id); }}
-              style={{ border: 'none', background: 'none', padding: '3px 0 0', textAlign: 'left', cursor: 'pointer', fontSize: 13, color: 'var(--text-faint)' }}
+              // Matched to the identical button on the Character Details form: same accent, size
+              // and weight, so the two read as one control in two places rather than two controls.
+              style={{ display: 'block', border: 'none', background: 'none', padding: '3px 0 0', textAlign: 'left', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--accent-soft)' }}
             >
               + Add other names they go by
             </button>
