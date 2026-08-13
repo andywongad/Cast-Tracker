@@ -19,6 +19,14 @@ export interface Enrichment {
   bio: string;
   /** Short in-universe job title, or null when the source doesn't say. Written by the model. */
   occupation: string | null;
+  /**
+   * Other names the character is known by — nicknames, formal names, titles. Empty when the source
+   * lists none, which is the common case for minor characters.
+   *
+   * Kept separate from CastMember.otherNames, which is the user's own list. These are suggestions
+   * from a source; those are what the user decided to record.
+   */
+  aliases: string[];
   roleTag: RoleTag;
   /**
    * Where the source text came from. Set from the fetch, never from the model — asking a model to

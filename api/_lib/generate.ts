@@ -9,7 +9,7 @@ import type { SourceText } from './source-wikipedia.js';
  * "Return only JSON, no markdown fences" is a request a model can decline; a json_schema is a
  * constraint it cannot violate, which removes the entire class of unparseable-response failures.
  *
- * The model is asked for three fields only. sourceUrl, modelVersion and generatedAt are filled in
+ * The model is asked for four fields only. sourceUrl, modelVersion and generatedAt are filled in
  * here from facts we already hold — a model asked to cite its own source will happily invent a
  * convincing URL it never read.
  */
@@ -59,6 +59,7 @@ Everything after the first sentence of that source is an event, so none of it is
 Also:
 - Write about the character, never the actor who plays them. Never mention the writers, creators, or how the show was made.
 - Use only the source text. If it does not support a claim, leave the field null or choose the safest role tag.
+- aliases: other names the character is commonly called — nicknames, a formal or full name, a title or rank. Only names in use from the start; a name revealed as a twist is a spoiler and must be left out. Do not repeat the name you were given. Empty array if there are none.
 - occupation: their in-universe job as a short noun phrase ("mob boss", "high school chemistry teacher"). Use null if the source does not say.
 - roleTag: "main" for a lead, "supporting" for a regular non-lead, "recurring" for someone who appears across multiple episodes without being a regular, "guest" for a one-off. If the source gives no signal, use "supporting".`;
 
@@ -73,13 +74,19 @@ const SCHEMA = {
       anyOf: [{ type: 'string' }, { type: 'null' }],
       description: "The character's in-universe occupation, or null if unstated.",
     },
+    aliases: {
+      type: 'array',
+      items: { type: 'string' },
+      description:
+        'Other names this character is commonly known by in-universe: nicknames, formal or full names, titles. Empty array if the source lists none.',
+    },
     roleTag: {
       type: 'string',
       enum: ROLE_TAGS,
       description: 'How central the character is to the show.',
     },
   },
-  required: ['bio', 'occupation', 'roleTag'],
+  required: ['bio', 'occupation', 'aliases', 'roleTag'],
   additionalProperties: false,
 } as const;
 
@@ -118,7 +125,7 @@ function isRoleTag(v: unknown): v is RoleTag {
  * output and our stored data — a cheap check here beats a malformed row served to every user of
  * that character from now on.
  */
-function toEnrichment(raw: unknown, source: SourceText): Enrichment | null {
+function toEnrichment(raw: unknown, source: SourceText, characterName: string): Enrichment | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
 
@@ -127,9 +134,28 @@ function toEnrichment(raw: unknown, source: SourceText): Enrichment | null {
 
   const occupationRaw = typeof r.occupation === 'string' ? r.occupation.trim() : '';
 
+  /**
+   * The model is told not to repeat the given name, but it does anyway often enough to matter —
+   * "AKA Tony Soprano" under the heading "Tony Soprano" looks broken. Dedupe case-insensitively
+   * against the name and against each other, and cap both count and length so a bad response
+   * can't push a wall of text into the header.
+   */
+  const seen = new Set([characterName.trim().toLowerCase()]);
+  const aliases = (Array.isArray(r.aliases) ? r.aliases : [])
+    .filter((a): a is string => typeof a === 'string')
+    .map((a) => a.trim().slice(0, 60))
+    .filter((a) => {
+      const k = a.toLowerCase();
+      if (!a || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+    .slice(0, 6);
+
   return {
     bio,
     occupation: occupationRaw || null,
+    aliases,
     roleTag: isRoleTag(r.roleTag) ? r.roleTag : 'supporting',
     sourceUrl: source.url,
     modelVersion: MODEL,
@@ -197,7 +223,7 @@ export async function generateEnrichment(input: {
     return { ok: false, reason: 'unparseable', permanent: false };
   }
 
-  const enrichment = toEnrichment(parsed, input.source);
+  const enrichment = toEnrichment(parsed, input.source, input.characterName);
   if (!enrichment) {
     return { ok: false, reason: 'failed_validation', permanent: false };
   }

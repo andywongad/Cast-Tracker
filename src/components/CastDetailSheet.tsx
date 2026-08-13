@@ -137,6 +137,23 @@ export default function CastDetailSheet() {
    * the right article for most actors and on a search-style miss for the rest, which is why it's
    * offered as a link to follow rather than presented as verified.
    */
+  /**
+   * The user's own alternate names first — they typed those deliberately — then any the source
+   * turned up that aren't already listed. Compared case-insensitively so "Tony" and "tony" don't
+   * both appear.
+   */
+  const akaNames = (() => {
+    const own = c.otherNames.filter((n) => n.trim());
+    const seen = new Set([c.name.trim().toLowerCase(), ...own.map((n) => n.trim().toLowerCase())]);
+    const found = (bio.status === 'ready' ? bio.data.aliases : []).filter((a) => {
+      const k = a.trim().toLowerCase();
+      if (!k || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+    return [...own, ...found];
+  })();
+
   const effectiveImdbUrl = imdbUrl || lookedUpImdbUrl;
   const effectiveWikiUrl =
     wikiUrl || (actorName ? `https://en.wikipedia.org/wiki/${encodeURIComponent(actorName.replace(/ /g, '_'))}` : '');
@@ -186,18 +203,19 @@ export default function CastDetailSheet() {
               balance it, which read as a layout accident rather than a choice. */}
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: 2 }}>
             <div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.2 }}>{activeVersion?.name || c.name}</div>
-            {c.otherNames.length > 0 ? (
-              <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 3 }}><span style={{ fontWeight: 700 }}>AKA</span> {c.otherNames.join(', ')}</div>
-            ) : (
-              /* Same wording as the Add-cast form, so the two read as one feature rather than two.
-                 Sits where the AKA line will appear once names exist. */
-              <button
-                onClick={() => { closeCastDetail(); openEditCast(c.id); }}
-                style={{ border: 'none', background: 'none', padding: '3px 0 0', textAlign: 'left', cursor: 'pointer', fontSize: 13, color: 'var(--text-faint)' }}
-              >
-                + Add other names they go by
-              </button>
+            {akaNames.length > 0 && (
+              <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 3 }}><span style={{ fontWeight: 700 }}>AKA</span> {akaNames.join(', ')}</div>
             )}
+            {/* Always offered, not just when the list is empty. Names found in the source are
+                suggestions; the user still needs a way to add the ones only they know — a fan
+                nickname, what their household calls the character. Same wording as the Add-cast
+                form so the two read as one feature. */}
+            <button
+              onClick={() => { closeCastDetail(); openEditCast(c.id); }}
+              style={{ border: 'none', background: 'none', padding: '3px 0 0', textAlign: 'left', cursor: 'pointer', fontSize: 13, color: 'var(--text-faint)' }}
+            >
+              + Add other names they go by
+            </button>
             {(activeVersion?.nickname || c.nickname) && <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 4 }}>&ldquo;{activeVersion?.nickname || c.nickname}&rdquo;</div>}
           </div>
         </div>
