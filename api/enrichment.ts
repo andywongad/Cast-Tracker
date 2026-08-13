@@ -1,13 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { enrichmentKey } from './_lib/key';
-import { fetchSourceText } from './_lib/source-wikipedia';
-import { generateEnrichment } from './_lib/generate';
+import { enrichmentKey } from './_lib/key.js';
+import { fetchSourceText } from './_lib/source-wikipedia.js';
+import { generateEnrichment } from './_lib/generate.js';
 import {
   kvEnrichmentStore,
   underGenerationLimit,
   NO_SOURCE_TTL_SECONDS,
   REFUSAL_TTL_SECONDS,
-} from './_lib/store-kv';
+} from './_lib/store-kv.js';
 
 /**
  * Check-then-generate endpoint for character enrichment.

@@ -1,4 +1,4 @@
-import { normalizeName } from '../../src/lib/tvmaze';
+import { normalizeName } from '../../src/lib/tvmaze.js';
 
 /**
  * Cache-key derivation for shared enrichment.

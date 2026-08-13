@@ -2,10 +2,14 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022", "DOM"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    // NodeNext, not "bundler": package.json declares "type": "module", so these run as real ES
+    // modules on Node, where relative imports need an explicit .js extension. Under "bundler"
+    // TypeScript happily accepts an extensionless import that then dies at runtime with
+    // ERR_MODULE_NOT_FOUND — which is exactly what shipped the first time. NodeNext makes the
+    // typechecker model the runtime, so a missing extension is a build error instead of a 500.
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
-    "isolatedModules": true,
     "noEmit": true,
     "strict": true,
     "skipLibCheck": true,

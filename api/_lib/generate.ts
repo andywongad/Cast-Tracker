@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { ROLE_TAGS, type Enrichment, type RoleTag } from '../../src/lib/enrichment/types';
-import type { SourceText } from './source-wikipedia';
+import { ROLE_TAGS, type Enrichment, type RoleTag } from '../../src/lib/enrichment/types.js';
+import type { SourceText } from './source-wikipedia.js';
 
 /**
  * The Claude call that turns source text into a structured bio.

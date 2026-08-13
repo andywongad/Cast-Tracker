@@ -1,4 +1,6 @@
-import type { CastMember } from '../types';
+// .js extension because api/_lib/key.ts imports this module, and that side runs as real ESM on
+// Node where relative specifiers need one. Vite resolves it to types.ts either way.
+import type { CastMember } from '../types.js';
 
 /**
  * TVmaze in-character images, matched onto cast we already hold from TMDb.

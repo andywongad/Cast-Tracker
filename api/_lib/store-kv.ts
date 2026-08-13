@@ -1,5 +1,5 @@
 import { kv } from '@vercel/kv';
-import type { Enrichment, EnrichmentStore, StoredEnrichment } from '../../src/lib/enrichment/types';
+import type { Enrichment, EnrichmentStore, StoredEnrichment } from '../../src/lib/enrichment/types.js';
 
 /**
  * Redis-backed implementation of EnrichmentStore.
