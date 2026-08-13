@@ -1,8 +1,13 @@
 {
-    "crons": [
-          {
-                  "path": "/api/check-episodes",
-                  "schedule": "0 6 * * *"
-          }
-    ]
+  "crons": [
+    {
+      "path": "/api/check-episodes",
+      "schedule": "0 6 * * *"
+    }
+  ],
+  "functions": {
+    "api/enrichment.ts": {
+      "maxDuration": 30
+    }
+  }
 }
