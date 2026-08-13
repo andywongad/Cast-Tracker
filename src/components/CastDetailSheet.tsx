@@ -157,9 +157,23 @@ export default function CastDetailSheet() {
           <div style={{ position: 'relative', width: 84, height: 84, borderRadius: 18, flex: 'none', overflow: 'hidden', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...cropStyle(activeVersion?.photo || displayPhoto(c), activeVersion ? null : c.photoCrop) }}>
             {!(activeVersion?.photo || displayPhoto(c)) && <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(activeVersion?.name || c.name)}</span>}
           </div>
-          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          {/* Top-aligned with the photo rather than centred against it. Centring left the name
+              floating in the middle of an 84px block whenever there was no AKA or nickname to
+              balance it, which read as a layout accident rather than a choice. */}
+          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: 2 }}>
             <div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.2 }}>{activeVersion?.name || c.name}</div>
-            {c.otherNames.length > 0 && <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 3 }}><span style={{ fontWeight: 700 }}>AKA</span> {c.otherNames.join(', ')}</div>}
+            {c.otherNames.length > 0 ? (
+              <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 3 }}><span style={{ fontWeight: 700 }}>AKA</span> {c.otherNames.join(', ')}</div>
+            ) : (
+              /* Same wording as the Add-cast form, so the two read as one feature rather than two.
+                 Sits where the AKA line will appear once names exist. */
+              <button
+                onClick={() => { closeCastDetail(); openEditCast(c.id); }}
+                style={{ border: 'none', background: 'none', padding: '3px 0 0', textAlign: 'left', cursor: 'pointer', fontSize: 13, color: 'var(--text-faint)' }}
+              >
+                + Add other names they go by
+              </button>
+            )}
             {(activeVersion?.nickname || c.nickname) && <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 4 }}>&ldquo;{activeVersion?.nickname || c.nickname}&rdquo;</div>}
           </div>
         </div>
