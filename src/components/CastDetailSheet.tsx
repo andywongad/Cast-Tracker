@@ -4,10 +4,19 @@ import { useUI } from '../hooks/useUI';
 import { initials, bgStyle, cropStyle } from '../lib/utils';
 import { displayPhoto } from '../lib/tvmaze';
 import { getPersonCredits, type PersonCredit } from '../lib/tmdb';
+import { fetchEnrichment, type EnrichmentState } from '../lib/enrichment/client';
+import type { RoleTag } from '../lib/enrichment/types';
 
 // Softer, sentence-case field labels — less shouting for a glanceable sheet
 const fieldLabel: CSSProperties = { fontSize: 13.5, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 };
 const fieldValue: CSSProperties = { fontSize: 14, color: 'var(--text-tertiary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 };
+
+const roleLabel: Record<RoleTag, string> = {
+  main: 'Main',
+  supporting: 'Supporting',
+  recurring: 'Recurring',
+  guest: 'Guest',
+};
 
 function EditIcon() {
   return <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11.3 2.3a1.5 1.5 0 0 1 2.1 2.1L5.7 12l-2.9.7.7-2.9 7.8-7.5z" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" fill="none"></path></svg>;
@@ -29,13 +38,37 @@ export default function CastDetailSheet() {
   const [creditsExpanded, setCreditsExpanded] = useState(false);
   const [creditsLoading, setCreditsLoading] = useState(false);
   const [credits, setCredits] = useState<PersonCredit[]>([]);
+  const [bio, setBio] = useState<EnrichmentState>({ status: 'idle' });
+  const [bioAttempt, setBioAttempt] = useState(0);
 
   useEffect(() => {
     setActiveVersionId(null);
     setNotesEditing(false);
     setCreditsExpanded(false);
     setCredits([]);
+    setBioAttempt(0);
   }, [castDetailId]);
+
+  /**
+   * Generation happens here and nowhere else — one character, on open. A first view costs a few
+   * seconds while the server writes it; everyone after that, on any device, gets it from the
+   * shared cache.
+   */
+  const showTmdbId = show?.tmdbId ?? null;
+  const characterName = c?.name ?? '';
+  const bioActorId = c?.actorTmdbId ?? null;
+  const showTitle = show?.title ?? '';
+
+  useEffect(() => {
+    if (!castDetailId || !characterName) return;
+    let cancelled = false;
+    setBio({ status: 'loading' });
+    fetchEnrichment({ showTmdbId, showTitle, characterName, actorTmdbId: bioActorId }).then((next) => {
+      // Closing the sheet or jumping to another character mid-flight must not write stale state.
+      if (!cancelled) setBio(next);
+    });
+    return () => { cancelled = true; };
+  }, [castDetailId, characterName, showTmdbId, showTitle, bioActorId, bioAttempt]);
 
   if (!show || !c) return null;
 
@@ -112,6 +145,47 @@ export default function CastDetailSheet() {
                 <span style={{ fontSize: 12, fontWeight: 700, color: activeVersionId === v.id ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.age || v.name || 'Version'}</span>
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Sits directly under the header because it answers "who is this?" — the question the
+            sheet is opened to answer. Absent entirely when there's no source, rather than showing
+            a permanent empty state on the many characters nobody has written about. */}
+        {bio.status !== 'unavailable' && bio.status !== 'idle' && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+              <div style={{ ...fieldLabel, marginBottom: 0 }}>Bio</div>
+              {bio.status === 'ready' && (
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.02em', color: 'var(--accent-soft)', background: 'color-mix(in oklch, var(--accent-soft) 12%, transparent)', padding: '2px 7px', borderRadius: 999 }}>
+                  {roleLabel[bio.data.roleTag]}
+                </span>
+              )}
+            </div>
+
+            {bio.status === 'loading' && (
+              <div style={{ fontSize: 13.5, color: 'var(--text-faint)', lineHeight: 1.5 }}>Writing a short bio&hellip;</div>
+            )}
+
+            {bio.status === 'ready' && (
+              <>
+                <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{bio.data.bio}</div>
+                {/* Said plainly, because a summary a machine wrote from one source shouldn't be
+                    mistaken for something the user wrote or for an authoritative fact. */}
+                <button
+                  onClick={() => openWebView(bio.data.sourceUrl, 'Wikipedia')}
+                  style={{ border: 'none', background: 'none', padding: '5px 0 0', cursor: 'pointer', fontSize: 12, color: 'var(--text-faint)', textAlign: 'left' }}
+                >
+                  AI summary of its <span style={{ textDecoration: 'underline' }}>Wikipedia page</span>
+                </button>
+              </>
+            )}
+
+            {bio.status === 'error' && (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-faint)' }}>Couldn&rsquo;t generate a bio right now.</span>
+                <button onClick={() => setBioAttempt((n) => n + 1)} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--accent-soft)' }}>Try again</button>
+              </div>
+            )}
           </div>
         )}
 
