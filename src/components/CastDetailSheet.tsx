@@ -238,7 +238,7 @@ export default function CastDetailSheet() {
 
             {bio.status === 'ready' && (
               <>
-                {/* Clamped to three lines rather than truncated with an ellipsis mid-sentence:
+                {/* Clamped to one line rather than truncated with an ellipsis mid-sentence:
                     line-clamp cuts on a line boundary, so the visible part still reads as prose.
                     The full text stays in the DOM, so find-in-page and screen readers reach it. */}
                 <div
@@ -249,7 +249,7 @@ export default function CastDetailSheet() {
                     lineHeight: 1.5,
                     ...(bioExpanded
                       ? {}
-                      : { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 3, overflow: 'hidden' }),
+                      : { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden' }),
                   }}
                 >
                   {bio.data.bio}
