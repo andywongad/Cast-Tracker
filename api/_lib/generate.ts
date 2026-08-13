@@ -14,6 +14,16 @@ import type { SourceText } from './source-wikipedia.js';
  * convincing URL it never read.
  */
 
+/**
+ * The system prompt embeds one real spoiler as a worked example. That's deliberate: an abstract
+ * "don't describe events" rule was followed inconsistently, and showing the model a plot-heavy
+ * source next to the one-line answer it should produce fixed it. The prompt is server-side and
+ * never reaches a user.
+ *
+ * Changing the prompt requires bumping KEY_VERSION in key.ts — otherwise every character already
+ * generated keeps serving text written under the old rules, forever.
+ */
+
 /** Pinned deliberately: the exact snapshot is recorded on every row via modelVersion. */
 export const MODEL = 'claude-haiku-4-5-20251001';
 
@@ -26,15 +36,30 @@ const MAX_TOKENS = 1024;
  */
 const REQUEST_TIMEOUT_MS = 20_000;
 
-const SYSTEM = `You write short, factual, in-universe descriptions of television characters.
+const SYSTEM = `You write short, spoiler-free descriptions of television characters.
 
-You will be given source text about a character, plus the show they appear in. Summarize only what the source supports.
+You will be given source text about a character, plus the show they appear in. The source is usually a plot summary, and most of it must not be used.
 
-Rules:
-- Write about the character, never the actor who plays them.
+Only these four kinds of fact may appear in the bio:
+1. Who they are to other characters — family, partner, colleague, rival.
+2. What they do — their job, role, or position.
+3. What they are like — temperament, values, reputation.
+4. Where they sit in the show's world — the setting, and their place in it.
+
+Everything else is off-limits. Never describe anything that HAPPENS: events, actions they take, things they witness, secrets, deaths, arrests, crimes, betrayals, twists, or how anyone changes across the series. If a fact would only be known to someone who has already watched the episodes, leave it out.
+
+Write in the present tense, as if introducing this character to someone about to watch their first episode.
+
+Prefer ONE sentence. Write a second only if the allowed facts genuinely fill it. A one-line bio is the correct answer for most characters, not a failure — minor characters often have nothing on record except who they are connected to, and that alone is a complete bio.
+
+Worked example. Source text: "Finn DeTrolio is Meadow Soprano's boyfriend, a dental student working a summer job at a construction site. There he witnesses Vito Spatafore performing oral sex on a security guard. Vito later corners him and intimidates him into silence, and Finn becomes terrified of him."
+Correct bio: "Meadow Soprano's boyfriend, a dental student working a summer construction job."
+Everything after the first sentence of that source is an event, so none of it is used. The result is short because the source offers nothing else that is allowed.
+
+Also:
+- Write about the character, never the actor who plays them. Never mention the writers, creators, or how the show was made.
 - Use only the source text. If it does not support a claim, leave the field null or choose the safest role tag.
-- bio: 1-3 sentences, present tense, no spoilers beyond what the source states plainly.
-- occupation: the character's in-universe job as a short noun phrase ("mob boss", "high school chemistry teacher"). Use null if the source does not say.
+- occupation: their in-universe job as a short noun phrase ("mob boss", "high school chemistry teacher"). Use null if the source does not say.
 - roleTag: "main" for a lead, "supporting" for a regular non-lead, "recurring" for someone who appears across multiple episodes without being a regular, "guest" for a one-off. If the source gives no signal, use "supporting".`;
 
 const SCHEMA = {
