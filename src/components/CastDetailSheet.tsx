@@ -69,7 +69,10 @@ export default function CastDetailSheet() {
     if (bio.status !== 'ready') { setBioOverflows(false); return; }
     const el = bioRef.current;
     if (!el || bioExpanded) return;
-    setBioOverflows(el.scrollHeight > el.clientHeight + 1);
+    // Width, not height: collapsed, the bio is a single nowrap line, so the text that doesn't fit
+    // overflows horizontally. Measuring height here would always report no overflow and the toggle
+    // would never appear.
+    setBioOverflows(el.scrollWidth > el.clientWidth + 1);
   }, [bio, bioExpanded]);
 
   /**
@@ -238,31 +241,48 @@ export default function CastDetailSheet() {
 
             {bio.status === 'ready' && (
               <>
-                {/* Clamped to one line rather than truncated with an ellipsis mid-sentence:
-                    line-clamp cuts on a line boundary, so the visible part still reads as prose.
-                    The full text stays in the DOM, so find-in-page and screen readers reach it. */}
-                <div
-                  ref={bioRef}
-                  style={{
-                    fontSize: 13.5,
-                    color: 'var(--text-secondary)',
-                    lineHeight: 1.5,
-                    ...(bioExpanded
-                      ? {}
-                      : { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden' }),
-                  }}
-                >
-                  {bio.data.bio}
+                {/* Collapsed, the text and its toggle share one line: on a phone the bio sits
+                    above everything the sheet exists to show, so a second line spent on a control
+                    is a line of someone's notes pushed off screen.
+
+                    Ellipsis truncation rather than line-clamp here, because clamping to one line
+                    still reserves the full row for the text and leaves nowhere for the button to
+                    sit beside it. The full string stays in the DOM either way. */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                  <div
+                    ref={bioRef}
+                    style={{
+                      flex: 1,
+                      minWidth: 0, // without this a flex child refuses to shrink below its text width
+                      fontSize: 13.5,
+                      color: 'var(--text-secondary)',
+                      lineHeight: 1.5,
+                      ...(bioExpanded ? {} : { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }),
+                    }}
+                  >
+                    {bio.data.bio}
+                  </div>
+                  {bioOverflows && !bioExpanded && (
+                    <button
+                      onClick={() => setBioExpanded(true)}
+                      aria-expanded={false}
+                      // Negative margin cancels the padding's effect on layout, so the tap target is
+                      // ~28px tall while the label still sits on the bio's baseline.
+                      style={{ flex: 'none', border: 'none', background: 'none', padding: '6px 0', margin: '-6px 0', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: 'var(--accent-soft)', whiteSpace: 'nowrap' }}
+                    >
+                      Show more
+                    </button>
+                  )}
                 </div>
-                {bioOverflows && (
+                {/* Expanded, the paragraph is already many lines — the toggle moves below it rather
+                    than floating beside the first line. */}
+                {bioOverflows && bioExpanded && (
                   <button
-                    onClick={() => setBioExpanded((v) => !v)}
-                    aria-expanded={bioExpanded}
-                    // 44px of vertical reach on a control whose text is only ~16px tall — the label
-                    // stays tight to the bio, the tap target doesn't.
+                    onClick={() => setBioExpanded(false)}
+                    aria-expanded
                     style={{ display: 'block', border: 'none', background: 'none', padding: '4px 0', marginTop: 1, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: 'var(--accent-soft)', textAlign: 'left', minHeight: 28 }}
                   >
-                    {bioExpanded ? 'Show less' : 'Show more'}
+                    Show less
                   </button>
                 )}
                 {/* Said plainly, because a summary a machine wrote from one source shouldn't be
