@@ -284,7 +284,23 @@ export default function CastDetailSheet() {
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: 2 }}>
             <div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.2 }}>{activeVersion?.name || c.name}</div>
             {akaNames.length > 0 && (
-              <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 3 }}><span style={{ fontWeight: 700 }}>AKA</span> {akaNames.join(', ')}</div>
+              <div style={{ fontSize: 14, color: 'var(--text-muted)', marginTop: 3 }}>
+                <span style={{ fontWeight: 700 }}>AKA</span> {akaNames.join(', ')}
+                {/* Once there's a list, the full "+ Add other names they go by" sentence is
+                    redundant — the line above it already says what these are. A plus after the
+                    last name says the same thing in one character and keeps the header to one
+                    line. Padding plus a cancelling negative margin gives it a real tap target
+                    without pushing the line apart. */}
+                {!akaEditing && (
+                  <button
+                    onClick={() => setAkaEditing(true)}
+                    aria-label="Add another name"
+                    style={{ border: 'none', background: 'none', padding: '6px 6px', margin: '-6px -2px', cursor: 'pointer', fontSize: 15, fontWeight: 700, lineHeight: 1, color: 'var(--accent-soft)', verticalAlign: 'baseline' }}
+                  >
+                    +
+                  </button>
+                )}
+              </div>
             )}
             {/* Always offered, not just when the list is empty. Names found in the source are
                 suggestions; the user still needs a way to add the ones only they know — a fan
@@ -310,7 +326,7 @@ export default function CastDetailSheet() {
                   <button onClick={saveAka} style={{ flex: 1, height: 30, border: 'none', borderRadius: 8, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
                 </div>
               </div>
-            ) : (
+            ) : akaNames.length === 0 ? (
               <button
                 onClick={() => setAkaEditing(true)}
                 // Matched to the identical button on the Character Details form: same accent, size
@@ -319,7 +335,7 @@ export default function CastDetailSheet() {
               >
                 + Add other names they go by
               </button>
-            )}
+            ) : null}
             {/* A version carries its own nickname, so while one is selected this stays read-only —
                 editing here would write to the base character and silently contradict what's on
                 screen. Reordering, deleting and per-version edits all live in the full form. */}
