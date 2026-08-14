@@ -45,6 +45,8 @@ export default function CastDetailSheet() {
   const [akaDraft, setAkaDraft] = useState('');
   const [nickEditing, setNickEditing] = useState(false);
   const [nickDraft, setNickDraft] = useState('');
+  const [descEditing, setDescEditing] = useState(false);
+  const [descDraft, setDescDraft] = useState('');
   const [bioExpanded, setBioExpanded] = useState(false);
   const [bioOverflows, setBioOverflows] = useState(false);
   const bioRef = useRef<HTMLDivElement>(null);
@@ -61,6 +63,8 @@ export default function CastDetailSheet() {
     setAkaDraft('');
     setNickEditing(false);
     setNickDraft('');
+    setDescEditing(false);
+    setDescDraft('');
   }, [castDetailId]);
 
   /**
@@ -213,6 +217,18 @@ export default function CastDetailSheet() {
       const s = d.shows.find((x) => x.id === show.id);
       const cc = s?.cast.find((x) => x.id === c.id);
       if (cc) cc.nickname = value;
+    });
+  };
+
+  /** Multi-line, so Enter inserts a newline rather than committing — Save is the only commit. */
+  const saveDesc = () => {
+    const value = descDraft.trim();
+    setDescEditing(false);
+    setDescDraft('');
+    updateData((d) => {
+      const s = d.shows.find((x) => x.id === show.id);
+      const cc = s?.cast.find((x) => x.id === c.id);
+      if (cc) cc.desc = value;
     });
   };
 
@@ -449,11 +465,54 @@ export default function CastDetailSheet() {
           </>
         )}
 
-        {(activeVersion?.desc || c.desc) && (
-          <>
+        {/* A version carries its own description, so while one is selected this stays read-only —
+            same reasoning as the nickname above. */}
+        {activeVersion ? (
+          activeVersion.desc ? (
+            <>
+              <div style={fieldLabel}>Visual description</div>
+              <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 16 }}>{activeVersion.desc}</div>
+            </>
+          ) : null
+        ) : (
+          <div style={{ marginBottom: 16 }}>
             <div style={fieldLabel}>Visual description</div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 16 }}>{activeVersion?.desc || c.desc}</div>
-          </>
+            {descEditing ? (
+              <>
+                <textarea
+                  autoFocus
+                  value={descDraft}
+                  onChange={(e) => setDescDraft(e.target.value)}
+                  // No Enter-to-commit here: this is the one field where a line break is plausible
+                  // content, so Enter has to mean Enter. Escape still abandons.
+                  onKeyDown={(e) => { if (e.key === 'Escape') { setDescEditing(false); setDescDraft(''); } }}
+                  placeholder="Chunky glasses, pink hat, high cheekbones&hellip;"
+                  className="ct-textarea"
+                  style={{ minHeight: 60, fontSize: 13.5, marginBottom: 6 }}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { setDescEditing(false); setDescDraft(''); }} style={{ flex: 1, height: 34, border: '1px solid var(--input-border)', borderRadius: 9, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={saveDesc} style={{ flex: 1, height: 34, border: 'none', borderRadius: 9, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                </div>
+              </>
+            ) : c.desc ? (
+              // The description itself is the control, as with the nickname — tapping it reopens
+              // the field prefilled, and saving it empty clears it.
+              <button
+                onClick={() => { setDescDraft(c.desc); setDescEditing(true); }}
+                style={{ display: 'block', width: '100%', border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}
+              >
+                {c.desc}
+              </button>
+            ) : (
+              <button
+                onClick={() => { setDescDraft(''); setDescEditing(true); }}
+                style={{ display: 'block', border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--accent-soft)' }}
+              >
+                + Add a visual description
+              </button>
+            )}
+          </div>
         )}
 
         {/* Empty fields are omitted rather than shown as a dash — a dash reads as a failed load. */}
