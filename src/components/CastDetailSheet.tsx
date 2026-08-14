@@ -524,16 +524,9 @@ export default function CastDetailSheet() {
             </div>
           )}
           {c.occupation && <div><div style={fieldLabel}>Occupation</div><div style={fieldValue}>{c.occupation}</div></div>}
-          {c.firstEp && (
-            <div>
-              {/* "Added from", not "First seen": this records the episode the character was
-                  imported from, which is only their true first appearance if you imported
-                  chronologically. Claiming the stronger thing was wrong — Tony Soprano is in
-                  the pilot but read "First seen Ep 8" after a season 5 import. */}
-              <div style={fieldLabel}>Added from</div>
-              <div style={fieldValue}>{c.season ? `Season ${c.season} \u00b7 ${c.firstEp}` : c.firstEp}</div>
-            </div>
-          )}
+          {/* The "Added from" row lived here. `firstEp` and `season` are still recorded on
+              import and still drive the season filter — this only stops showing them on the
+              character. Both remain editable in the Character Details form. */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <div style={{ ...fieldLabel, marginBottom: 0 }}>Notes</div>
