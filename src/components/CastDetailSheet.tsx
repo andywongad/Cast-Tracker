@@ -370,6 +370,55 @@ export default function CastDetailSheet() {
         {/* Sits directly under the header because it answers "who is this?" — the question the
             sheet is opened to answer. Absent entirely when there's no source, rather than showing
             a permanent empty state on the many characters nobody has written about. */}
+        {activeVersion ? (
+          activeVersion.desc ? (
+            <>
+              <div style={fieldLabel}>Visual description</div>
+              <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 16 }}>{activeVersion.desc}</div>
+            </>
+          ) : null
+        ) : (
+          <div style={{ marginBottom: 16 }}>
+            <div style={fieldLabel}>Visual description</div>
+            {descEditing ? (
+              <>
+                <textarea
+                  autoFocus
+                  value={descDraft}
+                  onChange={(e) => setDescDraft(e.target.value)}
+                  // No Enter-to-commit here: this is the one field where a line break is plausible
+                  // content, so Enter has to mean Enter. Escape still abandons.
+                  onKeyDown={(e) => { if (e.key === 'Escape') { setDescEditing(false); setDescDraft(''); } }}
+                  placeholder="Chunky glasses, pink hat, high cheekbones&hellip;"
+                  className="ct-textarea"
+                  style={{ minHeight: 60, fontSize: 13.5, marginBottom: 6 }}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { setDescEditing(false); setDescDraft(''); }} style={{ flex: 1, height: 34, border: '1px solid var(--input-border)', borderRadius: 9, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={saveDesc} style={{ flex: 1, height: 34, border: 'none', borderRadius: 9, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                </div>
+              </>
+            ) : c.desc ? (
+              // The description itself is the control, as with the nickname — tapping it reopens
+              // the field prefilled, and saving it empty clears it.
+              <button
+                onClick={() => { setDescDraft(c.desc); setDescEditing(true); }}
+                style={{ display: 'block', width: '100%', border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}
+              >
+                {c.desc}
+              </button>
+            ) : (
+              <button
+                onClick={() => { setDescDraft(''); setDescEditing(true); }}
+                style={{ display: 'block', border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--accent-soft)' }}
+              >
+                + Add a visual description
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Empty fields are omitted rather than shown as a dash — a dash reads as a failed load. */}
         {bio.status !== 'unavailable' && bio.status !== 'idle' && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
@@ -451,71 +500,6 @@ export default function CastDetailSheet() {
           </div>
         )}
 
-        {relatedList.length > 0 && (
-          <>
-            <div style={{ ...fieldLabel, marginBottom: 6 }}>Related to</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-              {relatedList.map(({ rel, target }) => (
-                <button key={rel.id} onClick={() => openCastDetail(target!.id)} style={{ display: 'flex', alignItems: 'baseline', gap: 6, border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)' }}>{target!.name}</span>
-                  <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>&middot; {rel.label}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* A version carries its own description, so while one is selected this stays read-only —
-            same reasoning as the nickname above. */}
-        {activeVersion ? (
-          activeVersion.desc ? (
-            <>
-              <div style={fieldLabel}>Visual description</div>
-              <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 16 }}>{activeVersion.desc}</div>
-            </>
-          ) : null
-        ) : (
-          <div style={{ marginBottom: 16 }}>
-            <div style={fieldLabel}>Visual description</div>
-            {descEditing ? (
-              <>
-                <textarea
-                  autoFocus
-                  value={descDraft}
-                  onChange={(e) => setDescDraft(e.target.value)}
-                  // No Enter-to-commit here: this is the one field where a line break is plausible
-                  // content, so Enter has to mean Enter. Escape still abandons.
-                  onKeyDown={(e) => { if (e.key === 'Escape') { setDescEditing(false); setDescDraft(''); } }}
-                  placeholder="Chunky glasses, pink hat, high cheekbones&hellip;"
-                  className="ct-textarea"
-                  style={{ minHeight: 60, fontSize: 13.5, marginBottom: 6 }}
-                />
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => { setDescEditing(false); setDescDraft(''); }} style={{ flex: 1, height: 34, border: '1px solid var(--input-border)', borderRadius: 9, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={saveDesc} style={{ flex: 1, height: 34, border: 'none', borderRadius: 9, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>Save</button>
-                </div>
-              </>
-            ) : c.desc ? (
-              // The description itself is the control, as with the nickname — tapping it reopens
-              // the field prefilled, and saving it empty clears it.
-              <button
-                onClick={() => { setDescDraft(c.desc); setDescEditing(true); }}
-                style={{ display: 'block', width: '100%', border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}
-              >
-                {c.desc}
-              </button>
-            ) : (
-              <button
-                onClick={() => { setDescDraft(''); setDescEditing(true); }}
-                style={{ display: 'block', border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--accent-soft)' }}
-              >
-                + Add a visual description
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Empty fields are omitted rather than shown as a dash — a dash reads as a failed load. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {(c.age || c.hometown) && (
             <div style={{ display: 'grid', gridTemplateColumns: c.age && c.hometown ? '1fr 1fr' : '1fr', gap: 14 }}>
@@ -524,6 +508,22 @@ export default function CastDetailSheet() {
             </div>
           )}
           {c.occupation && <div><div style={fieldLabel}>Occupation</div><div style={fieldValue}>{c.occupation}</div></div>}
+          {/* Relationships sit with the other facts about the character rather than above the
+              bio. They're also the sheet's only navigation — each one opens that character. The
+              wrapper drops the old marginBottom; this column's gap handles the spacing now. */}
+          {relatedList.length > 0 && (
+            <div>
+              <div style={{ ...fieldLabel, marginBottom: 6 }}>Related to</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {relatedList.map(({ rel, target }) => (
+                  <button key={rel.id} onClick={() => openCastDetail(target!.id)} style={{ display: 'flex', alignItems: 'baseline', gap: 6, border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)' }}>{target!.name}</span>
+                    <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>&middot; {rel.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {/* The "Added from" row lived here. `firstEp` and `season` are still recorded on
               import and still drive the season filter — this only stops showing them on the
               character. Both remain editable in the Character Details form. */}
