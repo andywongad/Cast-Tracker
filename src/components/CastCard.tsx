@@ -3,12 +3,9 @@ import type { CastMember, Show } from '../types';
 import { initials, cropStyle } from '../lib/utils';
 import { displayPhoto } from '../lib/tvmaze';
 import { useUI } from '../hooks/useUI';
-import { useStore } from '../hooks/useStore';
-import CardActions from './CardActions';
 
 export default function CastCard({ show, c, compact }: { show: Show; c: CastMember; compact: boolean }) {
-  const { openCastDetail, openShareSheet, openEditCast } = useUI();
-  const { shareCast } = useStore();
+  const { openCastDetail } = useUI();
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const activeVersion = activeVersionId ? c.versions.find((v) => v.id === activeVersionId) : null;
 
@@ -27,7 +24,10 @@ export default function CastCard({ show, c, compact }: { show: Show; c: CastMemb
         )}
       </div>
 
-      <CardActions onEdit={() => openEditCast(c.id)} onShare={() => openShareSheet(shareCast(show.id, c.id))} />
+      {/* The edit + share pair used to hang off this card's corner. Both actions live in the
+          detail sheet, one tap away, and on a 4-column grid they sat on top of the face the
+          card exists to show. ShowTile still uses CardActions — a show tile has no equivalent
+          sheet to reach for. */}
 
       {c.versions.length > 0 && (
         <div style={{ display: 'flex', gap: 5, overflowX: 'auto', minWidth: 0, marginBottom: 8 }} onClick={(e) => e.stopPropagation()}>
