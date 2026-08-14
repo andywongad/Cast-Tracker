@@ -4,7 +4,7 @@ import { useUI } from '../hooks/useUI';
 import type { CastVersion, Relationship, Gender, CustomField, PhotoCrop } from '../types';
 import { bgStyle, cropStyle, genId, initials, colorForIndex } from '../lib/utils';
 import { displayPhoto } from '../lib/tvmaze';
-import { getAggregateCredits, getEpisodeCredits, getSeasonEpisodeCount, hasTmdbKey, type AggregateCastMember } from '../lib/tmdb';
+import { getAggregateCredits, getEpisodeCredits, getSeasonEpisodeCount, getPersonWikiImdb, hasTmdbKey, type AggregateCastMember } from '../lib/tmdb';
 import CropModal from './CropModal';
 import EditControls from './EditControls';
 
@@ -160,6 +160,42 @@ export default function AddCastSheet() {
     if (!addCastSheet.open || !show?.tmdbId || !hasTmdbKey()) { setTmdbCast([]); return; }
     getAggregateCredits(show.tmdbId).then(setTmdbCast).catch(() => setTmdbCast([]));
   }, [addCastSheet.open, show?.tmdbId]);
+
+  /**
+   * Fill in the actor's Wikipedia and IMDb links when they're blank.
+   *
+   * Both fields are only ever written by this form, so anything imported from TMDb arrives with
+   * both empty — which is every character in a library built by searching. The detail sheet
+   * already resolves them for display; this puts the same values in the form so they're visible,
+   * editable, and saved onto the record rather than re-derived on every open.
+   *
+   * Only fills empties. A link the user typed is left exactly as they left it.
+   */
+  useEffect(() => {
+    if (!addCastSheet.open || !editing) return;
+    const actorId = editing.actorTmdbId;
+    let cancelled = false;
+
+    // Wikipedia is a name-guess — TMDb carries no Wikipedia link. Right for most actors, a miss
+    // for ambiguous names, which is why it's a suggested value the user can correct rather than
+    // something written silently onto the record.
+    if (!editing.wikiUrl && editing.actorName) {
+      const guess = `https://en.wikipedia.org/wiki/${encodeURIComponent(editing.actorName.replace(/ /g, '_'))}`;
+      setForm((f) => (f.wikiUrl ? f : { ...f, wikiUrl: guess }));
+    }
+
+    if (!editing.imdbUrl && actorId) {
+      getPersonWikiImdb(actorId)
+        .then((r) => {
+          if (cancelled || !r?.imdbUrl) return;
+          setForm((f) => (f.imdbUrl ? f : { ...f, imdbUrl: r.imdbUrl! }));
+        })
+        .catch(() => { /* no link is a fine outcome — the field just stays empty */ });
+    }
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addCastSheet.open, addCastSheet.editingId]);
 
   useEffect(() => {
     if (mode !== 'autofill' || !show?.tmdbId || !hasTmdbKey()) return;
