@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CastMember, Show } from '../types';
 import type { AggregateCastMember, SeasonEpisode } from '../lib/tmdb';
 import type { CastMeta } from '../lib/showShape';
@@ -19,8 +19,8 @@ import CastGrid from './CastGrid';
  * haven't added yet is reported as a count, not silently rendered: mixing TMDb's cast into a page
  * that means "your cast" would change what the page is.
  *
- * Characters added by hand have no `actorTmdbId` and so can't be matched to either tier. They
- * appear under "Also in your cast" rather than being dropped.
+ * Characters added by hand have no `actorTmdbId` and so can't be matched to either tier. They get
+ * their own section rather than being dropped, since there'd otherwise be no way to reach them.
  */
 export default function TieredCastView({
   show,
@@ -38,6 +38,11 @@ export default function TieredCastView({
   episode: SeasonEpisode | null;
   onAddMissing?: () => void;
 }) {
+  const [othersOpen, setOthersOpen] = useState(false);
+
+  // Collapse again when the episode changes — the list it describes is a different one now.
+  useEffect(() => { setOthersOpen(false); }, [episode?.number]);
+
   const byActorId = useMemo(() => {
     const m = new Map<number, CastMember>();
     for (const c of cast) if (c.actorTmdbId) m.set(c.actorTmdbId, c);
@@ -65,7 +70,22 @@ export default function TieredCastView({
     .filter((c) => !regularMembers.some((r) => r.id === c.id));
 
   const shownIds = new Set([...regularMembers, ...guestMembers].map((c) => c.id));
-  const unmatched = cast.filter((c) => !shownIds.has(c.id));
+
+  /**
+   * Everyone left over splits two ways, and pooling them was the mistake.
+   *
+   * Someone added by hand has no actorTmdbId, so they can't be matched to any episode ever. Hiding
+   * them would strand the record — there'd be no route to open or delete it from this page. They
+   * stay visible.
+   *
+   * Someone matched to TMDb who isn't in this episode is a different case: leaving them out *is*
+   * the episode filter working. Listing them underneath undoes it, and on a procedural that's the
+   * whole library — a small guest tier followed by a hundred cards, which is the pile this layout
+   * exists to avoid. They collapse to a count instead.
+   */
+  const leftover = cast.filter((c) => !shownIds.has(c.id));
+  const handAdded = leftover.filter((c) => !c.actorTmdbId);
+  const elsewhereInShow = leftover.filter((c) => !!c.actorTmdbId);
 
   const Section = ({ title, note, members }: { title: string; note?: string; members: CastMember[] }) => (
     <div style={{ marginBottom: 20 }}>
@@ -106,12 +126,35 @@ export default function TieredCastView({
         )
       ) : null}
 
-      {unmatched.length > 0 && (
+      {handAdded.length > 0 && (
         <Section
-          title="Also in your cast"
-          note={`${unmatched.length} not matched to this episode`}
-          members={unmatched}
+          title="Added by hand"
+          note="not linked to TMDb, so they can't be placed in an episode"
+          members={handAdded}
         />
+      )}
+
+      {elsewhereInShow.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <button
+            onClick={() => setOthersOpen((v) => !v)}
+            aria-expanded={othersOpen}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', border: 'none', background: 'none', padding: '6px 0', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>
+              {elsewhereInShow.length} other{elsewhereInShow.length === 1 ? '' : 's'} in your cast
+            </span>
+            <span style={{ fontSize: 12.5, color: 'var(--text-faint)', flex: 1 }}>not in this episode</span>
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ flex: 'none', transform: othersOpen ? 'rotate(180deg)' : 'none' }}>
+              <path d="M3 5.5L8 10.5L13 5.5" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          {othersOpen && (
+            <div style={{ marginTop: 10 }}>
+              <CastGrid show={show} cast={elsewhereInShow} meta={meta} />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
