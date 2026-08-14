@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
-import { epNumFromLabel } from '../lib/utils';
+import { epNumFromLabel, genId, colorForIndex } from '../lib/utils';
 import { getShowDetails, getEpisodeCredits, getAggregateCredits, getSeasonEpisodes, getSeasonCastIds, hasTmdbKey, type AggregateCastMember, type SeasonEpisode } from '../lib/tmdb';
 import { classifyShow, coreCast, type CastMeta, type ShapeReport } from '../lib/showShape';
 import { fetchTvmazeCast, matchCast } from '../lib/tvmaze';
@@ -271,7 +271,59 @@ export default function ShowScreen() {
     }
   };
 
-  const bulkAddLabel = bulkBusy ? 'Adding…' : `+ Add all cast (S${currentSeason}E${bulkEp})`;
+  /**
+   * Everyone in the series at once, from the aggregate credits already fetched for classification
+   * — no extra request.
+   *
+   * Filtered, because "all" is not a usable amount. TMDb's aggregate credits count every walk-on
+   * across the run: 807 entries for The Sopranos, 7,551 for Law & Order. Importing that would bury
+   * the cast you care about and push localStorage toward its 5MB ceiling. So this takes people who
+   * appear more than once, most-present first, capped — which is the recurring cast rather than
+   * literally everyone. The confirm says the real number before anything is written.
+   */
+  const SERIES_IMPORT_MIN_EPISODES = 2;
+  const SERIES_IMPORT_CAP = 100;
+
+  const seriesImportCandidates = useMemo(() => {
+    const isDrama = show?.type === 'DRAMA';
+    return credits
+      .filter((p) => p.episodeCount >= SERIES_IMPORT_MIN_EPISODES)
+      .filter((p) => (isDrama ? p.character : p.name))
+      .sort((a, b) => b.episodeCount - a.episodeCount)
+      .slice(0, SERIES_IMPORT_CAP);
+  }, [credits, show?.type]);
+
+  const addAllSeriesCast = () => {
+    if (!show || !seriesImportCandidates.length) return;
+    const n = seriesImportCandidates.length;
+    if (!window.confirm(
+      `Add ${n} cast ${n === 1 ? 'member' : 'members'} from every season of ${show.title}?\n\n` +
+      `This includes characters who don't appear until later, so it can give away who turns up.`,
+    )) return;
+
+    const isDrama = show.type === 'DRAMA';
+    updateData((d) => {
+      const sh = d.shows.find((x) => x.id === show.id);
+      if (!sh) return;
+      seriesImportCandidates.forEach((p) => {
+        const name = isDrama && p.character ? p.character : p.name;
+        if (!name || sh.cast.some((c) => c.name === name)) return;
+        sh.cast.push({
+          id: genId('p'), color: colorForIndex(sh.cast.length), name, native: '', nickname: '',
+          otherNames: [], desc: '', photo: p.photo || null, notes: '', gender: '', age: '', hometown: '',
+          occupation: '', social: '', socialPlatform: 'Instagram',
+          // No episode to attribute this to — it came from the series, not a screening. The season
+          // is the one TMDb says they first appear in when that's known, so the season filter still
+          // behaves; otherwise season 1, since they're somewhere in the show.
+          firstEp: '', season: seasonRanges.get(p.id)?.firstSeason || 1,
+          actorName: isDrama ? p.name : '', actorTmdbId: p.id || null,
+          wikiUrl: '', imdbUrl: '', versions: [], relationships: [],
+        });
+      });
+    });
+  };
+
+  const bulkAddLabel = bulkBusy ? 'Adding…' : `+ Add cast from S${currentSeason} E${bulkEp}`;
   const showBulk = !!show.tmdbId && hasTmdbKey();
 
   return (
@@ -323,22 +375,47 @@ export default function ShowScreen() {
               </svg>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-faint)', marginBottom: 6 }}>No cast yet</div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 22, maxWidth: 240 }}>Add the people you're trying to keep straight while you watch.</div>
-              {/* Bulk import leads. On an empty show it fills the whole page in one tap, where
-                  adding by hand is one person of however many — the manual route is the fallback
-                  for shows TMDb doesn't cover, not the expected first move. Order and emphasis
-                  both flipped; when there's no TMDb id, the manual button is all there is and
-                  takes the primary style itself. */}
+              {/* Three ways in, ordered by how well each fits someone starting a show they're
+                  watching. Importing one episode is the safe default — it can only tell you about
+                  people you've already met. The whole series is faster but shows you who arrives
+                  later, so it carries that warning and sits second. Manual entry is last: it's the
+                  fallback for shows TMDb doesn't cover, not the expected first move.
+
+                  With no TMDb id neither import can run, so manual takes the primary style rather
+                  than leaving the empty state with nothing emphasised. */}
               {showBulk && (
-                <button onClick={bulkAdd} disabled={bulkBusy} className="ct-btn-primary" style={{ padding: '0 22px', height: 46, borderRadius: 13, fontSize: 14 }}>{bulkAddLabel}</button>
+                <>
+                  <button onClick={bulkAdd} disabled={bulkBusy} className="ct-btn-primary" style={{ padding: '0 22px', height: 46, borderRadius: 13, fontSize: 14 }}>
+                    {bulkAddLabel}
+                  </button>
+                  <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 6, maxWidth: 260 }}>
+                    Only the people in that episode. Pick a different one above.
+                  </div>
+                </>
               )}
+
+              {showBulk && seriesImportCandidates.length > 0 && (
+                <>
+                  <button
+                    onClick={addAllSeriesCast}
+                    style={{ marginTop: 16, height: 44, padding: '0 22px', border: '1.5px solid var(--text)', borderRadius: 13, background: 'transparent', color: 'var(--text)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    + Add all cast
+                  </button>
+                  <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 6, maxWidth: 260 }}>
+                    Everyone from every season &mdash; including people who don&rsquo;t turn up until later, so this can spoil.
+                  </div>
+                </>
+              )}
+
               <button
                 onClick={() => openAddCast()}
                 className={showBulk ? undefined : 'ct-btn-primary'}
                 style={showBulk
-                  ? { marginTop: 10, height: 44, padding: '0 22px', border: '1.5px solid var(--text)', borderRadius: 13, background: 'transparent', color: 'var(--text)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }
+                  ? { marginTop: 16, border: 'none', background: 'none', padding: '6px 4px', color: 'var(--accent-soft)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }
                   : { padding: '0 22px', height: 46, borderRadius: 13, fontSize: 14 }}
               >
-                + Add first cast member manually
+                + Add cast manually
               </button>
             </div>
           )}
