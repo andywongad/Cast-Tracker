@@ -10,7 +10,7 @@ import type { SeasonEpisode } from '../lib/tmdb';
  * fill and a ring (see .ct-rail-item-selected).
  *
  * Replaces two native selects. Those collapsed into one row and got iOS's wheel picker for free;
- * these cost about 100px more vertical space, and buy episode titles and the ability to scan.
+ * these cost about 100px more vertical space, and buy a selection that stays pinned in view.
  */
 function Rail({
   children,
@@ -115,25 +115,13 @@ export default function SeasonEpisodeRails({
                 data-selected={selected}
                 onClick={() => onEpisodeChange(ep.number)}
                 className={`ct-rail-item ct-rail-item-sm${selected ? ' ct-rail-item-selected' : ''}`}
-                // Number always readable; the title takes whatever room is left. Titles run long
-                // ("Denial, Anger, Acceptance") and a rail of full titles can't be scanned.
-                style={{ gap: 6, maxWidth: 190 }}
+                // Number only. Titles were tried and taken back out: they made every chip a
+                // different width, which is hard to scan and cost most of the rail's visible
+                // range. The title still comes back with the season payload and is shown on the
+                // guest tier's heading, where there's room for it.
+                title={ep.name || undefined}
               >
-                <span style={{ flex: 'none' }}>Ep {ep.number}</span>
-                {ep.name && (
-                  <span
-                    style={{
-                      fontWeight: 500,
-                      opacity: 0.75,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      minWidth: 0,
-                    }}
-                  >
-                    {ep.name}
-                  </span>
-                )}
+                Ep {ep.number}
               </button>
             );
           })
