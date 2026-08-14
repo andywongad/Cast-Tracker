@@ -114,10 +114,10 @@ export default function SeasonEpisodeRails({
                 aria-selected={selected}
                 data-selected={selected}
                 onClick={() => onEpisodeChange(ep.number)}
-                className={`ct-rail-item${selected ? ' ct-rail-item-selected' : ''}`}
+                className={`ct-rail-item ct-rail-item-sm${selected ? ' ct-rail-item-selected' : ''}`}
                 // Number always readable; the title takes whatever room is left. Titles run long
                 // ("Denial, Anger, Acceptance") and a rail of full titles can't be scanned.
-                style={{ gap: 7, maxWidth: 210 }}
+                style={{ gap: 6, maxWidth: 190 }}
               >
                 <span style={{ flex: 'none' }}>Ep {ep.number}</span>
                 {ep.name && (

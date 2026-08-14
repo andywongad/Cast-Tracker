@@ -187,6 +187,22 @@ a { color: inherit; }
   font-size: 13.5px; font-weight: 700; white-space: nowrap; cursor: pointer;
 }
 
+/* Episode chips are smaller than season chips — the season is the primary choice and the episode
+   rail is long, so compact chips fit more of it on screen. Sized to match the pill the
+   relationship map still uses ("Import from Ep N"): 13.5px text, 7px/12px padding.
+
+   The 44px touch target from the season rail is preserved by an invisible overlay that extends
+   the hit area 6px above and below, rather than by inflating the chip itself. */
+.ct-rail-item-sm {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  position: relative;
+}
+.ct-rail-item-sm::after {
+  content: ''; position: absolute; left: 0; right: 0; top: -6px; bottom: -6px;
+}
+
 .ct-rail-item-selected {
   position: sticky; left: 0; z-index: 1;
   border-color: transparent;
