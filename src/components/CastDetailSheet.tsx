@@ -43,6 +43,8 @@ export default function CastDetailSheet() {
   const [lookedUpImdbUrl, setLookedUpImdbUrl] = useState<string | null>(null);
   const [akaEditing, setAkaEditing] = useState(false);
   const [akaDraft, setAkaDraft] = useState('');
+  const [nickEditing, setNickEditing] = useState(false);
+  const [nickDraft, setNickDraft] = useState('');
   const [bioExpanded, setBioExpanded] = useState(false);
   const [bioOverflows, setBioOverflows] = useState(false);
   const bioRef = useRef<HTMLDivElement>(null);
@@ -57,6 +59,8 @@ export default function CastDetailSheet() {
     setBioExpanded(false);
     setAkaEditing(false);
     setAkaDraft('');
+    setNickEditing(false);
+    setNickDraft('');
   }, [castDetailId]);
 
   /**
@@ -196,6 +200,22 @@ export default function CastDetailSheet() {
     });
   };
 
+  /**
+   * Same inline pattern as the AKA field, but the nickname is a single value rather than a list,
+   * so saving replaces it and saving an empty field clears it — that's the only way to remove one
+   * without opening the full form.
+   */
+  const saveNickname = () => {
+    const value = nickDraft.trim();
+    setNickEditing(false);
+    setNickDraft('');
+    updateData((d) => {
+      const s = d.shows.find((x) => x.id === show.id);
+      const cc = s?.cast.find((x) => x.id === c.id);
+      if (cc) cc.nickname = value;
+    });
+  };
+
   const startNotesEdit = () => { setNotesDraft(c.notes || ''); setNotesEditing(true); };
   const saveNotes = () => {
     updateData((d) => { const s = d.shows.find((x) => x.id === show.id); const cc = s?.cast.find((x) => x.id === c.id); if (cc) cc.notes = notesDraft.trim(); });
@@ -268,7 +288,47 @@ export default function CastDetailSheet() {
                 + Add other names they go by
               </button>
             )}
-            {(activeVersion?.nickname || c.nickname) && <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 4 }}>&ldquo;{activeVersion?.nickname || c.nickname}&rdquo;</div>}
+            {/* A version carries its own nickname, so while one is selected this stays read-only —
+                editing here would write to the base character and silently contradict what's on
+                screen. Reordering, deleting and per-version edits all live in the full form. */}
+            {activeVersion ? (
+              activeVersion.nickname ? <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 4 }}>&ldquo;{activeVersion.nickname}&rdquo;</div> : null
+            ) : nickEditing ? (
+              <div style={{ marginTop: 5 }}>
+                <input
+                  autoFocus
+                  value={nickDraft}
+                  onChange={(e) => setNickDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveNickname();
+                    if (e.key === 'Escape') { setNickEditing(false); setNickDraft(''); }
+                  }}
+                  placeholder={`What do you call this ${termLower}?`}
+                  className="ct-input"
+                  style={{ height: 34, fontSize: 13, marginBottom: 6 }}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { setNickEditing(false); setNickDraft(''); }} style={{ flex: 1, height: 30, border: '1px solid var(--input-border)', borderRadius: 8, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={saveNickname} style={{ flex: 1, height: 30, border: 'none', borderRadius: 8, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                </div>
+              </div>
+            ) : c.nickname ? (
+              // Tapping the nickname reopens it prefilled — the only affordance for changing or
+              // clearing one without a trip through the full form.
+              <button
+                onClick={() => { setNickDraft(c.nickname); setNickEditing(true); }}
+                style={{ display: 'block', border: 'none', background: 'none', padding: '4px 0 0', textAlign: 'left', cursor: 'pointer', fontSize: 13, fontStyle: 'italic', color: 'var(--accent-soft)' }}
+              >
+                &ldquo;{c.nickname}&rdquo;
+              </button>
+            ) : (
+              <button
+                onClick={() => { setNickDraft(''); setNickEditing(true); }}
+                style={{ display: 'block', border: 'none', background: 'none', padding: '3px 0 0', textAlign: 'left', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--accent-soft)' }}
+              >
+                + Add your nickname for this {termLower}
+              </button>
+            )}
           </div>
         </div>
 
