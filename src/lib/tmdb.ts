@@ -66,6 +66,8 @@ export interface ShowDetails {
   seasons: number[];
   imdbId: string | null;
   wikiGuess: string | null;
+  /** Series-wide episode total — the denominator for show classification. */
+  totalEpisodes: number;
 }
 
 export async function getShowDetails(tmdbId: number): Promise<ShowDetails | null> {
@@ -74,7 +76,7 @@ export async function getShowDetails(tmdbId: number): Promise<ShowDetails | null
   const seasons: number[] = (data.seasons || []).filter((s: any) => s.season_number > 0).map((s: any) => s.season_number);
   const imdbId = data.external_ids?.imdb_id || null;
   const wikiGuess = data.name ? `https://en.wikipedia.org/wiki/${encodeURIComponent(String(data.name).replace(/ /g, '_'))}` : null;
-  return { seasons, imdbId, wikiGuess };
+  return { seasons, imdbId, wikiGuess, totalEpisodes: data.number_of_episodes || 0 };
 }
 
 export async function getSeasonEpisodeCount(tmdbId: number, season: number): Promise<number | null> {
@@ -107,6 +109,12 @@ export interface AggregateCastMember {
   character: string;
   characters: string[];
   photo: string | null;
+  /**
+   * Episodes this person appears in across the whole series. The field TMDb returns and this
+   * mapper used to discard — it's what show classification and the per-character counts are
+   * built from. 0 when TMDb omits it.
+   */
+  episodeCount: number;
 }
 
 export async function getAggregateCredits(tmdbId: number): Promise<AggregateCastMember[]> {
@@ -118,7 +126,51 @@ export async function getAggregateCredits(tmdbId: number): Promise<AggregateCast
     character: p.roles?.[0]?.character || '',
     characters: (p.roles || []).map((r: any) => r.character).filter(Boolean),
     photo: img(p.profile_path, 'w185'),
+    episodeCount: p.total_episode_count || 0,
   }));
+}
+
+export interface SeasonEpisode {
+  number: number;
+  name: string;
+  /** Guest stars credited on this episode. Comes free with the season payload. */
+  guests: EpisodeCastMember[];
+}
+
+/**
+ * Every episode in a season — number, title, and guest stars — from a single call.
+ *
+ * The season payload embeds `guest_stars` on each episode, verified identical to what the
+ * per-episode credits endpoint returns (23 of 23 matching ids on The Sopranos S1E2). So an
+ * episode rail with titles, and the guest tier for any episode in the season, both come from one
+ * request rather than one per episode. A 24-episode season is 1 call, not 24.
+ */
+export async function getSeasonEpisodes(tmdbId: number, season: number): Promise<SeasonEpisode[]> {
+  const data = await get<{ episodes: any[] }>(`/tv/${tmdbId}/season/${season}`);
+  if (!data) return [];
+  return (data.episodes || []).map((e) => ({
+    number: e.episode_number,
+    name: e.name || '',
+    guests: (e.guest_stars || []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      character: p.character || p.roles?.[0]?.character || '',
+      photo: img(p.profile_path, 'w185'),
+    })),
+  }));
+}
+
+/**
+ * TMDb person ids credited in one season. Used to work out which season a character first and
+ * last appears in.
+ *
+ * Returns an empty set rather than throwing when the endpoint is unavailable — callers treat that
+ * as "range unknown" and simply omit the badge, so a bad response degrades the label rather than
+ * the screen.
+ */
+export async function getSeasonCastIds(tmdbId: number, season: number): Promise<Set<number>> {
+  const data = await get<{ cast: any[] }>(`/tv/${tmdbId}/season/${season}/aggregate_credits`);
+  return new Set((data?.cast || []).map((p) => p.id).filter((id) => typeof id === 'number'));
 }
 
 export interface PersonCredit {

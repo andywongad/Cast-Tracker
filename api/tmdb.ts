@@ -18,6 +18,9 @@ const ALLOWED: RegExp[] = [
   /^\/search\/tv$/,
   /^\/tv\/\d+$/,
   /^\/tv\/\d+\/season\/\d+$/,
+  // Per-season cast totals, for "new in S3" badges and first→last season ranges. One call per
+  // season, only ever made for shows classified as ensembles — see src/lib/showShape.ts.
+  /^\/tv\/\d+\/season\/\d+\/aggregate_credits$/,
   /^\/tv\/\d+\/season\/\d+\/episode\/\d+\/credits$/,
   /^\/tv\/\d+\/aggregate_credits$/,
   /^\/person\/\d+\/combined_credits$/,

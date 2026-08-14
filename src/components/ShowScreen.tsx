@@ -2,51 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { epNumFromLabel } from '../lib/utils';
-import { getShowDetails, getSeasonEpisodeCount, getEpisodeCredits, hasTmdbKey } from '../lib/tmdb';
+import { getShowDetails, getEpisodeCredits, getAggregateCredits, getSeasonEpisodes, getSeasonCastIds, hasTmdbKey, type AggregateCastMember, type SeasonEpisode } from '../lib/tmdb';
+import { classifyShow, coreCast, type CastMeta, type ShapeReport } from '../lib/showShape';
 import { fetchTvmazeCast, matchCast } from '../lib/tvmaze';
 import CastGrid from './CastGrid';
 import RelationshipMap from './RelationshipMap';
 import DensityToggle from './DensityToggle';
-
-/**
- * Select with a chevron we control. Chrome draws the native arrow at a fixed offset from the
- * border box and ignores padding-right, so nudging it means `appearance: none` plus our own
- * icon. Inherits colour from the wrapper, so it works on both the accent and surface fills.
- */
-function SelectField({ value, onChange, label, width, bg, fg, children }: {
-  value: string | number;
-  onChange: (v: string) => void;
-  label: string;
-  width: string;
-  bg: string;
-  fg: string;
-  children: React.ReactNode;
-}) {
-  return (
-    // fontSize must match the select's: `width` is in ch units, which resolve against *this*
-    // element's font. Inheriting the 16px body size made every dropdown ~10px too wide.
-    <div style={{ position: 'relative', width, flex: 'none', display: 'inline-flex', color: fg, fontSize: 13.5 }}>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={label}
-        style={{
-          appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
-          width: '100%', height: 38, border: 'none', borderRadius: 11, background: bg, color: fg,
-          padding: '0 30px 0 10px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
-        }}
-      >
-        {children}
-      </select>
-      <svg
-        width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"
-        style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-      >
-        <path d="M3 5.5L8 10.5L13 5.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </div>
-  );
-}
+import SeasonEpisodeRails from './SeasonEpisodeRails';
+import TieredCastView from './TieredCastView';
 
 export default function ShowScreen() {
   const { data, settings, updateData, showById, pushRecent, setCastColumns } = useStore();
@@ -60,6 +23,11 @@ export default function ShowScreen() {
   const [castQuery, setCastQuery] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
   const [photoNoteOpen, setPhotoNoteOpen] = useState(false);
+  const [credits, setCredits] = useState<AggregateCastMember[]>([]);
+  const [totalEpisodes, setTotalEpisodes] = useState(0);
+  const [seasonEpisodes, setSeasonEpisodes] = useState<SeasonEpisode[]>([]);
+  const [episodesLoading, setEpisodesLoading] = useState(false);
+  const [seasonRanges, setSeasonRanges] = useState<Map<number, CastMeta>>(new Map());
 
   useEffect(() => { if (activeShowId) pushRecent(activeShowId); }, [activeShowId, pushRecent]);
 
@@ -69,6 +37,7 @@ export default function ShowScreen() {
     getShowDetails(show.tmdbId).then((d) => {
       if (!alive || !d) return;
       if (d.seasons.length) setSeasons(d.seasons);
+      setTotalEpisodes(d.totalEpisodes);
       updateData((data2) => {
         const s = data2.shows.find((x) => x.id === show.id);
         if (!s) return;
@@ -131,12 +100,79 @@ export default function ShowScreen() {
   // pick one, so there's no auto-jump to the newest season.
   const currentSeason = show?.currentSeason || 1;
 
+  /**
+   * One call per season selection covers the episode rail's numbers and titles *and* every
+   * episode's guest stars. The season payload embeds guest_stars, verified identical to the
+   * per-episode credits endpoint, so a 24-episode season costs 1 request rather than 24.
+   */
   useEffect(() => {
-    if (!show?.tmdbId) { setEpisodeCount(24); return; }
+    if (!show?.tmdbId) { setSeasonEpisodes([]); setEpisodeCount(24); return; }
     let alive = true;
-    getSeasonEpisodeCount(show.tmdbId, currentSeason).then((c) => { if (alive && c) setEpisodeCount(c); });
+    setEpisodesLoading(true);
+    getSeasonEpisodes(show.tmdbId, currentSeason)
+      .then((eps) => {
+        if (!alive) return;
+        setSeasonEpisodes(eps);
+        if (eps.length) setEpisodeCount(eps.length);
+      })
+      .finally(() => { if (alive) setEpisodesLoading(false); });
     return () => { alive = false; };
   }, [show?.tmdbId, currentSeason]);
+
+  /** Series-level credits: one call, and the basis for classification and every episode count. */
+  useEffect(() => {
+    if (!show?.tmdbId) { setCredits([]); return; }
+    let alive = true;
+    getAggregateCredits(show.tmdbId).then((c) => { if (alive) setCredits(c); });
+    return () => { alive = false; };
+  }, [show?.tmdbId]);
+
+  const shape: ShapeReport | null = useMemo(
+    () => classifyShow(credits, totalEpisodes),
+    [credits, totalEpisodes],
+  );
+
+  // Exposed for spot-checking against real shows — the thresholds in showShape.ts are calibrated
+  // on a handful of samples and the ensemble/procedural boundary is the shakiest of them.
+  useEffect(() => {
+    if (shape && show?.title) {
+      console.info('[showShape] %s → %s (core %d of %d cast, %d eps, threshold %.1f eps)',
+        show.title, shape.shape, shape.coreCount, shape.castSize, shape.totalEpisodes, shape.coreThreshold);
+    }
+  }, [shape, show?.title]);
+
+  /**
+   * First and last season per person, for "31 eps · S2→S6" and the "new in S3" badge.
+   *
+   * One call per season, so it's gated to ensembles: those are shows with a large recurring
+   * company, which in practice run few seasons. A 20-season procedural never reaches this, which
+   * is what keeps the request count bounded.
+   *
+   * Failure is silent by design — an empty result means cards show the episode count alone rather
+   * than a wrong range.
+   */
+  useEffect(() => {
+    const tmdbId = show?.tmdbId;
+    if (!tmdbId || shape?.shape !== 'ensemble' || !credits.length) { setSeasonRanges(new Map()); return; }
+    let alive = true;
+    const ordered = [...seasons].sort((a, b) => a - b);
+    Promise.all(ordered.map((n) => getSeasonCastIds(tmdbId, n))).then((sets) => {
+      if (!alive) return;
+      const m = new Map<number, CastMeta>();
+      for (const p of credits) m.set(p.id, { episodeCount: p.episodeCount });
+      sets.forEach((ids, i) => {
+        const seasonNo = ordered[i];
+        ids.forEach((id) => {
+          const entry = m.get(id);
+          if (!entry) return;
+          entry.firstSeason = entry.firstSeason === undefined ? seasonNo : Math.min(entry.firstSeason, seasonNo);
+          entry.lastSeason = entry.lastSeason === undefined ? seasonNo : Math.max(entry.lastSeason, seasonNo);
+        });
+      });
+      setSeasonRanges(m);
+    });
+    return () => { alive = false; };
+  }, [show?.tmdbId, shape?.shape, credits, seasons]);
 
   const episodeOptions = useMemo(() => Array.from({ length: episodeCount }, (_, i) => `Ep ${i + 1}`), [episodeCount]);
 
@@ -165,13 +201,6 @@ export default function ShowScreen() {
   const visibleCastAll = hasSeasons
     ? show.cast.filter((c) => (cumulativeSeasons ? (c.season || 1) <= currentSeason : (c.season || 1) === currentSeason))
     : show.cast;
-  // Width from the widest label each dropdown will actually render, so a 6-season show doesn't
-  // reserve room for Survivor's 51. "Season " is 7 characters, "Ep " is 3; the +42px covers the
-  // side padding and the native dropdown arrow (box-sizing is border-box globally).
-  const seasonDigits = String(Math.max(1, ...orderedSeasons)).length;
-  const episodeDigits = String(Math.max(1, episodeOptions.length)).length;
-  const seasonSelW = `calc(${7 + seasonDigits}ch + 42px)`;
-  const episodeSelW = `calc(${3 + episodeDigits}ch + 42px)`;
 
   const cq = castQuery.trim().toLowerCase();
   const visibleCast = cq ? visibleCastAll.filter((c) => c.name.toLowerCase().includes(cq) || (c.nickname || '').toLowerCase().includes(cq)) : visibleCastAll;
@@ -266,33 +295,21 @@ export default function ShowScreen() {
           while scrolling a long cast list or dragging lines on the map. */}
       {hasSeasons && (
         <div style={{ position: 'sticky', top: 0, zIndex: 6, background: 'var(--bg)', borderBottom: '1px solid var(--border)', margin: '0 -16px 12px', padding: '8px 16px' }}>
-          <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 6 }}>Pick a season and episode</div>
-          {/* Wraps rather than squeezing: three controls don't fit one line on a narrow phone. */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <SelectField
-            value={currentSeason}
-            onChange={(v) => setSeason(parseInt(v))}
-            label="Season"
-            width={seasonSelW}
-            bg="var(--accent)"
-            fg="var(--accent-text)"
-          >
-            {orderedSeasons.map((sn) => <option key={sn} value={sn}>Season {sn}</option>)}
-          </SelectField>
-          <SelectField
-            value={show.mapEpisode || episodeOptions[0] || 'Ep 1'}
-            onChange={setMapEpisode}
-            label="Episode"
-            width={episodeSelW}
-            bg="var(--surface)"
-            fg="var(--text)"
-          >
-            {episodeOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
-          </SelectField>
+          {/* Rails rather than the two native selects. Those fitted on one row and got iOS's wheel
+              picker for free; these cost ~100px more and buy episode titles, scanning, and a
+              selection pinned in place while you browse. */}
+          <SeasonEpisodeRails
+            seasons={orderedSeasons}
+            currentSeason={currentSeason}
+            onSeasonChange={setSeason}
+            episodes={seasonEpisodes}
+            currentEpisode={bulkEp}
+            onEpisodeChange={(n) => setMapEpisode(`Ep ${n}`)}
+            episodesLoading={episodesLoading}
+          />
           {showBulk && (
-            <button onClick={bulkAdd} disabled={bulkBusy} style={{ flex: 'none', height: 38, border: '1px dashed var(--border)', borderRadius: 11, background: 'transparent', color: 'var(--accent-soft)', fontSize: 12.5, fontWeight: 700, cursor: bulkBusy ? 'default' : 'pointer', padding: '0 14px', whiteSpace: 'nowrap' }}>{bulkAddLabel}</button>
+            <button onClick={bulkAdd} disabled={bulkBusy} style={{ marginTop: 8, height: 38, border: '1px dashed var(--border)', borderRadius: 11, background: 'transparent', color: 'var(--accent-soft)', fontSize: 12.5, fontWeight: 700, cursor: bulkBusy ? 'default' : 'pointer', padding: '0 14px', whiteSpace: 'nowrap' }}>{bulkAddLabel}</button>
           )}
-          </div>
         </div>
       )}
 
@@ -357,7 +374,22 @@ export default function ShowScreen() {
                   )}
                 </div>
               )}
-              <CastGrid show={show} cast={visibleCast} />
+              {/* Layout follows the shape of the show's cast. Ensembles keep the season grid —
+                  everyone accumulates, so counts and a "new in S<N>" badge are what's missing.
+                  Procedurals and anthologies get the tiered view instead: a fixed core has
+                  nothing to do with which season you're on, and a guest list does. */}
+              {shape?.shape === 'procedural' || shape?.shape === 'anthology' ? (
+                <TieredCastView
+                  show={show}
+                  cast={visibleCast}
+                  regulars={coreCast(credits, totalEpisodes)}
+                  allCredits={credits}
+                  episode={seasonEpisodes.find((e) => e.number === bulkEp) || null}
+                  onAddMissing={() => openAddCast()}
+                />
+              ) : (
+                <CastGrid show={show} cast={visibleCast} meta={seasonRanges} currentSeason={currentSeason} />
+              )}
             </>
           )}
         </>
