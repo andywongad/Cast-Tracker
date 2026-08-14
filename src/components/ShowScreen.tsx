@@ -312,11 +312,19 @@ export default function ShowScreen() {
           )}
           {show.cast.length > 0 && (
             <>
-              <input value={castQuery} onChange={(e) => setCastQuery(e.target.value)} placeholder="Search this cast&hellip;" style={{ width: '100%', height: 40, border: '1px solid var(--input-border)', borderRadius: 12, background: 'var(--surface)', color: 'var(--text)', padding: '0 14px', fontSize: 13.5, marginBottom: 12 }} />
-              {/* flex-end keeps the toggle right-aligned when there's no TMDb key and the
-                  bulk-add button isn't rendered at all. */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 14 }}>
-                <DensityToggle value={settings.castColumns || 2} options={[2, 3, 4]} onChange={setCastColumns} label="Cast columns" />
+              {/* Search and the column toggle share a row: both are ways of narrowing what you're
+                  looking at, and on a phone the toggle alone was costing a whole line above the
+                  grid. The input takes the remaining width so the toggle keeps its natural size. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <input
+                  value={castQuery}
+                  onChange={(e) => setCastQuery(e.target.value)}
+                  placeholder="Search this cast&hellip;"
+                  style={{ flex: 1, minWidth: 0, height: 40, border: '1px solid var(--input-border)', borderRadius: 12, background: 'var(--surface)', color: 'var(--text)', padding: '0 14px', fontSize: 13.5 }}
+                />
+                <div style={{ flex: 'none' }}>
+                  <DensityToggle value={settings.castColumns || 2} options={[2, 3, 4]} onChange={setCastColumns} label="Cast columns" />
+                </div>
               </div>
               {/* The cast cards' action buttons hang 11px above the card edge, so a 12px bottom gap
                   left roughly 1px of real clearance. This clears the buttons, not the cards. */}
