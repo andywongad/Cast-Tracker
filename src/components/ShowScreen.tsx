@@ -323,8 +323,23 @@ export default function ShowScreen() {
               </svg>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-faint)', marginBottom: 6 }}>No cast yet</div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 22, maxWidth: 240 }}>Add the people you're trying to keep straight while you watch.</div>
-              <button onClick={() => openAddCast()} className="ct-btn-primary" style={{ padding: '0 22px', height: 46, borderRadius: 13, fontSize: 14 }}>+ Add first cast member</button>
-              {showBulk && <button onClick={bulkAdd} disabled={bulkBusy} style={{ marginTop: 10, height: 44, padding: '0 22px', border: '1.5px solid var(--text)', borderRadius: 13, background: 'transparent', color: 'var(--text)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>{bulkAddLabel}</button>}
+              {/* Bulk import leads. On an empty show it fills the whole page in one tap, where
+                  adding by hand is one person of however many — the manual route is the fallback
+                  for shows TMDb doesn't cover, not the expected first move. Order and emphasis
+                  both flipped; when there's no TMDb id, the manual button is all there is and
+                  takes the primary style itself. */}
+              {showBulk && (
+                <button onClick={bulkAdd} disabled={bulkBusy} className="ct-btn-primary" style={{ padding: '0 22px', height: 46, borderRadius: 13, fontSize: 14 }}>{bulkAddLabel}</button>
+              )}
+              <button
+                onClick={() => openAddCast()}
+                className={showBulk ? undefined : 'ct-btn-primary'}
+                style={showBulk
+                  ? { marginTop: 10, height: 44, padding: '0 22px', border: '1.5px solid var(--text)', borderRadius: 13, background: 'transparent', color: 'var(--text)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }
+                  : { padding: '0 22px', height: 46, borderRadius: 13, fontSize: 14 }}
+              >
+                + Add first cast member manually
+              </button>
             </div>
           )}
           {show.cast.length > 0 && (
