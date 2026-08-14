@@ -10,13 +10,11 @@ export default function CastCard({
   c,
   compact,
   meta,
-  currentSeason,
 }: {
   show: Show;
   c: CastMember;
   compact: boolean;
   meta?: CastMeta;
-  currentSeason?: number;
 }) {
   const { openCastDetail } = useUI();
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
@@ -62,21 +60,11 @@ export default function CastCard({
       {/* TMDb-derived, so only present for cast imported from TMDb — hand-added characters have no
           actorTmdbId to join on and simply show nothing here rather than a zero.
 
-          "new in S3" is the affordance for a cast that grows: it marks the characters who arrive
-          in the season you're looking at, which is otherwise invisible in a grid that only gets
-          longer. It needs firstSeason, which comes from the per-season lookup — absent on shows
-          where that wasn't run, in which case the badge silently doesn't appear. */}
+          The "new in S<N>" badge that sat alongside this was removed. The counts stay. */}
       {meta && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 5 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            {episodeCountLabel(meta.episodeCount)}
-            {meta.firstSeason && meta.lastSeason ? ` · ${seasonRangeLabel(meta.firstSeason, meta.lastSeason)}` : ''}
-          </span>
-          {currentSeason !== undefined && meta.firstSeason === currentSeason && (
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.02em', color: 'var(--accent-soft)', background: 'color-mix(in oklch, var(--accent-soft) 12%, transparent)', padding: '2px 6px', borderRadius: 999 }}>
-              new in S{currentSeason}
-            </span>
-          )}
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 5 }}>
+          {episodeCountLabel(meta.episodeCount)}
+          {meta.firstSeason && meta.lastSeason ? ` · ${seasonRangeLabel(meta.firstSeason, meta.lastSeason)}` : ''}
         </div>
       )}
 

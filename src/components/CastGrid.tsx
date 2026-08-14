@@ -7,14 +7,11 @@ export default function CastGrid({
   show,
   cast,
   meta,
-  currentSeason,
 }: {
   show: Show;
   cast: CastMember[];
   /** TMDb-derived episode counts and season ranges, keyed by actorTmdbId. Absent = show none. */
   meta?: Map<number, CastMeta>;
-  /** Drives the "new in S<N>" badge. Omit to suppress it. */
-  currentSeason?: number;
 }) {
   const { settings } = useStore();
   const cols = settings.castColumns || 2;
@@ -28,7 +25,6 @@ export default function CastGrid({
           c={c}
           compact={compact}
           meta={c.actorTmdbId ? meta?.get(c.actorTmdbId) : undefined}
-          currentSeason={currentSeason}
         />
       ))}
     </div>

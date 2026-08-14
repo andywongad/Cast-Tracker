@@ -142,7 +142,7 @@ export default function ShowScreen() {
   }, [shape, show?.title]);
 
   /**
-   * First and last season per person, for "31 eps · S2→S6" and the "new in S3" badge.
+   * First and last season per person, for the "31 eps · S2→S6" line on each card.
    *
    * One call per season, so it's gated to ensembles: those are shows with a large recurring
    * company, which in practice run few seasons. A 20-season procedural never reaches this, which
@@ -397,7 +397,7 @@ export default function ShowScreen() {
                 </div>
               )}
               {/* Layout follows the shape of the show's cast. Ensembles keep the season grid —
-                  everyone accumulates, so counts and a "new in S<N>" badge are what's missing.
+                  everyone accumulates, so episode counts and season ranges are what's missing.
                   Procedurals and anthologies get the tiered view instead: a fixed core has
                   nothing to do with which season you're on, and a guest list does. */}
               {shape?.shape === 'procedural' || shape?.shape === 'anthology' ? (
@@ -410,7 +410,7 @@ export default function ShowScreen() {
                   onAddMissing={() => openAddCast()}
                 />
               ) : (
-                <CastGrid show={show} cast={visibleCast} meta={seasonRanges} currentSeason={currentSeason} />
+                <CastGrid show={show} cast={visibleCast} meta={seasonRanges} />
               )}
             </>
           )}
