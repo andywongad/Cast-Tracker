@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CastMember, Show } from '../types';
 import type { AggregateCastMember, SeasonEpisode } from '../lib/tmdb';
-import type { CastMeta } from '../lib/showShape';
 import CastGrid from './CastGrid';
 
 /**
@@ -26,15 +25,12 @@ export default function TieredCastView({
   show,
   cast,
   regulars,
-  allCredits,
   episode,
   onAddMissing,
 }: {
   show: Show;
   cast: CastMember[];
   regulars: AggregateCastMember[];
-  /** Every person in the series' aggregate credits — the source of per-guest episode totals. */
-  allCredits: AggregateCastMember[];
   episode: SeasonEpisode | null;
   onAddMissing?: () => void;
 }) {
@@ -48,17 +44,6 @@ export default function TieredCastView({
     for (const c of cast) if (c.actorTmdbId) m.set(c.actorTmdbId, c);
     return m;
   }, [cast]);
-
-  /**
-   * Episode totals for every person TMDb knows about, so a guest card can say "1 ep" or "9 eps".
-   * That distinction is the entire point of this layout — a one-off and a recurring guest look
-   * identical otherwise.
-   */
-  const meta = useMemo(() => {
-    const m = new Map<number, CastMeta>();
-    for (const p of allCredits) m.set(p.id, { episodeCount: p.episodeCount });
-    return m;
-  }, [allCredits]);
 
   const regularMembers = regulars.map((r) => byActorId.get(r.id)).filter((c): c is CastMember => !!c);
   const missingRegulars = regulars.length - regularMembers.length;
@@ -93,7 +78,7 @@ export default function TieredCastView({
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>{title}</div>
         {note && <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>{note}</div>}
       </div>
-      <CastGrid show={show} cast={members} meta={meta} />
+      <CastGrid show={show} cast={members} />
     </div>
   );
 
@@ -151,7 +136,7 @@ export default function TieredCastView({
           </button>
           {othersOpen && (
             <div style={{ marginTop: 10 }}>
-              <CastGrid show={show} cast={elsewhereInShow} meta={meta} />
+              <CastGrid show={show} cast={elsewhereInShow} />
             </div>
           )}
         </div>

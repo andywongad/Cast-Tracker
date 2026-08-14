@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { epNumFromLabel } from '../lib/utils';
-import { getShowDetails, getEpisodeCredits, getAggregateCredits, getSeasonEpisodes, getSeasonCastIds, hasTmdbKey, type AggregateCastMember, type SeasonEpisode } from '../lib/tmdb';
-import { classifyShow, coreCast, type CastMeta, type ShapeReport } from '../lib/showShape';
+import { getShowDetails, getEpisodeCredits, getAggregateCredits, getSeasonEpisodes, hasTmdbKey, type AggregateCastMember, type SeasonEpisode } from '../lib/tmdb';
+import { classifyShow, coreCast, type ShapeReport } from '../lib/showShape';
 import { fetchTvmazeCast, matchCast } from '../lib/tvmaze';
 import CastGrid from './CastGrid';
 import RelationshipMap from './RelationshipMap';
@@ -27,7 +27,6 @@ export default function ShowScreen() {
   const [totalEpisodes, setTotalEpisodes] = useState(0);
   const [seasonEpisodes, setSeasonEpisodes] = useState<SeasonEpisode[]>([]);
   const [episodesLoading, setEpisodesLoading] = useState(false);
-  const [seasonRanges, setSeasonRanges] = useState<Map<number, CastMeta>>(new Map());
 
   useEffect(() => { if (activeShowId) pushRecent(activeShowId); }, [activeShowId, pushRecent]);
 
@@ -140,39 +139,6 @@ export default function ShowScreen() {
         show.title, shape.shape, shape.coreCount, shape.castSize, shape.totalEpisodes, shape.coreThreshold);
     }
   }, [shape, show?.title]);
-
-  /**
-   * First and last season per person, for the "31 eps · S2→S6" line on each card.
-   *
-   * One call per season, so it's gated to ensembles: those are shows with a large recurring
-   * company, which in practice run few seasons. A 20-season procedural never reaches this, which
-   * is what keeps the request count bounded.
-   *
-   * Failure is silent by design — an empty result means cards show the episode count alone rather
-   * than a wrong range.
-   */
-  useEffect(() => {
-    const tmdbId = show?.tmdbId;
-    if (!tmdbId || shape?.shape !== 'ensemble' || !credits.length) { setSeasonRanges(new Map()); return; }
-    let alive = true;
-    const ordered = [...seasons].sort((a, b) => a - b);
-    Promise.all(ordered.map((n) => getSeasonCastIds(tmdbId, n))).then((sets) => {
-      if (!alive) return;
-      const m = new Map<number, CastMeta>();
-      for (const p of credits) m.set(p.id, { episodeCount: p.episodeCount });
-      sets.forEach((ids, i) => {
-        const seasonNo = ordered[i];
-        ids.forEach((id) => {
-          const entry = m.get(id);
-          if (!entry) return;
-          entry.firstSeason = entry.firstSeason === undefined ? seasonNo : Math.min(entry.firstSeason, seasonNo);
-          entry.lastSeason = entry.lastSeason === undefined ? seasonNo : Math.max(entry.lastSeason, seasonNo);
-        });
-      });
-      setSeasonRanges(m);
-    });
-    return () => { alive = false; };
-  }, [show?.tmdbId, shape?.shape, credits, seasons]);
 
   const episodeOptions = useMemo(() => Array.from({ length: episodeCount }, (_, i) => `Ep ${i + 1}`), [episodeCount]);
 
@@ -405,12 +371,11 @@ export default function ShowScreen() {
                   show={show}
                   cast={visibleCast}
                   regulars={coreCast(credits, totalEpisodes)}
-                  allCredits={credits}
                   episode={seasonEpisodes.find((e) => e.number === bulkEp) || null}
                   onAddMissing={() => openAddCast()}
                 />
               ) : (
-                <CastGrid show={show} cast={visibleCast} meta={seasonRanges} />
+                <CastGrid show={show} cast={visibleCast} />
               )}
             </>
           )}

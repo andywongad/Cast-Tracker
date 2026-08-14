@@ -160,19 +160,6 @@ export async function getSeasonEpisodes(tmdbId: number, season: number): Promise
   }));
 }
 
-/**
- * TMDb person ids credited in one season. Used to work out which season a character first and
- * last appears in.
- *
- * Returns an empty set rather than throwing when the endpoint is unavailable — callers treat that
- * as "range unknown" and simply omit the badge, so a bad response degrades the label rather than
- * the screen.
- */
-export async function getSeasonCastIds(tmdbId: number, season: number): Promise<Set<number>> {
-  const data = await get<{ cast: any[] }>(`/tv/${tmdbId}/season/${season}/aggregate_credits`);
-  return new Set((data?.cast || []).map((p) => p.id).filter((id) => typeof id === 'number'));
-}
-
 export interface PersonCredit {
   title: string;
   year: string | null;

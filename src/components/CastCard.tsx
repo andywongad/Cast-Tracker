@@ -3,18 +3,15 @@ import type { CastMember, Show } from '../types';
 import { initials, cropStyle } from '../lib/utils';
 import { displayPhoto } from '../lib/tvmaze';
 import { useUI } from '../hooks/useUI';
-import { episodeCountLabel, seasonRangeLabel, type CastMeta } from '../lib/showShape';
 
 export default function CastCard({
   show,
   c,
   compact,
-  meta,
 }: {
   show: Show;
   c: CastMember;
   compact: boolean;
-  meta?: CastMeta;
 }) {
   const { openCastDetail } = useUI();
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
@@ -54,17 +51,6 @@ export default function CastCard({
       {displayOtherNames.length > 0 && (
         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           <span style={{ fontWeight: 700 }}>AKA</span> {displayOtherNames.join(', ')}
-        </div>
-      )}
-
-      {/* TMDb-derived, so only present for cast imported from TMDb — hand-added characters have no
-          actorTmdbId to join on and simply show nothing here rather than a zero.
-
-          The "new in S<N>" badge that sat alongside this was removed. The counts stay. */}
-      {meta && (
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 5 }}>
-          {episodeCountLabel(meta.episodeCount)}
-          {meta.firstSeason && meta.lastSeason ? ` · ${seasonRangeLabel(meta.firstSeason, meta.lastSeason)}` : ''}
         </div>
       )}
 

@@ -83,24 +83,3 @@ export function coreCast(cast: AggregateCastMember[], totalEpisodes: number): Ag
     .filter((p) => p.episodeCount > CORE_EPISODE_RATIO * totalEpisodes)
     .sort((a, b) => b.episodeCount - a.episodeCount);
 }
-
-/**
- * What a cast card can show beyond the character's own record, keyed by TMDb person id.
- * `firstSeason`/`lastSeason` are absent when the per-season lookup wasn't run or failed — the card
- * then shows the episode count alone rather than a wrong range.
- */
-export interface CastMeta {
-  episodeCount: number;
-  firstSeason?: number;
-  lastSeason?: number;
-}
-
-/** "31 eps" / "1 ep" — the distinction between a one-off and a recurring guest is the whole point. */
-export function episodeCountLabel(count: number): string {
-  return count === 1 ? '1 ep' : `${count} eps`;
-}
-
-/** "S2→S6", or "S4" when a character only ever appears in one season. */
-export function seasonRangeLabel(first: number, last: number): string {
-  return first === last ? `S${first}` : `S${first}→S${last}`;
-}
