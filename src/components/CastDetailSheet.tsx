@@ -6,6 +6,8 @@ import { displayPhoto } from '../lib/tvmaze';
 import { getPersonCredits, getPersonWikiImdb, type PersonCredit } from '../lib/tmdb';
 import { fetchEnrichment, type EnrichmentState } from '../lib/enrichment/client';
 import type { RoleTag } from '../lib/enrichment/types';
+import type { PhotoCrop } from '../types';
+import CropModal from './CropModal';
 
 // Softer, sentence-case field labels — less shouting for a glanceable sheet
 const fieldLabel: CSSProperties = { fontSize: 13.5, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 };
@@ -45,6 +47,7 @@ export default function CastDetailSheet() {
   const [akaDraft, setAkaDraft] = useState('');
   const [nickEditing, setNickEditing] = useState(false);
   const [nickDraft, setNickDraft] = useState('');
+  const [crop, setCrop] = useState<{ file: File | null; src: string | null }>({ file: null, src: null });
   const [descEditing, setDescEditing] = useState(false);
   const [descDraft, setDescDraft] = useState('');
   const [whoEditing, setWhoEditing] = useState(false);
@@ -67,6 +70,7 @@ export default function CastDetailSheet() {
     setNickDraft('');
     setDescEditing(false);
     setDescDraft('');
+    setCrop({ file: null, src: null });
     setWhoEditing(false);
     setWhoDraft('');
   }, [castDetailId]);
@@ -224,6 +228,26 @@ export default function CastDetailSheet() {
     });
   };
 
+  /**
+   * Same reframe control as the Character Details form, so a photo can be adjusted from the page
+   * you're already looking at instead of a round trip through the editor.
+   *
+   * A reframe returns framing only and leaves the source image alone; an upload also returns a
+   * downscaled copy of the whole picture. Writes to the base character, so it's suppressed while a
+   * version is selected — versions carry their own photo and editing here would change the wrong
+   * one.
+   */
+  const confirmCrop = ({ dataUrl, crop: framing }: { dataUrl?: string; crop: PhotoCrop }) => {
+    updateData((d) => {
+      const s = d.shows.find((x) => x.id === show.id);
+      const cc = s?.cast.find((x) => x.id === c.id);
+      if (!cc) return;
+      if (dataUrl) cc.photo = dataUrl;
+      cc.photoCrop = framing;
+    });
+    setCrop({ file: null, src: null });
+  };
+
   /** Single line, so Enter commits — same as the AKA and nickname fields. */
   const saveWho = () => {
     const value = whoDraft.trim();
@@ -275,8 +299,32 @@ export default function CastDetailSheet() {
         </button>
 
         <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
-          <div style={{ position: 'relative', width: 84, height: 84, borderRadius: 18, flex: 'none', overflow: 'hidden', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', ...cropStyle(activeVersion?.photo || displayPhoto(c), activeVersion ? null : c.photoCrop) }}>
-            {!(activeVersion?.photo || displayPhoto(c)) && <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(activeVersion?.name || c.name)}</span>}
+          {/* Matches the Character Details form: tapping the tile reframes the existing photo, the
+              pencil badge picks a new one. `overflow: hidden` has to go — it clipped the badge,
+              which hangs off the corner — so the rounded corners come from the tile's own radius
+              on the background image instead.
+
+              Suppressed while a version is selected: this writes to the base character, and a
+              version carries its own photo. */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 'none' }}>
+            <div
+              onClick={() => { if (!activeVersion && displayPhoto(c)) setCrop({ file: null, src: displayPhoto(c) }); }}
+              role={!activeVersion && displayPhoto(c) ? 'button' : undefined}
+              aria-label={!activeVersion && displayPhoto(c) ? 'Reframe photo' : undefined}
+              title={!activeVersion && displayPhoto(c) ? 'Reframe photo' : undefined}
+              style={{ position: 'relative', width: 84, height: 84, borderRadius: 18, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: !activeVersion && displayPhoto(c) ? 'pointer' : 'default', ...cropStyle(activeVersion?.photo || displayPhoto(c), activeVersion ? null : c.photoCrop) }}
+            >
+              {!(activeVersion?.photo || displayPhoto(c)) && <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(activeVersion?.name || c.name)}</span>}
+              {!activeVersion && (
+                <label style={{ position: 'absolute', right: -6, bottom: -6, width: 26, height: 26, borderRadius: 999, background: 'var(--accent)', border: '2px solid var(--sheet)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5-8 8L3 13.5l.5-2.5 8-8z" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg>
+                  <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) setCrop({ file: f, src: null }); }} style={{ display: 'none' }} />
+                </label>
+              )}
+            </div>
+            {!activeVersion && displayPhoto(c) && (
+              <button onClick={() => setCrop({ file: null, src: displayPhoto(c) })} style={{ border: 'none', background: 'none', padding: 0, marginTop: 4, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: 'var(--accent-soft)' }}>Reframe</button>
+            )}
           </div>
           {/* Top-aligned with the photo rather than centred against it. Centring left the name
               floating in the middle of an 84px block whenever there was no AKA or nickname to
@@ -678,6 +726,14 @@ export default function CastDetailSheet() {
         )}
 
         <button onClick={deleteCast} style={{ width: '100%', height: 40, border: 'none', background: 'transparent', color: '#E08A80', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginTop: 12 }}>Delete {termLower}</button>
+
+        <CropModal
+          file={crop.file}
+          src={crop.src}
+          initial={c.photoCrop ?? null}
+          onCancel={() => setCrop({ file: null, src: null })}
+          onConfirm={confirmCrop}
+        />
       </div>
     </div>
   );
