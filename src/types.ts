@@ -63,6 +63,12 @@ export interface CastMember {
   native: string;
   nickname: string;
   otherNames: string[];
+  /**
+   * The user's one-line answer to "who is this?" — "Meadow's boyfriend", "the family lawyer".
+   * Distinct from `desc`, which is what they look like, and from the generated bio, which is
+   * whatever a source said. Optional: absent on every record written before it existed.
+   */
+  whoTheyAre?: string;
   desc: string;
   photo: string | null;
   notes: string;

@@ -21,7 +21,7 @@ import { normalizeName } from '../../src/lib/tvmaze.js';
  * unreachable rather than being served as if they came from the new pipeline — cheaper and safer
  * than migrating rows, since anything dropped is regenerable.
  */
-export const KEY_VERSION = 'v3';
+export const KEY_VERSION = 'v4';
 
 /** Long enough for real names, short enough that a hostile 10KB "name" can't bloat the keyspace. */
 const MAX_SLUG_LENGTH = 80;

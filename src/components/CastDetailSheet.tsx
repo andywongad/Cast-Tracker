@@ -47,6 +47,8 @@ export default function CastDetailSheet() {
   const [nickDraft, setNickDraft] = useState('');
   const [descEditing, setDescEditing] = useState(false);
   const [descDraft, setDescDraft] = useState('');
+  const [whoEditing, setWhoEditing] = useState(false);
+  const [whoDraft, setWhoDraft] = useState('');
   const [bioExpanded, setBioExpanded] = useState(false);
   const [bioOverflows, setBioOverflows] = useState(false);
   const bioRef = useRef<HTMLDivElement>(null);
@@ -65,6 +67,8 @@ export default function CastDetailSheet() {
     setNickDraft('');
     setDescEditing(false);
     setDescDraft('');
+    setWhoEditing(false);
+    setWhoDraft('');
   }, [castDetailId]);
 
   /**
@@ -220,6 +224,18 @@ export default function CastDetailSheet() {
     });
   };
 
+  /** Single line, so Enter commits — same as the AKA and nickname fields. */
+  const saveWho = () => {
+    const value = whoDraft.trim();
+    setWhoEditing(false);
+    setWhoDraft('');
+    updateData((d) => {
+      const s = d.shows.find((x) => x.id === show.id);
+      const cc = s?.cast.find((x) => x.id === c.id);
+      if (cc) cc.whoTheyAre = value;
+    });
+  };
+
   /** Multi-line, so Enter inserts a newline rather than committing — Save is the only commit. */
   const saveDesc = () => {
     const value = descDraft.trim();
@@ -364,6 +380,50 @@ export default function CastDetailSheet() {
                 <span style={{ fontSize: 12, fontWeight: 700, color: activeVersionId === v.id ? 'var(--accent-soft)' : 'var(--text-muted)', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.age || v.name || 'Version'}</span>
               </button>
             ))}
+          </div>
+        )}
+
+        {/* The user's own answer to "who is this?", above what they look like: a role or a
+            relationship identifies someone faster than a description of their face, and unlike the
+            generated bio it's in their words. Read-only while a version is selected, matching the
+            two fields below — versions carry their own values for those. */}
+        {!activeVersion && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={fieldLabel}>Who they are</div>
+            {whoEditing ? (
+              <>
+                <input
+                  autoFocus
+                  value={whoDraft}
+                  onChange={(e) => setWhoDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveWho();
+                    if (e.key === 'Escape') { setWhoEditing(false); setWhoDraft(''); }
+                  }}
+                  placeholder="Meadow's boyfriend, the family lawyer&hellip;"
+                  className="ct-input"
+                  style={{ height: 34, fontSize: 13.5, marginBottom: 6 }}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { setWhoEditing(false); setWhoDraft(''); }} style={{ flex: 1, height: 30, border: '1px solid var(--input-border)', borderRadius: 8, background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={saveWho} style={{ flex: 1, height: 30, border: 'none', borderRadius: 8, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                </div>
+              </>
+            ) : c.whoTheyAre ? (
+              <button
+                onClick={() => { setWhoDraft(c.whoTheyAre || ''); setWhoEditing(true); }}
+                style={{ display: 'block', width: '100%', border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}
+              >
+                {c.whoTheyAre}
+              </button>
+            ) : (
+              <button
+                onClick={() => { setWhoDraft(''); setWhoEditing(true); }}
+                style={{ display: 'block', border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--accent-soft)' }}
+              >
+                + Add who they are
+              </button>
+            )}
           </div>
         )}
 

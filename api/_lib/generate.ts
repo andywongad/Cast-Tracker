@@ -59,7 +59,7 @@ Everything after the first sentence of that source is an event, so none of it is
 Also:
 - Write about the character, never the actor who plays them. Never mention the writers, creators, or how the show was made.
 - Use only the source text. If it does not support a claim, leave the field null or choose the safest role tag.
-- aliases: other names the character is commonly called — nicknames, a formal or full name, a title or rank. Only names in use from the start; a name revealed as a twist is a spoiler and must be left out. Do not repeat the name you were given. Empty array if there are none.
+- aliases: other names the character is already called in their FIRST episode — an established nickname, the formal version of the name they go by, a rank or title they already hold. Nothing they adopt, earn, inherit, or have revealed later: not a codename taken up mid-series, not a title gained, not a true identity uncovered, not a married name. If you cannot tell from the source whether a name was in use from the beginning, leave it out. Do not repeat the name you were given. An empty array is the normal answer.
 - occupation: their in-universe job as a short noun phrase ("mob boss", "high school chemistry teacher"). Use null if the source does not say.
 - roleTag: "main" for a lead, "supporting" for a regular non-lead, "recurring" for someone who appears across multiple episodes without being a regular, "guest" for a one-off. If the source gives no signal, use "supporting".`;
 
@@ -78,7 +78,7 @@ const SCHEMA = {
       type: 'array',
       items: { type: 'string' },
       description:
-        'Other names this character is commonly known by in-universe: nicknames, formal or full names, titles. Empty array if the source lists none.',
+        'Other names this character is already called in their first episode. Excludes any name adopted, earned, or revealed later in the series. Empty array if none apply.',
     },
     roleTag: {
       type: 'string',
