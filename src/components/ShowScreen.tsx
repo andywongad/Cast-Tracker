@@ -86,9 +86,13 @@ export default function ShowScreen() {
         // this from re-running forever on cast TVmaze doesn't have.
         sh.cast.forEach((c) => { c.characterPhoto = images.get(c.id) ?? c.characterPhoto ?? null; });
 
-        console.info('[tvmaze] %s: matched %d/%d, %d with images', sh.title, report.matched, sh.cast.length, report.withImage);
-        if (report.unmatchedLocal.length) console.info('[tvmaze] no TVmaze entry for:', report.unmatchedLocal);
-        if (report.unmatchedRemote.length) console.info('[tvmaze] unused TVmaze entries:', report.unmatchedRemote);
+        // Dev only, like the classification line below. These fire on any show with cast that
+        // hasn't been looked up yet, and print the show title plus every unmatched character name.
+        if (import.meta.env.DEV) {
+          console.info('[tvmaze] %s: matched %d/%d, %d with images', sh.title, report.matched, sh.cast.length, report.withImage);
+          if (report.unmatchedLocal.length) console.info('[tvmaze] no TVmaze entry for:', report.unmatchedLocal);
+          if (report.unmatchedRemote.length) console.info('[tvmaze] unused TVmaze entries:', report.unmatchedRemote);
+        }
       });
     });
     return () => { alive = false; };
@@ -133,8 +137,10 @@ export default function ShowScreen() {
 
   // Exposed for spot-checking against real shows — the thresholds in showShape.ts are calibrated
   // on a handful of samples and the ensemble/procedural boundary is the shakiest of them.
+  // Dev only: this is a calibration aid for me, not something a tester should be shown, and it
+  // fired on every show open.
   useEffect(() => {
-    if (shape && show?.title) {
+    if (import.meta.env.DEV && shape && show?.title) {
       console.info('[showShape] %s → %s (core %d of %d cast, %d eps, threshold %.1f eps)',
         show.title, shape.shape, shape.coreCount, shape.castSize, shape.totalEpisodes, shape.coreThreshold);
     }

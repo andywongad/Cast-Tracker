@@ -2,7 +2,10 @@ export async function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     try {
       const registration = await navigator.serviceWorker.register('/service-worker.js');
-      console.log('Service Worker registered:', registration);
+      // Dev only. Vite substitutes a literal false here in a production build and esbuild drops
+      // the branch, so neither the call nor its string ships. Failures below still log: an error
+      // a tester can read back to you is worth more than a clean console.
+      if (import.meta.env.DEV) console.info('[sw] registered', registration.scope);
       return registration;
     } catch (error) {
       console.error('Service Worker registration failed:', error);
