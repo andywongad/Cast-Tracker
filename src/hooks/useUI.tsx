@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useStore } from './useStore';
 
 export interface ShowFormPrefill {
   title: string;
@@ -17,11 +18,65 @@ export interface ShareSheetData {
   color: string;
 }
 
+/**
+ * One entry per thing the user can back out of.
+ *
+ * Everything the app puts on screen above the home grid is a layer, and the layer stack *is* the
+ * browser history: opening pushes an entry, closing consumes one, and the system back gesture
+ * pops exactly like a close button does. Before this the whole navigation model was loose
+ * `useState` flags with no history involvement at all, so on Android — and in an installed PWA,
+ * where there is no browser chrome to fall back on — back exited the app from anywhere, however
+ * deep you were.
+ *
+ * Layers carry only small serialisable identity (ids, modes, urls). Bulkier payloads — a share
+ * code, an add-show prefill — stay in React state, because history entries survive a reload and a
+ * regenerated share code shouldn't come back from the dead. Their sheets already no-op when the
+ * payload is missing.
+ */
+type Layer =
+  | { k: 'show'; id: string }
+  | { k: 'castDetail'; id: string }
+  | { k: 'addShow'; editingId: string | null }
+  | { k: 'addCast'; editingId: string | null }
+  | { k: 'settings' }
+  | { k: 'auth' }
+  | { k: 'showMenu' }
+  | { k: 'feedback' }
+  | { k: 'converter' }
+  | { k: 'translator' }
+  | { k: 'share' }
+  | { k: 'redeem'; mode: 'show' | 'cast' }
+  | { k: 'webView'; url: string; label: string };
+
+/** Namespaced so anything else that lands in history.state is left alone. */
+const STATE_KEY = 'ct.nav';
+
+/**
+ * Only the show layer reaches the URL, as `?show=<id>`.
+ *
+ * A query parameter rather than a path segment because this is a static Vite deploy with no SPA
+ * rewrite: `/show/abc` returns Vercel's 404 on refresh (verified against the live site), whereas
+ * the path here stays `/` and a refresh is served normally. Deep links come free as a result.
+ * Sheets deliberately get no URL — they're transient, and a URL that reopens a half-filled form
+ * is worse than one that doesn't.
+ */
+function urlFor(stack: Layer[]): string {
+  const show = [...stack].reverse().find((l): l is Extract<Layer, { k: 'show' }> => l.k === 'show');
+  return show ? `${window.location.pathname}?show=${encodeURIComponent(show.id)}` : window.location.pathname;
+}
+
+function lastOf<K extends Layer['k']>(stack: Layer[], k: K): Extract<Layer, { k: K }> | undefined {
+  for (let i = stack.length - 1; i >= 0; i--) if (stack[i].k === k) return stack[i] as Extract<Layer, { k: K }>;
+  return undefined;
+}
+
 interface UIValue {
   screen: 'home' | 'show';
   activeShowId: string | null;
   openShow: (id: string) => void;
   goHome: () => void;
+  /** Unwind to the home screen in one step, for when the data behind the stack is gone. */
+  resetToHome: () => void;
 
   query: string;
   setQuery: (q: string) => void;
@@ -80,89 +135,202 @@ interface UIValue {
 const UIContext = createContext<UIValue | null>(null);
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
-  const [screen, setScreen] = useState<'home' | 'show'>('home');
-  const [activeShowId, setActiveShowId] = useState<string | null>(null);
+  const { data } = useStore();
   const [query, setQuery] = useState('');
 
-  const [addShowSheet, setAddShowSheet] = useState<{ open: boolean; editingId: string | null }>({ open: false, editingId: null });
+  // Payloads too big or too perishable to live in a history entry. See the Layer doc comment.
   const [addShowPrefill, setAddShowPrefill] = useState<ShowFormPrefill | null>(null);
-  const [addCastSheet, setAddCastSheet] = useState<{ open: boolean; editingId: string | null }>({ open: false, editingId: null });
-  const [castDetailId, setCastDetailId] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
-  const [showMenuOpen, setShowMenuOpen] = useState(false);
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [converterOpen, setConverterOpen] = useState(false);
   const [converterPrefill, setConverterPrefill] = useState<{ fromCcy?: string; toCcy?: string; amount?: string } | null>(null);
-  const [translatorOpen, setTranslatorOpen] = useState(false);
-  const [shareSheet, setShareSheet] = useState<ShareSheetData | null>(null);
-  const [redeem, setRedeem] = useState<{ open: boolean; mode: 'show' | 'cast' }>({ open: false, mode: 'show' });
-  const [webView, setWebView] = useState<{ open: boolean; url: string; label: string }>({ open: false, url: '', label: '' });
+  const [shareData, setShareData] = useState<ShareSheetData | null>(null);
 
-  const openShow = useCallback((id: string) => { setScreen('show'); setActiveShowId(id); }, []);
-  const goHome = useCallback(() => { setScreen('home'); }, []);
+  /**
+   * Drop layers pointing at records that no longer exist.
+   *
+   * History outlives the data it refers to: delete a show, or reset the app from Settings, and the
+   * entries behind you still name it. Without this, back would land on a show screen whose show is
+   * gone — TopBar with an empty title over an empty page.
+   */
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const sanitize = useCallback((stack: Layer[]): Layer[] => {
+    const shows = dataRef.current.shows;
+    const out: Layer[] = [];
+    for (const l of stack) {
+      if (l.k === 'show' && !shows.some((s) => s.id === l.id)) continue;
+      // A character sheet is meaningless without the show it belongs to.
+      if (l.k === 'castDetail') {
+        const showLayer = lastOf(out, 'show');
+        const sh = showLayer && shows.find((s) => s.id === showLayer.id);
+        if (!sh || !sh.cast.some((c) => c.id === l.id)) continue;
+      }
+      out.push(l);
+    }
+    return out;
+  }, []);
 
-  const openAddShow = useCallback((prefill?: ShowFormPrefill) => { setAddShowPrefill(prefill || null); setAddShowSheet({ open: true, editingId: null }); }, []);
-  const openEditShow = useCallback((id: string) => { setAddShowPrefill(null); setAddShowSheet({ open: true, editingId: id }); }, []);
-  const closeAddShow = useCallback(() => setAddShowSheet({ open: false, editingId: null }), []);
+  const [stack, setStack] = useState<Layer[]>(() => {
+    const id = new URLSearchParams(window.location.search).get('show');
+    return id && data.shows.some((s) => s.id === id) ? [{ k: 'show', id }] : [];
+  });
+  const stackRef = useRef(stack);
 
-  const openAddCast = useCallback(() => setAddCastSheet({ open: true, editingId: null }), []);
-  const openEditCast = useCallback((id: string) => setAddCastSheet({ open: true, editingId: id }), []);
-  const closeAddCast = useCallback(() => setAddCastSheet({ open: false, editingId: null }), []);
+  const apply = useCallback((next: Layer[], mode: 'push' | 'replace') => {
+    stackRef.current = next;
+    setStack(next);
+    const state = { [STATE_KEY]: next };
+    if (mode === 'push') window.history.pushState(state, '', urlFor(next));
+    else window.history.replaceState(state, '', urlFor(next));
+  }, []);
 
-  const openCastDetail = useCallback((id: string) => setCastDetailId(id), []);
-  const closeCastDetail = useCallback(() => setCastDetailId(null), []);
+  /**
+   * Seed the entry the app loaded on, and normalise the URL.
+   *
+   * Deriving the opening stack from the URL rather than from a restored `history.state` is
+   * deliberate: reloading with a sheet open should land on the show, not reopen the sheet.
+   */
+  useEffect(() => {
+    apply(stackRef.current, 'replace');
+  }, [apply]);
 
-  const openSettings = useCallback(() => setSettingsOpen(true), []);
-  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const raw = (e.state as Record<string, unknown> | null)?.[STATE_KEY];
+      const next = sanitize(Array.isArray(raw) ? (raw as Layer[]) : []);
+      stackRef.current = next;
+      setStack(next);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [sanitize]);
 
-  const openAuth = useCallback(() => { setSettingsOpen(false); setAuthOpen(true); }, []);
-  const closeAuth = useCallback(() => setAuthOpen(false), []);
+  /**
+   * Closing is a real history traversal, not a state edit, so that back and a close button consume
+   * the same entry. Editing the current entry in place instead would leave a dead entry behind and
+   * make the first back press after every close do nothing.
+   *
+   * `history.back()` is asynchronous, which matters for the handfuls of places that close one
+   * sheet and open another in a single tick (the ⋯ menu's rows, redeeming a code into a new show,
+   * the character sheet's edit button). Firing back() and pushState() together would interleave
+   * badly. Deferring by a microtask lets an open() that lands in the same tick cancel the pending
+   * back and become a swap of the top layer — which is also the right history shape: back from
+   * the sheet you were sent to returns to what was under the one you came from.
+   */
+  const pendingPop = useRef(false);
+  const pop = useCallback(() => {
+    if (!stackRef.current.length) return;
+    pendingPop.current = true;
+    queueMicrotask(() => {
+      if (!pendingPop.current) return;
+      pendingPop.current = false;
+      window.history.back();
+    });
+  }, []);
 
-  const openShowMenu = useCallback(() => setShowMenuOpen(true), []);
-  const closeShowMenu = useCallback(() => setShowMenuOpen(false), []);
+  const push = useCallback((layer: Layer) => {
+    if (pendingPop.current) {
+      pendingPop.current = false;
+      apply([...stackRef.current.slice(0, -1), layer], 'replace');
+    } else {
+      apply([...stackRef.current, layer], 'push');
+    }
+  }, [apply]);
 
-  const openFeedback = useCallback(() => setFeedbackOpen(true), []);
-  const closeFeedback = useCallback(() => setFeedbackOpen(false), []);
+  const openShow = useCallback((id: string) => push({ k: 'show', id }), [push]);
+  const goHome = useCallback(() => pop(), [pop]);
+  const resetToHome = useCallback(() => { pendingPop.current = false; apply([], 'replace'); }, [apply]);
+
+  const openAddShow = useCallback((prefill?: ShowFormPrefill) => { setAddShowPrefill(prefill || null); push({ k: 'addShow', editingId: null }); }, [push]);
+  const openEditShow = useCallback((id: string) => { setAddShowPrefill(null); push({ k: 'addShow', editingId: id }); }, [push]);
+  const closeAddShow = useCallback(() => pop(), [pop]);
+
+  const openAddCast = useCallback(() => push({ k: 'addCast', editingId: null }), [push]);
+  const openEditCast = useCallback((id: string) => push({ k: 'addCast', editingId: id }), [push]);
+  const closeAddCast = useCallback(() => pop(), [pop]);
+
+  const openCastDetail = useCallback((id: string) => push({ k: 'castDetail', id }), [push]);
+  const closeCastDetail = useCallback(() => pop(), [pop]);
+
+  const openSettings = useCallback(() => push({ k: 'settings' }), [push]);
+  const closeSettings = useCallback(() => pop(), [pop]);
+
+  // Signing in replaces Settings rather than stacking on it, matching how it always behaved.
+  const openAuth = useCallback(() => { pop(); push({ k: 'auth' }); }, [pop, push]);
+  const closeAuth = useCallback(() => pop(), [pop]);
+
+  const openShowMenu = useCallback(() => push({ k: 'showMenu' }), [push]);
+  const closeShowMenu = useCallback(() => pop(), [pop]);
+
+  const openFeedback = useCallback(() => push({ k: 'feedback' }), [push]);
+  const closeFeedback = useCallback(() => pop(), [pop]);
 
   const openConverter = useCallback((prefill?: { fromCcy?: string; toCcy?: string; amount?: string }) => {
     setConverterPrefill(prefill || null);
-    setConverterOpen(true);
-  }, []);
-  const closeConverter = useCallback(() => setConverterOpen(false), []);
+    push({ k: 'converter' });
+  }, [push]);
+  const closeConverter = useCallback(() => pop(), [pop]);
 
-  const openTranslator = useCallback(() => setTranslatorOpen(true), []);
-  const closeTranslator = useCallback(() => setTranslatorOpen(false), []);
+  const openTranslator = useCallback(() => push({ k: 'translator' }), [push]);
+  const closeTranslator = useCallback(() => pop(), [pop]);
 
-  const openShareSheet = useCallback((data: ShareSheetData) => setShareSheet(data), []);
-  const closeShareSheet = useCallback(() => setShareSheet(null), []);
+  const openShareSheet = useCallback((d: ShareSheetData) => { setShareData(d); push({ k: 'share' }); }, [push]);
+  const closeShareSheet = useCallback(() => pop(), [pop]);
 
-  const openRedeem = useCallback((mode: 'show' | 'cast') => setRedeem({ open: true, mode }), []);
-  const closeRedeem = useCallback(() => setRedeem((r) => ({ ...r, open: false })), []);
+  const openRedeem = useCallback((mode: 'show' | 'cast') => push({ k: 'redeem', mode }), [push]);
+  const closeRedeem = useCallback(() => pop(), [pop]);
 
-  const openWebView = useCallback((url: string, label: string) => setWebView({ open: true, url, label }), []);
-  const closeWebView = useCallback(() => setWebView({ open: false, url: '', label: '' }), []);
+  const openWebView = useCallback((url: string, label: string) => push({ k: 'webView', url, label }), [push]);
+  const closeWebView = useCallback(() => pop(), [pop]);
+
+  // Every flag the app used to hold separately is now read off the stack, so there is exactly one
+  // source of truth for what's on screen and it's the same one the back gesture manipulates.
+  const derived = useMemo(() => {
+    const showLayer = lastOf(stack, 'show');
+    const addShow = lastOf(stack, 'addShow');
+    const addCast = lastOf(stack, 'addCast');
+    const castDetail = lastOf(stack, 'castDetail');
+    const redeemLayer = lastOf(stack, 'redeem');
+    const webViewLayer = lastOf(stack, 'webView');
+    return {
+      screen: (showLayer ? 'show' : 'home') as 'home' | 'show',
+      activeShowId: showLayer?.id ?? null,
+      addShowSheet: { open: !!addShow, editingId: addShow?.editingId ?? null },
+      addCastSheet: { open: !!addCast, editingId: addCast?.editingId ?? null },
+      castDetailId: castDetail?.id ?? null,
+      settingsOpen: stack.some((l) => l.k === 'settings'),
+      authOpen: stack.some((l) => l.k === 'auth'),
+      showMenuOpen: stack.some((l) => l.k === 'showMenu'),
+      feedbackOpen: stack.some((l) => l.k === 'feedback'),
+      converterOpen: stack.some((l) => l.k === 'converter'),
+      translatorOpen: stack.some((l) => l.k === 'translator'),
+      shareOpen: stack.some((l) => l.k === 'share'),
+      redeem: { open: !!redeemLayer, mode: redeemLayer?.mode ?? ('show' as const) },
+      webView: { open: !!webViewLayer, url: webViewLayer?.url ?? '', label: webViewLayer?.label ?? '' },
+    };
+  }, [stack]);
 
   const value = useMemo<UIValue>(() => ({
-    screen, activeShowId, openShow, goHome,
+    screen: derived.screen,
+    activeShowId: derived.activeShowId,
+    openShow, goHome, resetToHome,
     query, setQuery,
-    addShowSheet, addShowPrefill, openAddShow, openEditShow, closeAddShow,
-    addCastSheet, openAddCast, openEditCast, closeAddCast,
-    castDetailId, openCastDetail, closeCastDetail,
-    settingsOpen, openSettings, closeSettings,
-    authOpen, openAuth, closeAuth,
-    showMenuOpen, openShowMenu, closeShowMenu,
-    feedbackOpen, openFeedback, closeFeedback,
-    converterOpen, converterPrefill, openConverter, closeConverter,
-    translatorOpen, openTranslator, closeTranslator,
-    shareSheet, openShareSheet, closeShareSheet,
-    redeem, openRedeem, closeRedeem,
-    webView, openWebView, closeWebView,
-  }), [screen, activeShowId, query, addShowSheet, addShowPrefill, addCastSheet, castDetailId, settingsOpen, authOpen, openAuth, closeAuth, showMenuOpen, openShowMenu, closeShowMenu, feedbackOpen, converterOpen,
-      converterPrefill, translatorOpen, shareSheet, redeem, webView, openShow, goHome, openAddShow, openEditShow,
-      closeAddShow, openAddCast, openEditCast, closeAddCast, openCastDetail, closeCastDetail, openSettings,
-      closeSettings, openFeedback, closeFeedback, openConverter, closeConverter, openTranslator, closeTranslator, openShareSheet,
-      closeShareSheet, openRedeem, closeRedeem, openWebView, closeWebView]);
+    addShowSheet: derived.addShowSheet, addShowPrefill, openAddShow, openEditShow, closeAddShow,
+    addCastSheet: derived.addCastSheet, openAddCast, openEditCast, closeAddCast,
+    castDetailId: derived.castDetailId, openCastDetail, closeCastDetail,
+    settingsOpen: derived.settingsOpen, openSettings, closeSettings,
+    authOpen: derived.authOpen, openAuth, closeAuth,
+    showMenuOpen: derived.showMenuOpen, openShowMenu, closeShowMenu,
+    feedbackOpen: derived.feedbackOpen, openFeedback, closeFeedback,
+    converterOpen: derived.converterOpen, converterPrefill, openConverter, closeConverter,
+    translatorOpen: derived.translatorOpen, openTranslator, closeTranslator,
+    shareSheet: derived.shareOpen ? shareData : null, openShareSheet, closeShareSheet,
+    redeem: derived.redeem, openRedeem, closeRedeem,
+    webView: derived.webView, openWebView, closeWebView,
+  }), [derived, query, addShowPrefill, converterPrefill, shareData,
+      openShow, goHome, resetToHome, openAddShow, openEditShow, closeAddShow,
+      openAddCast, openEditCast, closeAddCast, openCastDetail, closeCastDetail,
+      openSettings, closeSettings, openAuth, closeAuth, openShowMenu, closeShowMenu,
+      openFeedback, closeFeedback, openConverter, closeConverter, openTranslator, closeTranslator,
+      openShareSheet, closeShareSheet, openRedeem, closeRedeem, openWebView, closeWebView]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }

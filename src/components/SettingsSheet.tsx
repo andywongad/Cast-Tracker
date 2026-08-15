@@ -7,7 +7,7 @@ import { isAuthPreviewEnabled } from '../lib/auth';
 export default function SettingsSheet() {
   const { settings, setTheme, setAutoSave, exportBackup, importBackup, resetAll } = useStore();
   const { session } = useAuth();
-  const { settingsOpen, closeSettings, goHome, openFeedback, openAuth } = useUI();
+  const { settingsOpen, closeSettings, resetToHome, openFeedback, openAuth } = useUI();
   const [resetConfirm, setResetConfirm] = useState(false);
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -15,7 +15,10 @@ export default function SettingsSheet() {
   if (!settingsOpen) return null;
   const theme = settings.theme ?? 'Light';
 
-  const doReset = () => { resetAll(); setResetConfirm(false); closeSettings(); goHome(); };
+  // Closing the sheet and going home are two layers, and a reset destroys everything the entries
+  // behind them refer to. One step straight to the root rather than two traversals through
+  // history that would each land on a show that no longer exists.
+  const doReset = () => { resetAll(); setResetConfirm(false); resetToHome(); };
 
   const doExport = () => {
     const backup = exportBackup();
