@@ -4,6 +4,7 @@ import { useUI } from '../hooks/useUI';
 import { epNumFromLabel } from '../lib/utils';
 import { getShowDetails, getEpisodeCredits, getAggregateCredits, getSeasonEpisodes, hasTmdbKey, type AggregateCastMember, type SeasonEpisode } from '../lib/tmdb';
 import { classifyShow, coreCast, type ShapeReport } from '../lib/showShape';
+import { useFirstSeasons } from '../lib/firstSeason';
 import { fetchTvmazeCast, matchCast } from '../lib/tvmaze';
 import CastGrid from './CastGrid';
 import RelationshipMap from './RelationshipMap';
@@ -16,7 +17,11 @@ export default function ShowScreen() {
   const { activeShowId, openAddCast } = useUI();
   const show = showById(activeShowId);
 
+  // A placeholder so the rail has something to draw before TMDb answers. `seasonsReal` says
+  // whether these are the show's actual seasons yet — anything that spends requests per season
+  // has to wait for that, or it burns them on seasons 7 and 8 of a six-season show.
   const [seasons, setSeasons] = useState<number[]>(Array.from({ length: 8 }, (_, i) => i + 1));
+  const [seasonsReal, setSeasonsReal] = useState(false);
   const [episodeCount, setEpisodeCount] = useState<number>(24);
   const [gridMode, setGridMode] = useState(true);
   const [mapHelpOpen, setMapHelpOpen] = useState(false);
@@ -29,13 +34,14 @@ export default function ShowScreen() {
   const [episodesLoading, setEpisodesLoading] = useState(false);
 
   useEffect(() => { if (activeShowId) pushRecent(activeShowId); }, [activeShowId, pushRecent]);
+  useEffect(() => { setSeasonsReal(false); }, [show?.tmdbId]);
 
   useEffect(() => {
     if (!show?.tmdbId) return;
     let alive = true;
     getShowDetails(show.tmdbId).then((d) => {
       if (!alive || !d) return;
-      if (d.seasons.length) setSeasons(d.seasons);
+      if (d.seasons.length) { setSeasons(d.seasons); setSeasonsReal(true); }
       setTotalEpisodes(d.totalEpisodes);
       updateData((data2) => {
         const s = data2.shows.find((x) => x.id === show.id);
@@ -148,6 +154,10 @@ export default function ShowScreen() {
 
   const episodeOptions = useMemo(() => Array.from({ length: episodeCount }, (_, i) => `Ep ${i + 1}`), [episodeCount]);
 
+  // Scripted only. Reality's stored season is already correct, so spending a request per season
+  // on it would buy nothing.
+  const firstSeasons = useFirstSeasons(show?.tmdbId ?? null, seasons, seasonsReal && show?.type === 'DRAMA');
+
   if (!show) return null;
 
   const isRealityShow = show.type === 'REALITY' || show.type === 'VARIETY';
@@ -158,21 +168,33 @@ export default function ShowScreen() {
   // dropdown, counting up is what people expect.
   const orderedSeasons = [...seasons].sort((a, b) => a - b);
   /**
-   * `season` records the season a cast member was *added* in — there's only one number per
-   * person, so "every season they appear in" isn't stored anywhere.
+   * Who belongs on screen for the selected season.
    *
-   * Scripted shows carry their cast forward, so a season shows everyone introduced by then:
-   * someone who joined in S1 is assumed still around in S3. Right for regulars, wrong for
-   * characters who get written out.
+   * Reality filters to the exact season, on the stored `season` field. That field records the
+   * season you imported someone in, which for reality is the same thing as the season they were
+   * in — casts are disjoint and you import one season at a time. Carrying them forward would pile
+   * 17 season-1 contestants into season 50.
    *
-   * Reality replaces its cast each season — Survivor S1 and S50 share nobody — so those stay
-   * filtered to the exact season. Carrying them forward would pile 17 season-1 contestants into
-   * season 50.
+   * Scripted carries its cast forward, and asks TMDb rather than the stored field. `season` is an
+   * import stamp, so filtering on it answered a question about your import history: The Sopranos
+   * imported from season 3 stamped all forty characters season 3 and rendered season 1 blank.
+   * `firstSeasons` is derived from per-season credits instead — see lib/firstSeason.ts.
+   *
+   * Anyone the map doesn't cover stays visible: hand-added cast has no actorTmdbId and can never
+   * be placed, and an actor TMDb doesn't list is a gap in the data, not a reason to hide someone
+   * the user typed in themselves. While the map is still loading it is null and nothing is
+   * filtered at all.
    */
-  const cumulativeSeasons = show.type === 'DRAMA';
-  const visibleCastAll = hasSeasons
-    ? show.cast.filter((c) => (cumulativeSeasons ? (c.season || 1) <= currentSeason : (c.season || 1) === currentSeason))
-    : show.cast;
+  const visibleCastAll = !hasSeasons
+    ? show.cast
+    : show.type !== 'DRAMA'
+      ? show.cast.filter((c) => (c.season || 1) === currentSeason)
+      : firstSeasons
+        ? show.cast.filter((c) => {
+            const first = c.actorTmdbId ? firstSeasons[c.actorTmdbId] : undefined;
+            return first === undefined || first <= currentSeason;
+          })
+        : show.cast;
 
   const cq = castQuery.trim().toLowerCase();
   const visibleCast = cq ? visibleCastAll.filter((c) => c.name.toLowerCase().includes(cq) || (c.nickname || '').toLowerCase().includes(cq)) : visibleCastAll;
@@ -372,7 +394,30 @@ export default function ShowScreen() {
                   everyone accumulates, so episode counts and season ranges are what's missing.
                   Procedurals and anthologies get the tiered view instead: a fixed core has
                   nothing to do with which season you're on, and a guest list does. */}
-              {shape?.shape === 'procedural' || shape?.shape === 'anthology' ? (
+              {/* A filter that matches nothing used to render nothing at all — the "No cast yet"
+                  block above is gated on the show having no cast, which is false here, so The
+                  Sopranos on season 1 was a blank page under the rails with 40 characters in it.
+                  Say which of the two filters emptied the grid, and offer the way out. */}
+              {visibleCast.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '34px 20px', border: '1px dashed var(--border)', borderRadius: 16 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+                    {cq ? `No one here matches “${castQuery.trim()}”` : `No one from your cast appears in season ${currentSeason}`}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: cq ? 0 : 16 }}>
+                    {cq
+                      ? `You've added ${visibleCastAll.length} ${visibleCastAll.length === 1 ? 'person' : 'people'} to this season.`
+                      // "from other seasons", not "later": a reality show filters to the exact
+                      // season, so Survivor on season 3 is empty because its cast sits in seasons
+                      // 1 and 2 — earlier, not later.
+                      : `You've added ${show.cast.length} ${show.cast.length === 1 ? 'person' : 'people'} to this show, from other seasons.`}
+                  </div>
+                  {!cq && showBulk && (
+                    <button onClick={bulkAdd} disabled={bulkBusy} className="ct-btn-primary" style={{ padding: '0 20px', height: 42, borderRadius: 12, fontSize: 13.5 }}>
+                      {bulkAddLabel}
+                    </button>
+                  )}
+                </div>
+              ) : shape?.shape === 'procedural' || shape?.shape === 'anthology' ? (
                 <TieredCastView
                   show={show}
                   cast={visibleCast}

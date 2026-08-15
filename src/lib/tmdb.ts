@@ -133,6 +133,19 @@ export async function getAggregateCredits(tmdbId: number): Promise<AggregateCast
   }));
 }
 
+/**
+ * Every actor credited anywhere in one season — regulars and guests alike.
+ *
+ * Ids only. The caller folds these into "which season does each actor first appear in", which is
+ * the one thing the series-level aggregate_credits can't answer: it has episode counts but no
+ * season identity at all.
+ */
+export async function getSeasonCastIds(tmdbId: number, season: number): Promise<number[] | null> {
+  const data = await get<{ cast: { id: number }[] }>(`/tv/${tmdbId}/season/${season}/aggregate_credits`);
+  if (!data) return null;
+  return (data.cast || []).map((p) => p.id).filter((id) => typeof id === 'number');
+}
+
 export interface SeasonEpisode {
   number: number;
   name: string;
