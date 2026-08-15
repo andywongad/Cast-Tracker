@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { searchShows, hasTmdbKey, img, inferShowType, type TmdbShowResult } from '../lib/tmdb';
-import { bgStyle, colorForIndex, genId, SHOW_TYPE_LABELS } from '../lib/utils';
+import { bgStyle, colorForIndex, genId } from '../lib/utils';
 import type { ShowType } from '../types';
 
 interface FormState {
@@ -14,9 +14,6 @@ interface FormState {
   wikiUrl: string;
   imdbUrl: string;
 }
-
-/** VARIETY is legacy — see src/types.ts. It's never offered as a choice. */
-const TYPES: ShowType[] = ['DRAMA', 'REALITY'];
 
 function blank(): FormState {
   return { title: '', type: 'DRAMA', poster: null, tmdbId: null, originCountry: '', wikiUrl: '', imdbUrl: '' };
@@ -128,29 +125,11 @@ export default function AddShowSheet() {
         {!hasTmdbKey() && <div style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 16 }}>Add a TMDb API key (VITE_TMDB_API_KEY) to search real shows — you can still add one manually.</div>}
         {searching && <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 12 }}>Searching TMDb&hellip;</div>}
 
-        {/* Asked only when there's nothing to infer from, or when you've deliberately opened a
-            show to edit it.
-            Picking a TMDb result sets the type from its genre ids, which is better evidence than a
-            choice made in two seconds while typing. And it isn't a distinction users think in —
-            nobody adding a show is wondering whether it has "characters" — so putting it in the
-            normal path asks them to do the app's bookkeeping.
-            It stays reachable here rather than nowhere: inference is good, not perfect, and a
-            documentary series inferred as scripted would otherwise be stuck with characters, a
-            cumulative season filter and a TVmaze lookup that can't succeed. */}
-        {(!form.tmdbId || !!editingShow) && (
-          <>
-            <label className="ct-label-muted" style={{ marginTop: 8 }}>TYPE</label>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-              {TYPES.map((t) => (
-                <button key={t} onClick={() => setForm((f) => ({ ...f, type: t }))} className={`ct-tab-btn${form.type === t ? ' is-active' : ''}`}>{SHOW_TYPE_LABELS[t]}</button>
-              ))}
-            </div>
-            <div style={{ fontSize: 12.5, color: 'var(--text-faint)', marginBottom: 16 }}>
-              Scripted shows have characters played by actors; reality shows have a cast that changes.
-            </div>
-          </>
-        )}
-
+        {/* No type picker. It exists to decide whether the relationship map is offered, which is
+            the app's concern rather than something the person adding a show is thinking about.
+            Shows found through search infer it from TMDb's genre ids; a hand-typed title defaults
+            to scripted and stays there. Revisit if the type ever drives something a user would
+            care about knowing. */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 22 }}>
           <div><label className="ct-label">WIKIPEDIA LINK</label><input value={form.wikiUrl} onChange={(e) => setForm((f) => ({ ...f, wikiUrl: e.target.value }))} className="ct-input" style={{ fontSize: 13.5 }} /></div>
           <div><label className="ct-label">IMDB LINK</label><input value={form.imdbUrl} onChange={(e) => setForm((f) => ({ ...f, imdbUrl: e.target.value }))} className="ct-input" style={{ fontSize: 13.5 }} /></div>
