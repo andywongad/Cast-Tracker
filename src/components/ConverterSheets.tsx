@@ -75,7 +75,12 @@ function SwapPuck({ onClick }: { onClick: () => void }) {
 export function ValueConverterSheet() {
   const { converterOpen, converterPrefill, closeConverter } = useUI();
   const [tab, setTab] = useState<'currency' | 'inflation'>('currency');
-  const [amount, setAmount] = useState('0');
+  /**
+   * Empty, not '0'. A literal zero sitting in the field means the first digit typed lands next to
+   * it — "05" — or has to be deleted first. The placeholder shows a ghosted 0 instead, so the
+   * field reads the same but starts genuinely empty. Clearing with the ⊗ returns to that state.
+   */
+  const [amount, setAmount] = useState('');
   const [fromCcy, setFromCcy] = useState('USD');
   const [toCcy, setToCcy] = useState('USD');
   const [fromYear, setFromYear] = useState(1965);
@@ -88,6 +93,8 @@ export function ValueConverterSheet() {
   useEffect(() => {
     if (!converterOpen) return;
     setTab('currency');
+    // Reopening starts clean rather than showing the last conversion's amount.
+    setAmount('');
     if (converterPrefill) {
       if (converterPrefill.fromCcy) { setFromCcy(converterPrefill.fromCcy); setInflationCcy(converterPrefill.fromCcy); }
       if (converterPrefill.toCcy) setToCcy(converterPrefill.toCcy);
