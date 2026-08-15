@@ -54,17 +54,24 @@ export default function CastCard({
           The card and its grid row grow to whatever the name needs; nothing is clamped or
           ellipsised, so a four-line name gets four lines and its row gets taller. */}
       <div className="ct-heading" style={{ fontSize: 15, lineHeight: 1.25, overflowWrap: 'anywhere' }}>{displayName}</div>
-      {displayNickname && <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 4, overflowWrap: 'anywhere' }}>&ldquo;{displayNickname}&rdquo;</div>}
+      {/* Everything the user filled in, in the order the character sheet asks for it: other names,
+          nickname, who they are, then the visual description below. No longer exclusive — a
+          character with all four shows all four, and the card and its grid row grow to fit.
+
+          Each is capped at one line so a row's height stays a function of how many fields are
+          filled rather than how long any one of them is. The description keeps its own treatment
+          below: one line when compact, up to three at two columns. */}
       {displayOtherNames.length > 0 && (
         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           <span style={{ fontWeight: 700 }}>AKA</span> {displayOtherNames.join(', ')}
         </div>
       )}
-      {/* "Who they are" fills the line a nickname or AKA would have taken, when neither exists.
-          A card with only a name says nothing you couldn't get from the photo; "Meadow's boyfriend"
-          is the thing you opened the app to remember. Not shown alongside them — three identity
-          lines under one name is more than a card at four columns can carry. */}
-      {!displayNickname && displayOtherNames.length === 0 && c.whoTheyAre && (
+      {displayNickname && (
+        <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          &ldquo;{displayNickname}&rdquo;
+        </div>
+      )}
+      {c.whoTheyAre && (
         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {c.whoTheyAre}
         </div>
