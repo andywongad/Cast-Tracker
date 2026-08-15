@@ -104,8 +104,11 @@ a { color: inherit; }
   background: var(--sheet); border-radius: 26px 26px 0 0; padding: 12px 20px 32px;
   box-shadow: var(--shadow-lift);
 }
+/* Decorative — it is not a drag handle. user-select stops a mouse drag across it from starting a
+   text selection that runs on into the sheet's content. */
 .ct-sheet-grabber {
   width: 36px; height: 4px; border-radius: 999px; background: var(--divider); margin: 0 auto 18px;
+  user-select: none; -webkit-user-select: none;
 }
 .ct-sheet-close {
   position: absolute; right: 20px; top: 16px; width: 34px; height: 34px; border-radius: 12px;

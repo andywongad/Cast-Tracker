@@ -4,6 +4,7 @@ import { useUI } from '../hooks/useUI';
 import { searchShows, hasTmdbKey, img, inferShowType, type TmdbShowResult } from '../lib/tmdb';
 import { bgStyle, colorForIndex, genId, SHOW_TYPE_LABELS } from '../lib/utils';
 import type { ShowType } from '../types';
+import Sheet from './Sheet';
 
 interface FormState {
   title: string;
@@ -96,9 +97,7 @@ export default function AddShowSheet() {
   };
 
   return (
-    <div className="ct-scrim" onClick={closeAddShow}>
-      <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="ct-sheet-grabber" />
+    <Sheet onClose={closeAddShow} label={editingShow ? 'Edit show' : 'Add a show'}>
         <button className="ct-sheet-close" onClick={closeAddShow}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="var(--text)" strokeWidth="1.6" strokeLinecap="round" /></svg>
         </button>
@@ -164,7 +163,6 @@ export default function AddShowSheet() {
           )}
           <button onClick={save} disabled={!form.title.trim()} className="ct-btn-primary" style={{ flex: 1 }}>Save</button>
         </div>
-      </div>
-    </div>
+    </Sheet>
   );
 }

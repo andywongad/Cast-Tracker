@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useUI } from '../hooks/useUI';
 import { CCY_RATES, YEARS, fmtMoney, getLiveRates, convertCurrency, inflate } from '../lib/currency';
 import { LANGUAGES, translateText } from '../lib/translate';
+import Sheet from './Sheet';
 
 const CCY_CODES = Object.keys(CCY_RATES);
 
@@ -112,9 +113,7 @@ export function ValueConverterSheet() {
   const symbol = (code: string) => CCY_RATES[code]?.symbol || '';
 
   return (
-    <div className="ct-scrim" onClick={closeConverter}>
-      <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="ct-sheet-grabber" />
+    <Sheet onClose={closeConverter} label="Value converter">
         <div className="ct-sheet-title">Value converter</div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
@@ -193,8 +192,7 @@ export function ValueConverterSheet() {
         {tab === 'inflation' && (
           <button onClick={() => { setTab('currency'); setFromCcy(inflationCcy); setToCcy('USD'); setAmount(String(Math.round(inflatedInCcy * 100) / 100)); }} className="ct-btn-primary" style={{ width: '100%' }}>See total in USD</button>
         )}
-      </div>
-    </div>
+    </Sheet>
   );
 }
 
@@ -230,9 +228,7 @@ export function TranslatorSheet() {
   };
 
   return (
-    <div className="ct-scrim" onClick={closeTranslator}>
-      <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="ct-sheet-grabber" />
+    <Sheet onClose={closeTranslator} label="Translate">
         <div className="ct-sheet-title">Translate</div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
@@ -255,7 +251,6 @@ export function TranslatorSheet() {
 
         {error && <div style={{ fontSize: 14, color: '#E08A80', textAlign: 'center', marginBottom: 10 }}>{error}</div>}
         <button onClick={run} disabled={!text.trim() || loading} className="ct-btn-primary" style={{ width: '100%' }}>{loading ? 'Translating…' : 'Translate'}</button>
-      </div>
-    </div>
+    </Sheet>
   );
 }

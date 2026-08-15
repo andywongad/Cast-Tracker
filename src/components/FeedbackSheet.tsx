@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useUI } from '../hooks/useUI';
+import Sheet from './Sheet';
 
 export default function FeedbackSheet() {
   const { feedbackOpen, closeFeedback } = useUI();
@@ -37,9 +38,7 @@ export default function FeedbackSheet() {
   if (!feedbackOpen) return null;
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'var(--scrim)', display: 'flex', alignItems: 'flex-end' }}>
-      <div style={{ position: 'relative', width: '100%', maxHeight: '85%', overflowY: 'auto', background: 'var(--sheet)', borderRadius: '22px 22px 0 0', padding: '10px 18px 30px', boxShadow: '0 -12px 32px rgba(0,0,0,0.5)' }}>
-        <div style={{ width: 36, height: 4, borderRadius: 999, background: 'var(--divider)', margin: '0 auto 18px' }} />
+    <Sheet onClose={closeFeedback} label="Send us feedback" scrimStyle={{ zIndex: 50 }}>
         <button onClick={closeFeedback} style={{ position: 'absolute', right: 18, top: 16, width: 32, height: 32, borderRadius: 999, background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 20, color: 'var(--text)' }}>×</button>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 18 }}>Send Us Feedback</div>
 
@@ -94,7 +93,6 @@ export default function FeedbackSheet() {
             </button>
           </form>
         )}
-      </div>
-    </div>
+    </Sheet>
   );
 }

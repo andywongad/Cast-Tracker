@@ -8,6 +8,7 @@ import { fetchEnrichment, type EnrichmentState } from '../lib/enrichment/client'
 import type { RoleTag } from '../lib/enrichment/types';
 import type { PhotoCrop } from '../types';
 import CropModal from './CropModal';
+import Sheet from './Sheet';
 
 // Softer, sentence-case field labels — less shouting for a glanceable sheet
 const fieldLabel: CSSProperties = { fontSize: 13.5, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 };
@@ -288,9 +289,7 @@ export default function CastDetailSheet() {
   };
 
   return (
-    <div className="ct-scrim" onClick={closeCastDetail}>
-      <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="ct-sheet-grabber" />
+    <Sheet onClose={closeCastDetail} label={c.name}>
         <button onClick={() => { closeCastDetail(); openEditCast(c.id); }} style={{ position: 'absolute', right: 58, top: 16, width: 32, height: 32, borderRadius: 999, background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.3 2.3a1.5 1.5 0 0 1 2.1 2.1L5.7 12l-2.9.7.7-2.9 7.8-7.5z" stroke="var(--text)" strokeWidth="1.3" strokeLinejoin="round" fill="none"></path></svg>
         </button>
@@ -368,7 +367,7 @@ export default function CastDetailSheet() {
                   // Enter to commit, Escape to abandon — the shortcuts a one-field form implies.
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') saveAka();
-                    if (e.key === 'Escape') { setAkaEditing(false); setAkaDraft(''); }
+                    if (e.key === 'Escape') { e.stopPropagation(); setAkaEditing(false); setAkaDraft(''); }
                   }}
                   placeholder="Another name they go by"
                   className="ct-input"
@@ -402,7 +401,7 @@ export default function CastDetailSheet() {
                   onChange={(e) => setNickDraft(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') saveNickname();
-                    if (e.key === 'Escape') { setNickEditing(false); setNickDraft(''); }
+                    if (e.key === 'Escape') { e.stopPropagation(); setNickEditing(false); setNickDraft(''); }
                   }}
                   placeholder={`What do you call this ${termLower}?`}
                   className="ct-input"
@@ -467,7 +466,7 @@ export default function CastDetailSheet() {
                   onChange={(e) => setWhoDraft(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') saveWho();
-                    if (e.key === 'Escape') { setWhoEditing(false); setWhoDraft(''); }
+                    if (e.key === 'Escape') { e.stopPropagation(); setWhoEditing(false); setWhoDraft(''); }
                   }}
                   placeholder="Meadow's boyfriend, the family lawyer&hellip;"
                   className="ct-input"
@@ -517,7 +516,7 @@ export default function CastDetailSheet() {
                   onChange={(e) => setDescDraft(e.target.value)}
                   // No Enter-to-commit here: this is the one field where a line break is plausible
                   // content, so Enter has to mean Enter. Escape still abandons.
-                  onKeyDown={(e) => { if (e.key === 'Escape') { setDescEditing(false); setDescDraft(''); } }}
+                  onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setDescEditing(false); setDescDraft(''); } }}
                   placeholder="Chunky glasses, pink hat, high cheekbones&hellip;"
                   className="ct-textarea"
                   style={{ minHeight: 60, fontSize: 13.5, marginBottom: 6 }}
@@ -739,7 +738,6 @@ export default function CastDetailSheet() {
           onCancel={() => setCrop({ file: null, src: null })}
           onConfirm={confirmCrop}
         />
-      </div>
-    </div>
+    </Sheet>
   );
 }

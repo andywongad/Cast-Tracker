@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { bgStyle, initials, SHOW_TYPE_LABELS } from '../lib/utils';
 import NotificationToggle from './NotificationToggle';
+import Sheet from './Sheet';
 
 /**
  * Per-show actions, moved off the show page into an overflow menu.
@@ -42,9 +43,7 @@ export default function ShowMenuSheet() {
   const act = (fn: () => void) => () => { closeShowMenu(); fn(); };
 
   return (
-    <div className="ct-scrim" onClick={closeShowMenu}>
-      <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="ct-sheet-grabber" />
+    <Sheet onClose={closeShowMenu} label="Show options">
 
         {/* The poster lived on the show page purely for identity; it belongs here now that the
             title carries that job in the top bar. */}
@@ -70,7 +69,6 @@ export default function ShowMenuSheet() {
         </div>
 
         <button onClick={closeShowMenu} className="ct-btn-ghost" style={{ width: '100%', marginTop: 22 }}>Done</button>
-      </div>
-    </div>
+    </Sheet>
   );
 }

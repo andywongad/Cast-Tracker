@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { useAuth } from '../hooks/useAuth';
 import { isAuthPreviewEnabled } from '../lib/auth';
+import Sheet from './Sheet';
 
 export default function SettingsSheet() {
   const { settings, setTheme, setAutoSave, exportBackup, importBackup, resetAll } = useStore();
@@ -47,9 +48,7 @@ export default function SettingsSheet() {
   };
 
   return (
-    <div className="ct-scrim" onClick={closeSettings}>
-      <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="ct-sheet-grabber" />
+    <Sheet onClose={closeSettings} label="Settings">
         <div className="ct-sheet-title">Settings</div>
 
         {isAuthPreviewEnabled() && (
@@ -119,7 +118,6 @@ export default function SettingsSheet() {
             <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-soft)', fontWeight: 700, textDecoration: 'none' }}>CC BY-SA 4.0</a>.
           </div>
         </div>
-      </div>
-    </div>
+    </Sheet>
   );
 }

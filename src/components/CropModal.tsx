@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PhotoCrop } from '../types';
+import { useDismissible } from './Sheet';
 
 const FRAME = 220;
 /** Uploads are stored at this longest edge — big enough to re-crop later, small enough for localStorage. */
@@ -23,19 +24,29 @@ function corsUrl(url: string): string {
  * from where you left off. Uploads additionally return a downscaled copy of the *whole* image to
  * store as the source — cropping it here would throw away the pixels needed to re-crop later.
  */
-export default function CropModal({
-  file,
-  src: srcProp,
-  initial,
-  onCancel,
-  onConfirm,
-}: {
+interface CropModalProps {
   file: File | null;
   src?: string | null;
   initial?: PhotoCrop | null;
   onCancel: () => void;
   onConfirm: (result: { dataUrl?: string; crop: PhotoCrop }) => void;
-}) {
+}
+
+/**
+ * Callers render this unconditionally and it decides for itself whether there's anything to crop.
+ * The gate is split out so the body only mounts when there is: useDismissible reads being mounted
+ * as being open, and a permanently-mounted instance would sit at the top of the dismissal stack
+ * and swallow every Escape in the app.
+ */
+export default function CropModal(props: CropModalProps) {
+  if (!props.file && !props.src) return null;
+  return <CropModalBody {...props} />;
+}
+
+function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: CropModalProps) {
+  // Escape cancels. No backdrop dismissal on purpose -- a stray tap outside would throw away a
+  // crop in progress, and unlike a sheet there is no cheap way back to where you were.
+  useDismissible(onCancel);
   const [src, setSrc] = useState<string | null>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -66,7 +77,7 @@ export default function CropModal({
 
   useEffect(() => { offsetRef.current = offset; }, [offset]);
 
-  if ((!file && !srcProp) || !src) return null;
+  if (!src) return null;
 
   // Render maths mirror cropStyle(): width is `size%` of the frame, height follows aspect.
   const dispW = FRAME * zoom;

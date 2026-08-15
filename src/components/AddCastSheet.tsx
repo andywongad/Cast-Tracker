@@ -7,6 +7,7 @@ import { displayPhoto } from '../lib/tvmaze';
 import { getAggregateCredits, getEpisodeCredits, getSeasonEpisodeCount, getPersonWikiImdb, hasTmdbKey, type AggregateCastMember } from '../lib/tmdb';
 import CropModal from './CropModal';
 import EditControls from './EditControls';
+import Sheet from './Sheet';
 
 const SOCIAL_PLATFORMS = ['Instagram', 'TikTok', 'X', 'YouTube', 'Facebook', 'Snapchat', 'Other'];
 
@@ -448,10 +449,14 @@ export default function AddCastSheet() {
   const editingVersion = versionCardId ? form.versions.find((v) => v.id === versionCardId) : null;
 
   return (
-    <div className="ct-scrim" onClick={closeAddCast}>
-      <div className="ct-sheet" style={{ paddingBottom: settings.autoSave ? undefined : '140px' }} onClick={(e) => e.stopPropagation()}>
-        <div className="ct-sheet-grabber" />
-        <button className="ct-sheet-close" onClick={closeAddCast}>
+    <>
+    {/* Backdrop and Escape route through handleCancel, not straight to close. This is the only
+        sheet holding unsaved edits, and the Cancel button has always asked before discarding
+        them -- a backdrop tap dropping the same work silently was an inconsistency, not a
+        shortcut. The system back gesture is the one route that cannot ask: by the time popstate
+        fires the entry is already gone. */}
+    <Sheet onClose={handleCancel} label={editing ? 'Edit details' : 'Add cast'} sheetStyle={{ paddingBottom: settings.autoSave ? undefined : '140px' }}>
+        <button className="ct-sheet-close" onClick={handleCancel}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="var(--text)" strokeWidth="1.6" strokeLinecap="round" /></svg>
         </button>
         <div className="ct-sheet-title">{editing ? `${term.charAt(0)}${term.slice(1).toLowerCase()} Details` : `Add ${term.charAt(0)}${term.slice(1).toLowerCase()}`}</div>
@@ -715,7 +720,7 @@ export default function AddCastSheet() {
             {editing && <button onClick={deleteCast} style={{ width: '100%', height: 40, border: 'none', background: 'transparent', color: '#E08A80', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginTop: 12 }}>Delete {termLower}</button>}
           </>
         )}
-      </div>
+    </Sheet>
 
       {editingVersion && (
         <VersionCardPanel
@@ -728,7 +733,7 @@ export default function AddCastSheet() {
       )}
 
       <CropModal file={crop.file} src={crop.src} initial={crop.target === 'main' ? form.photoCrop : null} onCancel={() => setCrop({ file: null, src: null, target: 'main' })} onConfirm={confirmCrop} />
-    </div>
+    </>
   );
 }
 
@@ -740,9 +745,7 @@ function VersionCardPanel({ version, onChange, onUpload, onRemove, onClose }: {
   onClose: () => void;
 }) {
   return (
-    <div className="ct-scrim" style={{ zIndex: 45 }} onClick={onClose}>
-      <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="ct-sheet-grabber" />
+    <Sheet onClose={onClose} label="Character version" scrimStyle={{ zIndex: 45 }}>
         <div className="ct-sheet-title" style={{ marginBottom: 4 }}>Character version</div>
         <div style={{ fontSize: 14, color: 'var(--text-faint)', marginBottom: 18 }}>Edit freely for this version — a younger/older look with its own photo.</div>
 
@@ -788,7 +791,6 @@ function VersionCardPanel({ version, onChange, onUpload, onRemove, onClose }: {
           <button onClick={onRemove} className="ct-btn-ghost" style={{ flex: 1, color: '#E08A80', borderColor: 'var(--input-border)' }}>Remove version</button>
           <button onClick={onClose} className="ct-btn-primary" style={{ flex: 1 }}>Done</button>
         </div>
-      </div>
-    </div>
+    </Sheet>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useUI } from '../hooks/useUI';
 import { useAuth } from '../hooks/useAuth';
 import { isValidEmail } from '../lib/auth';
+import Sheet from './Sheet';
 
 /**
  * Sign-up / sign-in screens for the auth preview. Three states: email entry, check-your-inbox,
@@ -34,9 +35,7 @@ export default function AuthSheet() {
   const canSubmit = isValidEmail(email) && !pending;
 
   return (
-    <div className="ct-scrim" onClick={closeAuth}>
-      <div className="ct-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="ct-sheet-grabber" />
+    <Sheet onClose={closeAuth} label="Account">
 
         {session ? (
           <>
@@ -96,7 +95,6 @@ export default function AuthSheet() {
             <button onClick={closeAuth} className="ct-btn-ghost" style={{ width: '100%' }}>Not now</button>
           </>
         )}
-      </div>
-    </div>
+    </Sheet>
   );
 }
