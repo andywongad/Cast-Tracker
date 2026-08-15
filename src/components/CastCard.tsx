@@ -46,8 +46,15 @@ export default function CastCard({
         </div>
       )}
 
-      <div className="ct-heading" style={{ fontSize: 15, lineHeight: 1.25 }}>{displayName}</div>
-      {displayNickname && <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 4 }}>&ldquo;{displayNickname}&rdquo;</div>}
+      {/* overflowWrap: anywhere so a long unbroken name breaks instead of running past the card.
+          At four columns the text box is 99px wide; "Wolfeschlegelsteinhausenbergerdorff" measures
+          265px and has no space to wrap at. Normal names still break on spaces as before — this
+          only engages when there's no other option.
+
+          The card and its grid row grow to whatever the name needs; nothing is clamped or
+          ellipsised, so a four-line name gets four lines and its row gets taller. */}
+      <div className="ct-heading" style={{ fontSize: 15, lineHeight: 1.25, overflowWrap: 'anywhere' }}>{displayName}</div>
+      {displayNickname && <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 4, overflowWrap: 'anywhere' }}>&ldquo;{displayNickname}&rdquo;</div>}
       {displayOtherNames.length > 0 && (
         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           <span style={{ fontWeight: 700 }}>AKA</span> {displayOtherNames.join(', ')}
