@@ -24,7 +24,7 @@ const valueText: React.CSSProperties = { fontSize: 34, fontWeight: 200, letterSp
  * on a phone, so 50000000 was clipped mid-number. The picker gets its own line and the amount gets
  * the full width underneath.
  */
-const pickerStyle: React.CSSProperties = { display: 'block', width: '100%', border: 'none', background: 'transparent', fontSize: 14, fontWeight: 500, color: 'var(--text)', padding: 0, outline: 'none' };
+const pickerStyle: React.CSSProperties = { display: 'block', width: '100%', border: 'none', background: 'transparent', fontSize: 15, fontWeight: 500, color: 'var(--text)', padding: 0, outline: 'none' };
 
 /**
  * Thousands separators while typing, so you can see at a glance whether you've entered 5 million
@@ -153,7 +153,7 @@ export function ValueConverterSheet() {
                   <select value={toYear} onChange={(e) => setToYear(parseInt(e.target.value))} style={{ ...pickerStyle, width: 'auto', flex: 'none', color: 'var(--text)' }}>
                     {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
                   </select>
-                  <span style={{ flex: 'none', fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>{inflationCcy}</span>
+                  <span style={{ flex: 'none', fontSize: 15, fontWeight: 500, color: 'var(--text)' }}>{inflationCcy}</span>
                 </div>
                 <div style={{ ...valueText, color: 'var(--text)', marginTop: 6 }}>{symbol(inflationCcy)}{fmtMoney(inflatedInCcy)}</div>
               </div>
