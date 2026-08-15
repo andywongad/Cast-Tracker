@@ -128,12 +128,16 @@ export default function AddShowSheet() {
         {!hasTmdbKey() && <div style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 16 }}>Add a TMDb API key (VITE_TMDB_API_KEY) to search real shows — you can still add one manually.</div>}
         {searching && <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 12 }}>Searching TMDb&hellip;</div>}
 
-        {/* Only asked when there's nothing to infer from.
+        {/* Asked only when there's nothing to infer from, or when you've deliberately opened a
+            show to edit it.
             Picking a TMDb result sets the type from its genre ids, which is better evidence than a
-            choice made in two seconds while typing — and the person adding the show already knows
-            what it is, so asking makes them do the app's bookkeeping. A wrong guess is correctable
-            from the show's ⋯ menu, where you'd be when you notice contestants called characters. */}
-        {!form.tmdbId && (
+            choice made in two seconds while typing. And it isn't a distinction users think in —
+            nobody adding a show is wondering whether it has "characters" — so putting it in the
+            normal path asks them to do the app's bookkeeping.
+            It stays reachable here rather than nowhere: inference is good, not perfect, and a
+            documentary series inferred as scripted would otherwise be stuck with characters, a
+            cumulative season filter and a TVmaze lookup that can't succeed. */}
+        {(!form.tmdbId || !!editingShow) && (
           <>
             <label className="ct-label-muted" style={{ marginTop: 8 }}>TYPE</label>
             <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
