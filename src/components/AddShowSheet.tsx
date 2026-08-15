@@ -15,7 +15,8 @@ interface FormState {
   imdbUrl: string;
 }
 
-const TYPES: ShowType[] = ['DRAMA', 'REALITY', 'VARIETY'];
+/** VARIETY is legacy — see src/types.ts. It's never offered as a choice. */
+const TYPES: ShowType[] = ['DRAMA', 'REALITY'];
 
 function blank(): FormState {
   return { title: '', type: 'DRAMA', poster: null, tmdbId: null, originCountry: '', wikiUrl: '', imdbUrl: '' };

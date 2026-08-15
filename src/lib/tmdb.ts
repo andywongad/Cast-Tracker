@@ -51,8 +51,11 @@ async function get<T>(path: string, params: Record<string, string | number> = {}
 
 export function inferShowType(genreIds: number[] | undefined): ShowType {
   const ids = genreIds || [];
-  if (ids.includes(10764)) return 'REALITY';
-  if (ids.includes(10767) || ids.includes(10763)) return 'VARIETY';
+  // TMDb has no "variety" genre. 10764 Reality, 10767 Talk and 10763 News are the only
+  // unscripted ones, and Korean variety shows come back as Reality — Running Man and Knowing Bros
+  // are both [Comedy, Reality]. Talk and news land here too: they have a rotating cast of real
+  // people, which is what this flag actually decides.
+  if (ids.includes(10764) || ids.includes(10767) || ids.includes(10763)) return 'REALITY';
   return 'DRAMA';
 }
 

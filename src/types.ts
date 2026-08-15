@@ -1,3 +1,12 @@
+/**
+ * What kind of show this is, which decides characters vs contestants, the relationship map,
+ * whether a season carries its cast forward, and whether TVmaze photos are looked up.
+ *
+ * 'VARIETY' is retained but never produced. It only ever came from TMDb's Talk and News genres —
+ * TMDb has no variety genre, and Korean variety shows are tagged Reality — and it behaved
+ * identically to 'REALITY' everywhere. Kept in the union so records written before it was
+ * withdrawn, and share codes carrying it, stay valid and keep behaving as reality.
+ */
 export type ShowType = 'DRAMA' | 'REALITY' | 'VARIETY';
 export type ShowStatus = 'watching' | 'completed';
 export type Gender = '' | 'Female' | 'Male' | 'Non-binary';

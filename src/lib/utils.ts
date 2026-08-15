@@ -12,14 +12,15 @@ import type { ShowType } from '../types';
 export const SHOW_TYPE_LABELS: Record<ShowType, string> = {
   DRAMA: 'Scripted',
   REALITY: 'Reality',
-  VARIETY: 'Variety',
+  // Legacy value, never offered as a choice — reads as Reality, which is how it already behaves.
+  VARIETY: 'Reality',
 };
 
 /** Two-letter form for the badge on a dense show tile. */
 export const SHOW_TYPE_SHORT: Record<ShowType, string> = {
   DRAMA: 'SC',
   REALITY: 'RE',
-  VARIETY: 'VA',
+  VARIETY: 'RE',
 };
 
 export const PALETTE = ['#5B4FD6', '#3F5FA8', '#8B4FA0', '#4F8B7A', '#A0574F', '#4F6BA0', '#7A4FA0'];
