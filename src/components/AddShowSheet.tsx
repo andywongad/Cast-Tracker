@@ -128,12 +128,24 @@ export default function AddShowSheet() {
         {!hasTmdbKey() && <div style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 16 }}>Add a TMDb API key (VITE_TMDB_API_KEY) to search real shows — you can still add one manually.</div>}
         {searching && <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 12 }}>Searching TMDb&hellip;</div>}
 
-        <label className="ct-label-muted" style={{ marginTop: 8 }}>TYPE</label>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {TYPES.map((t) => (
-            <button key={t} onClick={() => setForm((f) => ({ ...f, type: t }))} className={`ct-tab-btn${form.type === t ? ' is-active' : ''}`}>{SHOW_TYPE_LABELS[t]}</button>
-          ))}
-        </div>
+        {/* Only asked when there's nothing to infer from.
+            Picking a TMDb result sets the type from its genre ids, which is better evidence than a
+            choice made in two seconds while typing — and the person adding the show already knows
+            what it is, so asking makes them do the app's bookkeeping. A wrong guess is correctable
+            from the show's ⋯ menu, where you'd be when you notice contestants called characters. */}
+        {!form.tmdbId && (
+          <>
+            <label className="ct-label-muted" style={{ marginTop: 8 }}>TYPE</label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+              {TYPES.map((t) => (
+                <button key={t} onClick={() => setForm((f) => ({ ...f, type: t }))} className={`ct-tab-btn${form.type === t ? ' is-active' : ''}`}>{SHOW_TYPE_LABELS[t]}</button>
+              ))}
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-faint)', marginBottom: 16 }}>
+              Scripted shows have characters played by actors; reality shows have a cast that changes.
+            </div>
+          </>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 22 }}>
           <div><label className="ct-label">WIKIPEDIA LINK</label><input value={form.wikiUrl} onChange={(e) => setForm((f) => ({ ...f, wikiUrl: e.target.value }))} className="ct-input" style={{ fontSize: 13.5 }} /></div>

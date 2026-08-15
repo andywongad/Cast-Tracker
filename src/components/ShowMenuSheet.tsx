@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useStore } from '../hooks/useStore';
+import type { ShowType } from '../types';
 import { useUI } from '../hooks/useUI';
 import { bgStyle, initials, SHOW_TYPE_LABELS } from '../lib/utils';
 import NotificationToggle from './NotificationToggle';
@@ -28,7 +29,7 @@ function Row({ label, hint, onClick, danger }: { label: string; hint?: string; o
 }
 
 export default function ShowMenuSheet() {
-  const { showById, shareShow } = useStore();
+  const { showById, shareShow, updateData } = useStore();
   const { activeShowId, showMenuOpen, closeShowMenu, openWebView, openShareSheet, openRedeem } = useUI();
   const show = showById(activeShowId);
 
@@ -60,6 +61,27 @@ export default function ShowMenuSheet() {
 
         <div style={{ marginBottom: 18 }}>
           <NotificationToggle showId={show.id} />
+        </div>
+
+        {/* The correction path for a wrong inference. Not offered at add time — the type comes
+            from TMDb's genre ids there — but reachable here, which is where you'd be when you
+            notice the app calling contestants "characters" or the relationship map missing. */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>This show has</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['DRAMA', 'REALITY'] as ShowType[]).map((t) => {
+              const active = show.type === t || (t === 'REALITY' && show.type === 'VARIETY');
+              return (
+                <button
+                  key={t}
+                  onClick={() => updateData((d) => { const s2 = d.shows.find((x) => x.id === show.id); if (s2) s2.type = t; })}
+                  className={`ct-tab-btn${active ? ' is-active' : ''}`}
+                >
+                  {t === 'DRAMA' ? 'Characters' : 'A changing cast'}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div>
