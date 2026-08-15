@@ -19,7 +19,35 @@ const cardStyle: React.CSSProperties = { background: 'var(--card)', border: 'non
 const cardLabel: React.CSSProperties = { fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 };
 // Oversized, ultra-light numerals are the anchor of the fintech look.
 const valueText: React.CSSProperties = { fontSize: 34, fontWeight: 200, letterSpacing: '-0.02em', textAlign: 'right', minWidth: 0, flex: 1 };
-const pickerStyle: React.CSSProperties = { flex: 'none', maxWidth: '58%', border: 'none', background: 'transparent', fontSize: 14, fontWeight: 500, color: 'var(--text)', padding: 0, outline: 'none' };
+/**
+ * Stacked, not side by side. Sharing a row with a 34px numeral left the amount a few dozen pixels
+ * on a phone, so 50000000 was clipped mid-number. The picker gets its own line and the amount gets
+ * the full width underneath.
+ */
+const pickerStyle: React.CSSProperties = { display: 'block', width: '100%', border: 'none', background: 'transparent', fontSize: 14, fontWeight: 500, color: 'var(--text)', padding: 0, outline: 'none' };
+
+/**
+ * Thousands separators while typing, so you can see at a glance whether you've entered 5 million
+ * or 50. Display-only: `amount` stays an unformatted string, which is what parseFloat and the
+ * prefill both expect.
+ *
+ * A trailing "." is preserved mid-typing — stripping it would delete the decimal point the moment
+ * it was typed.
+ */
+function groupDigits(raw: string): string {
+  if (!raw) return '';
+  const [int, ...rest] = raw.split('.');
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (!rest.length) return grouped;
+  return `${grouped}.${rest.join('')}`;
+}
+
+/** Digits and at most one decimal point, capped at two places. */
+function sanitizeAmount(input: string): string {
+  const cleaned = input.replace(/[^\d.]/g, '');
+  const [int, ...rest] = cleaned.split('.');
+  return rest.length ? `${int}.${rest.join('').slice(0, 2)}` : int;
+}
 
 /**
  * The blue puck straddling the two cards. Renders as a zero-height flex item between them so it
@@ -92,14 +120,18 @@ export function ValueConverterSheet() {
             <>
               <div style={cardStyle}>
                 <div style={cardLabel}>Then</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <select value={fromYear} onChange={(e) => setFromYear(parseInt(e.target.value))} style={pickerStyle}>
+                {/* Year and currency stay paired on one line — both are short — with the amount
+                    underneath on its own, same as the currency tab. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <select value={fromYear} onChange={(e) => setFromYear(parseInt(e.target.value))} style={{ ...pickerStyle, width: 'auto', flex: 'none' }}>
                     {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
                   </select>
-                  <select value={inflationCcy} onChange={(e) => setInflationCcy(e.target.value)} style={pickerStyle}>
+                  <select value={inflationCcy} onChange={(e) => setInflationCcy(e.target.value)} style={{ ...pickerStyle, width: 'auto', flex: 'none' }}>
                     {CCY_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
-                  <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0" style={{ ...valueText, border: 'none', background: 'transparent', padding: 0, color: 'var(--text)', outline: 'none' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                  <input value={groupDigits(amount)} onChange={(e) => setAmount(sanitizeAmount(e.target.value))} inputMode="decimal" placeholder="0" style={{ ...valueText, border: 'none', background: 'transparent', padding: 0, color: 'var(--text)', outline: 'none' }} />
                   {amount && (
                     <button onClick={() => setAmount('')} aria-label="Clear amount" style={{ flex: 'none', border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="var(--text-muted)" strokeWidth="1.6" /><path d="M9 9l6 6M15 9l-6 6" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round" /></svg>
@@ -110,24 +142,24 @@ export function ValueConverterSheet() {
               <SwapPuck onClick={() => { const f = fromYear; setFromYear(toYear); setToYear(f); }} />
               <div style={cardStyle}>
                 <div style={cardLabel}>Now</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <select value={toYear} onChange={(e) => setToYear(parseInt(e.target.value))} style={{ ...pickerStyle, color: 'var(--text)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <select value={toYear} onChange={(e) => setToYear(parseInt(e.target.value))} style={{ ...pickerStyle, width: 'auto', flex: 'none', color: 'var(--text)' }}>
                     {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
                   </select>
                   <span style={{ flex: 'none', fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>{inflationCcy}</span>
-                  <div style={{ ...valueText, color: 'var(--text)' }}>{symbol(inflationCcy)}{fmtMoney(inflatedInCcy)}</div>
                 </div>
+                <div style={{ ...valueText, color: 'var(--text)', marginTop: 6 }}>{symbol(inflationCcy)}{fmtMoney(inflatedInCcy)}</div>
               </div>
             </>
           ) : (
             <>
               <div style={cardStyle}>
                 <div style={cardLabel}>From</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <select value={fromCcy} onChange={(e) => setFromCcy(e.target.value)} style={pickerStyle}>
-                    {CCY_CODES.map((c) => <option key={c} value={c}>{CCY_RATES[c].label}</option>)}
-                  </select>
-                  <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="0" style={{ ...valueText, border: 'none', background: 'transparent', padding: 0, color: 'var(--text)', outline: 'none' }} />
+                <select value={fromCcy} onChange={(e) => setFromCcy(e.target.value)} style={pickerStyle}>
+                  {CCY_CODES.map((c) => <option key={c} value={c}>{CCY_RATES[c].label}</option>)}
+                </select>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                  <input value={groupDigits(amount)} onChange={(e) => setAmount(sanitizeAmount(e.target.value))} inputMode="decimal" placeholder="0" style={{ ...valueText, border: 'none', background: 'transparent', padding: 0, color: 'var(--text)', outline: 'none' }} />
                   {amount && (
                     <button onClick={() => setAmount('')} aria-label="Clear amount" style={{ flex: 'none', border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="var(--text-muted)" strokeWidth="1.6" /><path d="M9 9l6 6M15 9l-6 6" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round" /></svg>
@@ -138,12 +170,10 @@ export function ValueConverterSheet() {
               <SwapPuck onClick={() => { const f = fromCcy; setFromCcy(toCcy); setToCcy(f); }} />
               <div style={cardStyle}>
                 <div style={cardLabel}>To</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <select value={toCcy} onChange={(e) => setToCcy(e.target.value)} style={{ ...pickerStyle, color: 'var(--text)' }}>
-                    {CCY_CODES.map((c) => <option key={c} value={c}>{CCY_RATES[c].label}</option>)}
-                  </select>
-                  <div style={{ ...valueText, color: 'var(--text)' }}>{symbol(toCcy)}{fmtMoney(currencyResult)}</div>
-                </div>
+                <select value={toCcy} onChange={(e) => setToCcy(e.target.value)} style={{ ...pickerStyle, color: 'var(--text)' }}>
+                  {CCY_CODES.map((c) => <option key={c} value={c}>{CCY_RATES[c].label}</option>)}
+                </select>
+                <div style={{ ...valueText, color: 'var(--text)', marginTop: 6 }}>{symbol(toCcy)}{fmtMoney(currencyResult)}</div>
               </div>
             </>
           )}
