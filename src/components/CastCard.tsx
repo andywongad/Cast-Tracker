@@ -60,6 +60,15 @@ export default function CastCard({
           <span style={{ fontWeight: 700 }}>AKA</span> {displayOtherNames.join(', ')}
         </div>
       )}
+      {/* "Who they are" fills the line a nickname or AKA would have taken, when neither exists.
+          A card with only a name says nothing you couldn't get from the photo; "Meadow's boyfriend"
+          is the thing you opened the app to remember. Not shown alongside them — three identity
+          lines under one name is more than a card at four columns can carry. */}
+      {!displayNickname && displayOtherNames.length === 0 && c.whoTheyAre && (
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {c.whoTheyAre}
+        </div>
+      )}
 
       {compact ? (
         displayDesc && <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.4, marginTop: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayDesc}</div>
