@@ -66,8 +66,11 @@ export default function CastCard({
           <span style={{ fontWeight: 700 }}>AKA</span> {displayOtherNames.join(', ')}
         </div>
       )}
+      {/* Wraps like who-they-are, and for a stronger reason: the nickname is the user's own handle
+          for this character — the thing they'll actually recognise them by — so it's the last
+          field that should be showing half of itself. Three lines, same cap. */}
       {displayNickname && (
-        <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--accent-soft)', marginTop: 3, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.35, overflowWrap: 'anywhere' }}>
           &ldquo;{displayNickname}&rdquo;
         </div>
       )}
