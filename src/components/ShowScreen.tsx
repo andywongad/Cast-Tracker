@@ -287,22 +287,62 @@ export default function ShowScreen() {
           wheel picker, which handles Survivor's 50 seasons and a 24-episode run without a
           horizontal scroll strip — and collapses two rows into one. Sticky so both stay reachable
           while scrolling a long cast list or dragging lines on the map. */}
-      {hasSeasons && (
+      {/* One sticky block for everything that controls what the grid shows: the rails, the import
+          button, the search field and the density toggle. They're stacked in one container rather
+          than each given its own `top` offset, because the header's height changes with content —
+          the button appears only for TMDb-backed shows — and a hardcoded offset would be wrong the
+          moment it did. */}
+      {(hasSeasons || (gridMode && show.cast.length > 0)) && (
         <div style={{ position: 'sticky', top: 0, zIndex: 6, background: 'var(--bg)', borderBottom: '1px solid var(--border)', margin: '0 -16px 12px', padding: '8px 16px' }}>
           {/* Rails rather than the two native selects. Those fitted on one row and got iOS's wheel
               picker for free; these cost ~100px more and buy episode titles, scanning, and a
               selection pinned in place while you browse. */}
-          <SeasonEpisodeRails
-            seasons={orderedSeasons}
-            currentSeason={currentSeason}
-            onSeasonChange={setSeason}
-            episodes={seasonEpisodes}
-            currentEpisode={bulkEp}
-            onEpisodeChange={(n) => setMapEpisode(`Ep ${n}`)}
-            episodesLoading={episodesLoading}
-          />
-          {showBulk && (
-            <button onClick={bulkAdd} disabled={bulkBusy} style={{ marginTop: 8, height: 38, border: '1px dashed var(--border)', borderRadius: 11, background: 'transparent', color: 'var(--accent-soft)', fontSize: 12.5, fontWeight: 700, cursor: bulkBusy ? 'default' : 'pointer', padding: '0 14px', whiteSpace: 'nowrap' }}>{bulkAddLabel}</button>
+          {hasSeasons && (
+            <SeasonEpisodeRails
+              seasons={orderedSeasons}
+              currentSeason={currentSeason}
+              onSeasonChange={setSeason}
+              episodes={seasonEpisodes}
+              currentEpisode={bulkEp}
+              onEpisodeChange={(n) => setMapEpisode(`Ep ${n}`)}
+              episodesLoading={episodesLoading}
+              trailing={showBulk ? (
+                /* Two lines, breaking after "cast", so the button stays narrow enough to share the
+                   episode row. One line ran to about 150px and left the rail almost no room. The
+                   second line is always rendered, including while adding, so the row doesn't
+                   change height mid-import. */
+                <button
+                  onClick={bulkAdd}
+                  disabled={bulkBusy}
+                  aria-label={`Add cast from season ${currentSeason} episode ${bulkEp}`}
+                  style={{
+                    flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    minHeight: 38, padding: '0 10px', border: '1px dashed var(--border)', borderRadius: 11,
+                    background: 'transparent', color: 'var(--accent-soft)', fontSize: 11.5, fontWeight: 700,
+                    lineHeight: 1.25, whiteSpace: 'nowrap', cursor: bulkBusy ? 'default' : 'pointer',
+                  }}
+                >
+                  <span>{bulkBusy ? 'Adding&hellip;' : '+ Add cast'}</span>
+                  <span>from S{currentSeason} E{bulkEp}</span>
+                </button>
+              ) : undefined}
+            />
+          )}
+
+          {/* Search and the column toggle share a row: both are ways of narrowing what you're
+              looking at, and on a phone the toggle alone was costing a whole line above the grid. */}
+          {gridMode && show.cast.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: hasSeasons ? 8 : 0 }}>
+              <input
+                value={castQuery}
+                onChange={(e) => setCastQuery(e.target.value)}
+                placeholder="Search this cast&hellip;"
+                style={{ flex: 1, minWidth: 0, height: 38, border: '1px solid var(--input-border)', borderRadius: 12, background: 'var(--surface)', color: 'var(--text)', padding: '0 14px', fontSize: 13.5 }}
+              />
+              <div style={{ flex: 'none' }}>
+                <DensityToggle value={settings.castColumns || 2} options={[2, 3, 4]} onChange={setCastColumns} label="Cast columns" />
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -345,20 +385,8 @@ export default function ShowScreen() {
           )}
           {show.cast.length > 0 && (
             <>
-              {/* Search and the column toggle share a row: both are ways of narrowing what you're
-                  looking at, and on a phone the toggle alone was costing a whole line above the
-                  grid. The input takes the remaining width so the toggle keeps its natural size. */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                <input
-                  value={castQuery}
-                  onChange={(e) => setCastQuery(e.target.value)}
-                  placeholder="Search this cast&hellip;"
-                  style={{ flex: 1, minWidth: 0, height: 40, border: '1px solid var(--input-border)', borderRadius: 12, background: 'var(--surface)', color: 'var(--text)', padding: '0 14px', fontSize: 13.5 }}
-                />
-                <div style={{ flex: 'none' }}>
-                  <DensityToggle value={settings.castColumns || 2} options={[2, 3, 4]} onChange={setCastColumns} label="Cast columns" />
-                </div>
-              </div>
+              {/* Search and the density toggle moved up into the sticky header, so they stay
+                  reachable while scrolling a long cast list. */}
               {/* The cast cards' action buttons hang 11px above the card edge, so a 12px bottom gap
                   left roughly 1px of real clearance. This clears the buttons, not the cards. */}
               {showsPhotoMix && (

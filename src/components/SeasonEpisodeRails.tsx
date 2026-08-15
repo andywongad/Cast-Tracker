@@ -70,6 +70,7 @@ export default function SeasonEpisodeRails({
   currentEpisode,
   onEpisodeChange,
   episodesLoading,
+  trailing,
 }: {
   seasons: number[];
   currentSeason: number;
@@ -78,6 +79,12 @@ export default function SeasonEpisodeRails({
   currentEpisode: number;
   onEpisodeChange: (n: number) => void;
   episodesLoading: boolean;
+  /**
+   * Sits at the end of the episode row rather than on a line of its own. The import button used
+   * to take a full row under the rails, and every pixel of header is a pixel of cast you can't
+   * see — which is the whole point of this screen.
+   */
+  trailing?: React.ReactNode;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -99,6 +106,11 @@ export default function SeasonEpisodeRails({
         })}
       </Rail>
 
+      {/* The episode rail takes the room the trailing control doesn't. minWidth: 0 is what lets it
+          actually shrink — a flex item defaults to its content width, so without it the rail would
+          push the button off the edge instead of scrolling. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
       <Rail selectedKey={`${currentSeason}:${currentEpisode}`} listKey={currentSeason} label="Episode">
         {episodesLoading && episodes.length === 0 ? (
           <div style={{ minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-faint)' }}>
@@ -127,6 +139,9 @@ export default function SeasonEpisodeRails({
           })
         )}
       </Rail>
+        </div>
+        {trailing}
+      </div>
     </div>
   );
 }
