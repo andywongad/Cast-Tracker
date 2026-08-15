@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { searchShows, hasTmdbKey, img, inferShowType, type TmdbShowResult } from '../lib/tmdb';
-import { bgStyle, colorForIndex, genId } from '../lib/utils';
+import { bgStyle, colorForIndex, genId, SHOW_TYPE_LABELS } from '../lib/utils';
 import type { ShowType } from '../types';
 
 interface FormState {
@@ -130,7 +130,7 @@ export default function AddShowSheet() {
         <label className="ct-label-muted" style={{ marginTop: 8 }}>TYPE</label>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           {TYPES.map((t) => (
-            <button key={t} onClick={() => setForm((f) => ({ ...f, type: t }))} className={`ct-tab-btn${form.type === t ? ' is-active' : ''}`}>{t.charAt(0) + t.slice(1).toLowerCase()}</button>
+            <button key={t} onClick={() => setForm((f) => ({ ...f, type: t }))} className={`ct-tab-btn${form.type === t ? ' is-active' : ''}`}>{SHOW_TYPE_LABELS[t]}</button>
           ))}
         </div>
 

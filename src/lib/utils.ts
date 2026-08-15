@@ -1,3 +1,27 @@
+import type { ShowType } from '../types';
+
+/**
+ * `type` is a behaviour switch, not a genre. It decides whether people are called characters or
+ * contestants, whether the relationship map is offered, whether a season carries its cast forward
+ * or replaces it, and whether TVmaze in-character photos are looked up.
+ *
+ * So the label is "Scripted", not "Drama" — a comedy, a sci-fi series and a period drama all want
+ * identical behaviour, and a genre-sounding label made people reach for a category that doesn't
+ * exist. The stored values are unchanged; this is what the user reads.
+ */
+export const SHOW_TYPE_LABELS: Record<ShowType, string> = {
+  DRAMA: 'Scripted',
+  REALITY: 'Reality',
+  VARIETY: 'Variety',
+};
+
+/** Two-letter form for the badge on a dense show tile. */
+export const SHOW_TYPE_SHORT: Record<ShowType, string> = {
+  DRAMA: 'SC',
+  REALITY: 'RE',
+  VARIETY: 'VA',
+};
+
 export const PALETTE = ['#5B4FD6', '#3F5FA8', '#8B4FA0', '#4F8B7A', '#A0574F', '#4F6BA0', '#7A4FA0'];
 
 export function colorForIndex(i: number): string {

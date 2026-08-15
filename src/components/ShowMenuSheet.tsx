@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
-import { bgStyle, initials } from '../lib/utils';
+import { bgStyle, initials, SHOW_TYPE_LABELS } from '../lib/utils';
 import NotificationToggle from './NotificationToggle';
 
 /**
@@ -34,7 +34,7 @@ export default function ShowMenuSheet() {
 
   const typeLabel = useMemo(() => {
     if (!show) return '';
-    return show.type === 'DRAMA' ? 'Drama' : show.type === 'REALITY' ? 'Reality' : 'Variety';
+    return SHOW_TYPE_LABELS[show.type];
   }, [show]);
 
   if (!showMenuOpen || !show) return null;

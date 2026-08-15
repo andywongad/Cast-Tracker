@@ -1,5 +1,5 @@
 import type { Show } from '../types';
-import { initials, bgStyle } from '../lib/utils';
+import { initials, bgStyle, SHOW_TYPE_LABELS, SHOW_TYPE_SHORT } from '../lib/utils';
 import { useUI } from '../hooks/useUI';
 import { useStore } from '../hooks/useStore';
 import CardActions from './CardActions';
@@ -7,7 +7,7 @@ import CardActions from './CardActions';
 export function ShowTile({ show, columns, done = false }: { show: Show; columns: number; done?: boolean }) {
   const { openShow, openEditShow, openShareSheet } = useUI();
   const { shareShow } = useStore();
-  const typeLabel = done ? 'DONE' : (columns >= 4 ? show.type.slice(0, 2) : show.type);
+  const typeLabel = done ? 'DONE' : (columns >= 4 ? SHOW_TYPE_SHORT[show.type] : SHOW_TYPE_LABELS[show.type].toUpperCase());
   const caughtUpVisible = !!show.caughtUpEp && (columns === 2 || columns === 3);
 
   return (
