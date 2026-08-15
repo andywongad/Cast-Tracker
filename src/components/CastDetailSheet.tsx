@@ -297,12 +297,19 @@ export default function CastDetailSheet() {
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="4" cy="8" r="1.9" stroke="var(--text)" strokeWidth="1.3" /><circle cx="12" cy="3.5" r="1.9" stroke="var(--text)" strokeWidth="1.3" /><circle cx="12" cy="12.5" r="1.9" stroke="var(--text)" strokeWidth="1.3" /><path d="M5.7 7.1l4.6-3.2M5.7 8.9l4.6 3.2" stroke="var(--text)" strokeWidth="1.3" /></svg>
         </button>
 
-        {/* paddingRight keeps the name clear of the edit and share buttons, which are absolutely
-            positioned over this row. They span from 18px to 90px off the sheet's right edge, and a
-            long name ran 47px underneath them on a 400px screen — "Opening Title Sequence (voice)
-            (uncredited)" with the icons sitting on top of it. Padding the row rather than the name
-            means the AKA, nickname and who-they-are lines below are clear too. */}
-        <div style={{ display: 'flex', gap: 14, marginBottom: 16, paddingRight: 84 }}>
+        {/* Clears the edit and share buttons by starting below them rather than by reserving a
+            column beside them.
+
+            Those buttons are absolutely positioned over this row, ending 48px down the sheet. This
+            row used to begin at 34px and carry 84px of right padding so a long name didn't run
+            underneath them — which cost every line in this block 84px of width, on the narrowest
+            screen, for the sake of the two rows that were actually at risk. Starting at 56px
+            instead costs 22px of height once and gives the name, the AKA list, the nickname and
+            who-they-are the full width of the sheet.
+
+            40 and not 22: this margin collapses with the grabber's 18px bottom margin rather than
+            adding to it, so the larger of the two is what you get. */}
+        <div style={{ display: 'flex', gap: 14, marginTop: 40, marginBottom: 16 }}>
           {/* Matches the Character Details form: tapping the tile reframes the existing photo, the
               pencil badge picks a new one. `overflow: hidden` has to go — it clipped the badge,
               which hangs off the corner — so the rounded corners come from the tile's own radius
