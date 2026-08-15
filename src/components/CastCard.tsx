@@ -71,8 +71,15 @@ export default function CastCard({
           &ldquo;{displayNickname}&rdquo;
         </div>
       )}
+      {/* Three lines rather than one. This field is a phrase, not a label — "brother of main
+          character" needs 158px at this size and a four-column card gives it 99px, so a one-line
+          cap truncated the ordinary case rather than the long one. Three and not two because two
+          still cut "Main Character's Assistant" off mid-word on the same show. AKA and nickname
+          stay at one line: they hold names, which are short, and a list of them reads fine
+          trailing off. Still clamped, so a paragraph typed here can't set the height of every
+          card in its row. */}
       {c.whoTheyAre && (
-        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.35, overflowWrap: 'anywhere' }}>
           {c.whoTheyAre}
         </div>
       )}
