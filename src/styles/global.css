@@ -181,9 +181,14 @@ a { color: inherit; }
 }
 .ct-rail::-webkit-scrollbar { display: none; }
 
+/* Height is the whole touch target. A pseudo-element used to reach past the chip to claim more,
+   but the rail scrolls horizontally, and overflow-x: auto forces the cross axis to clip — so it
+   was cut off at the rail's 2px padding and bought nothing. Measured: 2px above the chip, 0 below.
+   Nothing to do about it short of padding the rail by more than the chips save, so the number
+   below is honest about what you can actually hit. */
 .ct-rail-item {
   flex: none; scroll-snap-align: start;
-  min-height: 44px; /* touch target floor — the label is ~17px */
+  min-height: 36px;
   display: inline-flex; align-items: center; justify-content: center;
   padding: 0 14px; border-radius: 999px;
   border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary);
@@ -197,13 +202,9 @@ a { color: inherit; }
    The 44px touch target from the season rail is preserved by an invisible overlay that extends
    the hit area 6px above and below, rather than by inflating the chip itself. */
 .ct-rail-item-sm {
-  min-height: 32px;
+  min-height: 30px;
   padding: 0 12px;
   font-size: 13px;
-  position: relative;
-}
-.ct-rail-item-sm::after {
-  content: ''; position: absolute; left: 0; right: 0; top: -6px; bottom: -6px;
 }
 
 .ct-rail-item-selected {
