@@ -13,6 +13,28 @@ body {
 #root { height: 100%; }
 input, textarea, button, select { font-family: inherit; }
 textarea { resize: none; }
+
+/* Stop iOS zooming the page when a field is focused.
+
+   Safari zooms in whenever you focus a text field whose text is smaller than 16px, and it never
+   zooms back out — so one tap in the search box leaves that screen and every screen after it
+   oversized until you pinch back down. 16px is a threshold in Safari, not a matter of taste, and
+   every field here was under it: the search boxes at 13.5 and 15, the selects at 13.
+
+   Coarse pointers only, so the desktop layout keeps its typographic scale. !important because
+   almost every field sets its size inline, which an ordinary rule can't reach. The two fields
+   already above 16px opt out with .ct-type-lg, so this can only ever raise a size, never lower
+   one.
+
+   The alternative — maximum-scale=1 on the viewport — would also stop the zoom, by taking
+   pinch-to-zoom away from everyone. Not worth it. */
+@media (pointer: coarse) {
+  input:not(.ct-type-lg),
+  textarea:not(.ct-type-lg),
+  select:not(.ct-type-lg) {
+    font-size: 16px !important;
+  }
+}
 button { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; }
 

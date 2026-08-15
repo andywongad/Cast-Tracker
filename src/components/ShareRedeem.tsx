@@ -61,7 +61,7 @@ export function RedeemSheet() {
     <Sheet onClose={closeRedeem} label="Redeem a code" sheetStyle={{ maxHeight: 'none', padding: '22px 18px 28px' }}>
         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{redeem.mode === 'show' ? 'Redeem a Show Card' : 'Redeem a Character Card'}</div>
         <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 16 }}>Enter the code someone shared with you.</div>
-        <input value={code} onChange={(e) => { setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)); setError(''); }} placeholder="e.g. AB3XQ9" style={{ width: '100%', height: 50, border: '1px solid var(--input-border)', borderRadius: 12, background: 'var(--surface)', color: 'var(--text)', padding: '0 14px', fontSize: 18, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12, outline: 'none' }} />
+        <input className="ct-type-lg" value={code} onChange={(e) => { setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)); setError(''); }} placeholder="e.g. AB3XQ9" style={{ width: '100%', height: 50, border: '1px solid var(--input-border)', borderRadius: 12, background: 'var(--surface)', color: 'var(--text)', padding: '0 14px', fontSize: 18, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12, outline: 'none' }} />
         {error && <div style={{ fontSize: 14, color: '#E08A80', marginBottom: 12 }}>{error}</div>}
         <button onClick={claim} className="ct-btn-primary" style={{ width: '100%' }}>Add to My Tracker</button>
     </Sheet>

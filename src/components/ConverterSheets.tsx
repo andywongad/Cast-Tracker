@@ -137,7 +137,7 @@ export function ValueConverterSheet() {
                   </select>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                  <input value={groupDigits(amount)} onChange={(e) => setAmount(sanitizeAmount(e.target.value))} inputMode="decimal" placeholder="0" style={{ ...valueText, border: 'none', background: 'transparent', padding: 0, color: 'var(--text)', outline: 'none' }} />
+                  <input className="ct-type-lg" value={groupDigits(amount)} onChange={(e) => setAmount(sanitizeAmount(e.target.value))} inputMode="decimal" placeholder="0" style={{ ...valueText, border: 'none', background: 'transparent', padding: 0, color: 'var(--text)', outline: 'none' }} />
                   {amount && (
                     <button onClick={() => setAmount('')} aria-label="Clear amount" style={{ flex: 'none', border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="var(--text-muted)" strokeWidth="1.6" /><path d="M9 9l6 6M15 9l-6 6" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round" /></svg>
@@ -165,7 +165,7 @@ export function ValueConverterSheet() {
                   {CCY_CODES.map((c) => <option key={c} value={c}>{CCY_RATES[c].label}</option>)}
                 </select>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                  <input value={groupDigits(amount)} onChange={(e) => setAmount(sanitizeAmount(e.target.value))} inputMode="decimal" placeholder="0" style={{ ...valueText, border: 'none', background: 'transparent', padding: 0, color: 'var(--text)', outline: 'none' }} />
+                  <input className="ct-type-lg" value={groupDigits(amount)} onChange={(e) => setAmount(sanitizeAmount(e.target.value))} inputMode="decimal" placeholder="0" style={{ ...valueText, border: 'none', background: 'transparent', padding: 0, color: 'var(--text)', outline: 'none' }} />
                   {amount && (
                     <button onClick={() => setAmount('')} aria-label="Clear amount" style={{ flex: 'none', border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="var(--text-muted)" strokeWidth="1.6" /><path d="M9 9l6 6M15 9l-6 6" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round" /></svg>
@@ -237,7 +237,7 @@ export function TranslatorSheet() {
             <select value={from} onChange={(e) => { setFrom(e.target.value); setResult(''); }} style={{ ...pickerStyle, display: 'block', maxWidth: '100%' }}>
               {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
             </select>
-            <textarea value={text} onChange={(e) => { setText(e.target.value); setResult(''); }} placeholder="Enter text" style={{ width: '100%', minHeight: 46, marginTop: 10, border: 'none', background: 'transparent', padding: 0, fontSize: 17, lineHeight: 1.4, color: 'var(--text)', outline: 'none', resize: 'none' }} />
+            <textarea className="ct-type-lg" value={text} onChange={(e) => { setText(e.target.value); setResult(''); }} placeholder="Enter text" style={{ width: '100%', minHeight: 46, marginTop: 10, border: 'none', background: 'transparent', padding: 0, fontSize: 17, lineHeight: 1.4, color: 'var(--text)', outline: 'none', resize: 'none' }} />
           </div>
           <SwapPuck onClick={swap} />
           <div style={cardStyle}>
