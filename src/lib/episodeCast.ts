@@ -1,0 +1,118 @@
+import type { CastMember } from '../types';
+import type { AggregateCastMember, EpisodeCastMember } from './tmdb';
+import { epNumFromLabel } from './utils';
+
+/**
+ * Who TMDb credits in one episode, and which of them you haven't added yet.
+ *
+ * The show screen used to answer this only when you pressed an import button, and answering it
+ * meant writing every one of those people into your saved cast — 34 records for a single Sopranos
+ * episode. Selecting an episode now shows them instead, un-added ones as placeholder cards, and
+ * nothing is written until you tap one.
+ *
+ * ## Where the list comes from
+ *
+ * The per-episode credits endpoint, which bills regulars and guests together and is the only
+ * source that is actually about *this* episode. The cheaper option was the season payload's guest
+ * stars plus the show's core cast, costing no extra request — but core cast is a threshold over
+ * the whole series, and on The Sopranos it returns 32 people against the 11 regulars TMDb credits
+ * on S3E4. Placeholders for people who aren't in the episode would make the feature a liar, so
+ * this pays one request per episode selection instead, cached in memory and at the edge.
+ */
+
+/** A person credited in an episode, in the one shape both TMDb sources reduce to. */
+export interface EpisodePerson {
+  id: number;
+  actorName: string;
+  character: string;
+  photo: string | null;
+}
+
+const PALETTE = ['#5B4FD6', '#3F5FA8', '#8B4FA0', '#4F8B7A', '#A0574F', '#4F6BA0', '#7A4FA0'];
+
+/** What this person is called on a card: the character for scripted, the person for reality. */
+export function personLabel(p: EpisodePerson, isDrama: boolean): string {
+  return isDrama && p.character ? p.character : p.actorName;
+}
+
+export function toEpisodePeople(credits: (EpisodeCastMember | AggregateCastMember)[]): EpisodePerson[] {
+  const out: EpisodePerson[] = [];
+  const seen = new Set<number>();
+  for (const r of credits) {
+    if (!r.id || seen.has(r.id)) continue;
+    seen.add(r.id);
+    out.push({ id: r.id, actorName: r.name, character: r.character, photo: r.photo });
+  }
+  return out;
+}
+
+/**
+ * Which of these people aren't in your cast yet.
+ *
+ * Matched on actorTmdbId first and the displayed name second, mirroring how the bulk import
+ * decides whether someone is already there — otherwise a character added by hand, or added before
+ * TMDb ids were recorded, would show up as a placeholder alongside the card that already exists.
+ */
+export function missingFromCast(
+  people: EpisodePerson[],
+  cast: CastMember[],
+  isDrama: boolean,
+): EpisodePerson[] {
+  const ids = new Set(cast.map((c) => c.actorTmdbId).filter((n): n is number => !!n));
+  const names = new Set(cast.map((c) => c.name));
+  return people.filter((p) => !ids.has(p.id) && !names.has(personLabel(p, isDrama)));
+}
+
+/** A new cast record for someone picked out of an episode. */
+export function personToCastMember(
+  p: EpisodePerson,
+  opts: { isDrama: boolean; season: number; episode: number; castLength: number },
+): CastMember {
+  return {
+    id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6),
+    color: PALETTE[opts.castLength % PALETTE.length],
+    name: personLabel(p, opts.isDrama),
+    native: '', nickname: '', otherNames: [], desc: '', photo: p.photo || null, notes: '',
+    gender: '', age: '', hometown: '', occupation: '', social: '', socialPlatform: 'Instagram',
+    firstEp: `Ep ${opts.episode}`, season: opts.season,
+    actorName: opts.isDrama ? p.actorName : '',
+    actorTmdbId: p.id || null,
+    wikiUrl: '', imdbUrl: '', versions: [], relationships: [],
+  };
+}
+
+/**
+ * Add these people to a show, in place, inside an updateData callback.
+ *
+ * Shared by the placeholder cards and the add-all action so the two can't drift on how a record
+ * is stamped. Someone already present keeps the *earliest* episode they've been seen in — an
+ * import from further back moves them earlier, which is what stops one import from season 5
+ * stamping the whole cast season 5 and emptying the seasons before it.
+ */
+export function addPeopleToShow(
+  show: { cast: CastMember[] },
+  people: EpisodePerson[],
+  opts: { isDrama: boolean; season: number; episode: number },
+) {
+  for (const p of people) {
+    const name = personLabel(p, opts.isDrama);
+    if (!name) continue;
+
+    const existing = show.cast.find((c) => (p.id && c.actorTmdbId === p.id) || c.name === name);
+    if (existing) {
+      const knownSeason = existing.season || 1;
+      // No recorded episode means unknown, so anything beats it. epNumFromLabel returns 1 for an
+      // unparseable label, which would read as "episode 1" and block every correction.
+      const knownEp = existing.firstEp ? epNumFromLabel(existing.firstEp) : Infinity;
+      const isEarlier =
+        opts.season < knownSeason || (opts.season === knownSeason && opts.episode < knownEp);
+      if (isEarlier) {
+        existing.season = opts.season;
+        existing.firstEp = `Ep ${opts.episode}`;
+      }
+      continue;
+    }
+
+    show.cast.push(personToCastMember(p, { ...opts, castLength: show.cast.length }));
+  }
+}

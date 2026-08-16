@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CastMember, Show } from '../types';
 import type { AggregateCastMember, SeasonEpisode } from '../lib/tmdb';
+import type { EpisodePerson } from '../lib/episodeCast';
+import { missingFromCast } from '../lib/episodeCast';
 import CastGrid from './CastGrid';
 
 /**
@@ -26,13 +28,19 @@ export default function TieredCastView({
   cast,
   regulars,
   episode,
+  episodePeople,
   onAddMissing,
+  onAddPerson,
 }: {
   show: Show;
   cast: CastMember[];
   regulars: AggregateCastMember[];
   episode: SeasonEpisode | null;
+  /** Everyone TMDb credits in the selected episode. The single source for placeholders. */
+  episodePeople: EpisodePerson[];
   onAddMissing?: () => void;
+  /** Adds one person from the episode to the cast. Absent = don't offer placeholders at all. */
+  onAddPerson?: (p: EpisodePerson) => void;
 }) {
   const [othersOpen, setOthersOpen] = useState(false);
 
@@ -72,27 +80,41 @@ export default function TieredCastView({
   const handAdded = leftover.filter((c) => !c.actorTmdbId);
   const elsewhereInShow = leftover.filter((c) => !!c.actorTmdbId);
 
-  const Section = ({ title, note, members }: { title: string; note?: string; members: CastMember[] }) => (
+  const isDrama = show.type === 'DRAMA';
+  /**
+   * Placeholders come from one list — this episode's credits — and are split across the two tiers
+   * by whether the person is one of the show's regulars. Computing each tier from its own source
+   * let them disagree about who is in the episode; this can't.
+   */
+  const missing = onAddPerson ? missingFromCast(episodePeople, cast, isDrama) : [];
+  const regularIds = new Set(regulars.map((r) => r.id));
+  const missingRegularPeople = missing.filter((p) => regularIds.has(p.id));
+  const missingGuestPeople = missing.filter((p) => !regularIds.has(p.id));
+
+  const Section = ({ title, note, members, ghosts }: { title: string; note?: string; members: CastMember[]; ghosts?: EpisodePerson[] }) => (
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>{title}</div>
         {note && <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>{note}</div>}
       </div>
-      <CastGrid show={show} cast={members} />
+      <CastGrid show={show} cast={members} ghosts={ghosts} onAddGhost={onAddPerson} />
     </div>
   );
 
   return (
     <div>
-      {regularMembers.length > 0 && (
+      {(regularMembers.length > 0 || missingRegularPeople.length > 0) && (
         <Section
           title="Regulars"
-          note={`in every episode${missingRegulars > 0 ? ` · ${missingRegulars} not added yet` : ''}`}
+          note={`in every episode${missingRegularPeople.length > 0 ? ` · tap to add ${missingRegularPeople.length}` : ''}`}
           members={regularMembers}
+          ghosts={missingRegularPeople}
         />
       )}
 
-      {regularMembers.length === 0 && missingRegulars > 0 && onAddMissing && (
+      {/* The old bulk button is only needed where placeholders aren't offered — a show whose
+          regulars we know about but whose people can't be tapped in individually. */}
+      {!onAddPerson && regularMembers.length === 0 && missingRegulars > 0 && onAddMissing && (
         <button
           onClick={onAddMissing}
           style={{ display: 'block', width: '100%', marginBottom: 20, padding: '12px 14px', border: '1px dashed var(--border)', borderRadius: 12, background: 'transparent', color: 'var(--accent-soft)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
@@ -102,11 +124,16 @@ export default function TieredCastView({
       )}
 
       {episode ? (
-        guestMembers.length > 0 ? (
-          <Section title={`Guests in Ep ${episode.number}`} note={episode.name || undefined} members={guestMembers} />
+        guestMembers.length > 0 || missingGuestPeople.length > 0 ? (
+          <Section
+            title={`Guests in Ep ${episode.number}`}
+            note={episode.name || undefined}
+            members={guestMembers}
+            ghosts={missingGuestPeople}
+          />
         ) : (
           <div style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 20 }}>
-            No guests from Ep {episode.number} are in your cast yet.
+            TMDb lists no guest stars for Ep {episode.number}.
           </div>
         )
       ) : null}

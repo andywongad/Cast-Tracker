@@ -4,6 +4,7 @@ import { useUI } from '../hooks/useUI';
 import { epNumFromLabel } from '../lib/utils';
 import { getShowDetails, getEpisodeCredits, getAggregateCredits, getSeasonEpisodes, hasTmdbKey, type AggregateCastMember, type SeasonEpisode } from '../lib/tmdb';
 import { classifyShow, coreCast, type ShapeReport } from '../lib/showShape';
+import { toEpisodePeople, missingFromCast, addPeopleToShow, type EpisodePerson } from '../lib/episodeCast';
 import { useFirstSeasons } from '../lib/firstSeason';
 import { fetchTvmazeCast, matchCast } from '../lib/tvmaze';
 import CastGrid from './CastGrid';
@@ -11,6 +12,9 @@ import RelationshipMap from './RelationshipMap';
 import DensityToggle from './DensityToggle';
 import SeasonEpisodeRails from './SeasonEpisodeRails';
 import TieredCastView from './TieredCastView';
+
+/** Episode credits already fetched this session, keyed showId:season:episode. */
+const episodeCastCache = new Map<string, EpisodePerson[]>();
 
 export default function ShowScreen() {
   const { data, settings, updateData, showById, pushRecent, setCastColumns } = useStore();
@@ -26,12 +30,12 @@ export default function ShowScreen() {
   const [gridMode, setGridMode] = useState(true);
   const [mapHelpOpen, setMapHelpOpen] = useState(false);
   const [castQuery, setCastQuery] = useState('');
-  const [bulkBusy, setBulkBusy] = useState(false);
   const [photoNoteOpen, setPhotoNoteOpen] = useState(false);
   const [credits, setCredits] = useState<AggregateCastMember[]>([]);
   const [totalEpisodes, setTotalEpisodes] = useState(0);
   const [seasonEpisodes, setSeasonEpisodes] = useState<SeasonEpisode[]>([]);
   const [episodesLoading, setEpisodesLoading] = useState(false);
+  const [episodeCast, setEpisodeCast] = useState<EpisodePerson[]>([]);
 
   useEffect(() => { if (activeShowId) pushRecent(activeShowId); }, [activeShowId, pushRecent]);
   useEffect(() => { setSeasonsReal(false); }, [show?.tmdbId]);
@@ -108,6 +112,9 @@ export default function ShowScreen() {
   // Shows open on Season 1 and you work forward from there. `currentSeason` is only set once you
   // pick one, so there's no auto-jump to the newest season.
   const currentSeason = show?.currentSeason || 1;
+  // Derived up here rather than beside the grid, because the episode-credits effect below needs
+  // it. Equivalent to the old expression: episodeOptions[0] is always "Ep 1".
+  const currentEp = epNumFromLabel(show?.mapEpisode || 'Ep 1');
 
   /**
    * One call per season selection covers the episode rail's numbers and titles *and* every
@@ -127,6 +134,33 @@ export default function ShowScreen() {
       .finally(() => { if (alive) setEpisodesLoading(false); });
     return () => { alive = false; };
   }, [show?.tmdbId, currentSeason]);
+
+  /**
+   * The selected episode's credited cast, regulars and guests together.
+   *
+   * One request per episode selection, memoised for the session and edge-cached for an hour, so
+   * moving back and forth along the rail costs nothing after the first visit. The season payload
+   * already in hand would have been free, but it only carries guest stars — pairing it with the
+   * show's core cast over-reports badly (32 people against the 11 TMDb credits on Sopranos S3E4),
+   * and placeholders for people who aren't in the episode would defeat the point.
+   */
+  useEffect(() => {
+    const tmdbId = show?.tmdbId;
+    if (!tmdbId || !hasTmdbKey()) { setEpisodeCast([]); return; }
+    const key = `${tmdbId}:${currentSeason}:${currentEp}`;
+    const hit = episodeCastCache.get(key);
+    if (hit) { setEpisodeCast(hit); return; }
+
+    let alive = true;
+    getEpisodeCredits(tmdbId, currentSeason, currentEp).then((list) => {
+      const people = toEpisodePeople(list);
+      // Cache even an empty result: a season/episode TMDb has no credits for shouldn't be asked
+      // about again every time it's selected.
+      episodeCastCache.set(key, people);
+      if (alive) setEpisodeCast(people);
+    });
+    return () => { alive = false; };
+  }, [show?.tmdbId, currentSeason, currentEp]);
 
   /** Series-level credits: one call, and the basis for classification and every episode count. */
   useEffect(() => {
@@ -213,59 +247,35 @@ export default function ShowScreen() {
   // Reads the episode strip's selection, so "+ Add all cast from Ep N" always names the episode
   // that's visibly highlighted. `mapEpisode` predates the strip appearing in grid view — it's the
   // show's current episode now, not a map-only setting.
-  const bulkEp = epNumFromLabel(show.mapEpisode || episodeOptions[0] || 'Ep 1');
-  const bulkAdd = async () => {
-    if (!show?.tmdbId || !hasTmdbKey()) return;
-    setBulkBusy(true);
-    try {
-      const list = await getEpisodeCredits(show.tmdbId, currentSeason, bulkEp);
-      const isDrama = show.type === 'DRAMA';
-      updateData((d) => {
-        const s = d.shows.find((x) => x.id === show.id);
-        if (!s) return;
-        list.forEach((p) => {
-          const name = isDrama && p.character ? p.character : p.name;
-          if (!name) return;
+  const bulkEp = currentEp;
 
-          /**
-           * Low-water mark. Someone already in the cast keeps the *earliest* episode they've been
-           * imported from, and an import from further back moves them earlier.
-           *
-           * Before this, the first import won permanently: adding everyone from S5 E8 stamped the
-           * entire cast season 5, and a later import from S1 E1 skipped them silently — so the
-           * season filter, which reads this field, showed nobody in seasons 1-4. Now the record
-           * corrects itself as you work backwards or watch forwards.
-           */
-          const existing = s.cast.find((c) => c.name === name);
-          if (existing) {
-            const knownSeason = existing.season || 1;
-            // epNumFromLabel defaults to 1 on an unparseable label, which would read as "episode 1"
-            // and block every correction. No recorded episode means unknown, so anything beats it.
-            const knownEp = existing.firstEp ? epNumFromLabel(existing.firstEp) : Infinity;
-            const isEarlier =
-              currentSeason < knownSeason || (currentSeason === knownSeason && bulkEp < knownEp);
-            if (isEarlier) {
-              existing.season = currentSeason;
-              existing.firstEp = `Ep ${bulkEp}`;
-            }
-            return;
-          }
+  /**
+   * Everyone TMDb credits in the selected episode, and which of them aren't in the cast yet.
+   *
+   * Selecting an episode shows these straight away as placeholder cards; nothing is saved until
+   * one is tapped. Browsing the rail used to be inert — you had to press an import button, and
+   * pressing it wrote 34 records for a single Sopranos episode whether or not you wanted them.
+   * Costs no extra requests: guests ride along on the season payload, regulars on the series
+   * aggregate, both already fetched.
+   */
+  // Plain consts, not useMemo: this sits after the `if (!show) return null` guard above, so a hook
+  // here would change the hook count on a show that's been deleted.
+  const selectedEpisode = seasonEpisodes.find((e) => e.number === bulkEp) || null;
+  const missingPeople = missingFromCast(episodeCast, show.cast, show.type === 'DRAMA');
 
-          const color = ['#5B4FD6', '#3F5FA8', '#8B4FA0', '#4F8B7A', '#A0574F', '#4F6BA0', '#7A4FA0'][s.cast.length % 7];
-          s.cast.push({
-            id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6), color, name, native: '', nickname: '',
-            otherNames: [], desc: '', photo: p.photo || null, notes: '', gender: '', age: '', hometown: '',
-            occupation: '', social: '', socialPlatform: 'Instagram', firstEp: `Ep ${bulkEp}`, season: currentSeason,
-            actorName: isDrama ? p.name : '', actorTmdbId: p.id || null, wikiUrl: '', imdbUrl: '', versions: [], relationships: [],
-          });
-        });
-      });
-    } finally {
-      setBulkBusy(false);
-    }
+  const addPeople = (people: EpisodePerson[]) => {
+    updateData((d) => {
+      const s2 = d.shows.find((x) => x.id === show.id);
+      if (!s2) return;
+      addPeopleToShow(s2, people, { isDrama: show.type === 'DRAMA', season: currentSeason, episode: bulkEp });
+    });
   };
 
-  const bulkAddLabel = bulkBusy ? 'Adding…' : `+ Add cast from S${currentSeason} E${bulkEp}`;
+  // Kept for the two empty states, where importing everything is the primary action rather than
+  // a shortcut. Same shared code path as tapping a single placeholder.
+  const bulkAdd = () => addPeople(missingPeople);
+
+  const bulkAddLabel = `+ Add cast from S${currentSeason} E${bulkEp}`;
   const showBulk = !!show.tmdbId && hasTmdbKey();
 
   return (
@@ -309,23 +319,22 @@ export default function ShowScreen() {
               currentEpisode={bulkEp}
               onEpisodeChange={(n) => setMapEpisode(`Ep ${n}`)}
               episodesLoading={episodesLoading}
-              trailing={showBulk ? (
-                /* Two lines, breaking after "cast", so the button stays narrow enough to share the
-                   episode row. One line ran to about 150px and left the rail almost no room. The
-                   second line is always rendered, including while adding, so the row doesn't
-                   change height mid-import. */
+              /* Selecting an episode now shows its cast as placeholder cards, so this is no longer
+                 the way in — it's the shortcut for taking all of them at once, and it only appears
+                 when there is actually something left to take. Two lines, breaking after "Add all",
+                 so it stays narrow enough to share the episode row. */
+              trailing={showBulk && missingPeople.length > 0 ? (
                 <button
-                  onClick={bulkAdd}
-                  disabled={bulkBusy}
-                  aria-label={`Add cast from season ${currentSeason} episode ${bulkEp}`}
+                  onClick={() => addPeople(missingPeople)}
+                  aria-label={`Add all ${missingPeople.length} people from season ${currentSeason} episode ${bulkEp} to your cast`}
                   style={{
                     flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     minHeight: 38, padding: '0 10px', border: '1px dashed var(--border)', borderRadius: 11,
                     background: 'transparent', color: 'var(--accent-soft)', fontSize: 11.5, fontWeight: 700,
-                    lineHeight: 1.25, whiteSpace: 'nowrap', cursor: bulkBusy ? 'default' : 'pointer',
+                    lineHeight: 1.25, whiteSpace: 'nowrap', cursor: 'pointer',
                   }}
                 >
-                  <span>{bulkBusy ? 'Adding&hellip;' : '+ Add cast'}</span>
+                  <span>+ Add all {missingPeople.length}</span>
                   <span>from S{currentSeason} E{bulkEp}</span>
                 </button>
               ) : undefined}
@@ -366,7 +375,7 @@ export default function ShowScreen() {
                   only way in. */}
               {showBulk && (
                 <>
-                  <button onClick={bulkAdd} disabled={bulkBusy} className="ct-btn-primary" style={{ padding: '0 22px', height: 46, borderRadius: 13, fontSize: 14 }}>
+                  <button onClick={bulkAdd} className="ct-btn-primary" style={{ padding: '0 22px', height: 46, borderRadius: 13, fontSize: 14 }}>
                     {bulkAddLabel}
                   </button>
                   <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 6, maxWidth: 260 }}>
@@ -443,7 +452,7 @@ export default function ShowScreen() {
                       : `You've added ${show.cast.length} ${show.cast.length === 1 ? 'person' : 'people'} to this show, from other seasons.`}
                   </div>
                   {!cq && showBulk && (
-                    <button onClick={bulkAdd} disabled={bulkBusy} className="ct-btn-primary" style={{ padding: '0 20px', height: 42, borderRadius: 12, fontSize: 13.5 }}>
+                    <button onClick={bulkAdd} className="ct-btn-primary" style={{ padding: '0 20px', height: 42, borderRadius: 12, fontSize: 13.5 }}>
                       {bulkAddLabel}
                     </button>
                   )}
@@ -453,11 +462,21 @@ export default function ShowScreen() {
                   show={show}
                   cast={visibleCast}
                   regulars={coreCast(credits, totalEpisodes)}
-                  episode={seasonEpisodes.find((e) => e.number === bulkEp) || null}
+                  episode={selectedEpisode}
+                  episodePeople={episodeCast}
                   onAddMissing={() => openAddCast()}
+                  onAddPerson={showBulk && !cq ? (person) => addPeople([person]) : undefined}
                 />
               ) : (
-                <CastGrid show={show} cast={visibleCast} />
+                /* Placeholders are suppressed while searching: the query filters your cast, and a
+                   row of people you haven't added underneath the matches answers a question nobody
+                   asked. */
+                <CastGrid
+                  show={show}
+                  cast={visibleCast}
+                  ghosts={missingPeople}
+                  onAddGhost={showBulk && !cq ? (person) => addPeople([person]) : undefined}
+                />
               )}
             </>
           )}
