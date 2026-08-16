@@ -241,7 +241,8 @@ export default function ShowScreen() {
     updateData((d) => {
       const s2 = d.shows.find((x) => x.id === show.id);
       if (!s2) return;
-      addPeopleToShow(s2, missing, { isDrama: show.type === 'DRAMA', season: currentSeason, episode: currentEp });
+      // auto: nobody asked for these by name, so they stay disposable until edited.
+      addPeopleToShow(s2, missing, { isDrama: show.type === 'DRAMA', season: currentSeason, episode: currentEp, auto: true });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoLoads, show?.id, currentSeason, currentEp, episodeCast]);

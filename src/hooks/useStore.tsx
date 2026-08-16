@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import type { AppData, AppSettings, Show, ShareStore, SharePayload, CastMember } from '../types';
 import * as storage from '../lib/storage';
 import { genId, genShareCode, initials, colorForIndex } from '../lib/utils';
+import { isDisposable, countDisposable } from '../lib/castValue';
 
 interface ShareSheetState {
   code: string;
@@ -33,6 +34,10 @@ interface StoreValue {
   setCastColumns: (n: number) => void;
   setAutoSave: (enabled: boolean) => void;
   exportBackup: () => Backup;
+  /** How many of a show's records were auto-loaded and still hold nothing of the user's. */
+  disposableCount: (showId: string) => number;
+  /** Drops those records. Anything edited is kept, and anything dropped comes back on re-open. */
+  clearDisposable: (showId: string) => number;
   backupState: storage.BackupState;
   dismissBackupNudge: () => void;
   importBackup: (raw: string) => { ok: true } | { ok: false; error: string };
@@ -83,8 +88,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const exportBackup = useCallback((): Backup => {
     // Exporting is what clears the nudge — the user has a copy off-device now.
     patchBackupState({ lastExportAt: Date.now() });
-    return { app: 'cast-tracker', version: 1, exportedAt: Date.now(), data, settings, shares: shareStore, recent: recentShows };
+    /**
+     * Auto-loaded records are left out. They're TMDb's, not yours, they can outnumber your own
+     * by a hundred to one after a season of browsing, and every one of them comes back the moment
+     * the episode is opened again. A backup should be the part that can't be re-fetched.
+     */
+    const slim: AppData = { shows: data.shows.map((s) => ({ ...s, cast: s.cast.filter((c) => !isDisposable(c)) })) };
+    return { app: 'cast-tracker', version: 1, exportedAt: Date.now(), data: slim, settings, shares: shareStore, recent: recentShows };
   }, [data, settings, shareStore, recentShows, patchBackupState]);
+
+  const disposableCount = useCallback(
+    (showId: string) => countDisposable(data.shows.find((s) => s.id === showId)?.cast || []),
+    [data],
+  );
+
+  const clearDisposable = useCallback((showId: string) => {
+    let removed = 0;
+    updateData((d) => {
+      const sh = d.shows.find((x) => x.id === showId);
+      if (!sh) return;
+      const before = sh.cast.length;
+      sh.cast = sh.cast.filter((c) => !isDisposable(c));
+      removed = before - sh.cast.length;
+    });
+    return removed;
+  }, [updateData]);
 
   const importBackup = useCallback((raw: string): { ok: true } | { ok: false; error: string } => {
     let parsed: unknown;
@@ -183,8 +211,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<StoreValue>(() => ({
     data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave,
     exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem,
-    backupState, dismissBackupNudge,
-  }), [data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge]);
+    backupState, dismissBackupNudge, disposableCount, clearDisposable,
+  }), [data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

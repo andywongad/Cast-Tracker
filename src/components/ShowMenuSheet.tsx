@@ -29,7 +29,7 @@ function Row({ label, hint, onClick, danger }: { label: string; hint?: string; o
 }
 
 export default function ShowMenuSheet() {
-  const { showById, shareShow } = useStore();
+  const { showById, shareShow, disposableCount, clearDisposable } = useStore();
   const { activeShowId, showMenuOpen, closeShowMenu, openWebView, openShareSheet, openRedeem } = useUI();
   const show = showById(activeShowId);
 
@@ -39,6 +39,8 @@ export default function ShowMenuSheet() {
   }, [show]);
 
   if (!showMenuOpen || !show) return null;
+
+  const autoCount = disposableCount(show.id);
 
   const act = (fn: () => void) => () => { closeShowMenu(); fn(); };
 
@@ -62,6 +64,16 @@ export default function ShowMenuSheet() {
         </div>
 
         <div>
+          {/* The undo for episode auto-loading. Only offered when there is something to clear,
+              and it says how many so the number isn't a surprise. Records you've edited are not
+              counted and not touched; the rest come straight back when you reopen the episode. */}
+          {autoCount > 0 && (
+            <Row
+              label={`Clear ${autoCount} auto-loaded ${autoCount === 1 ? 'character' : 'characters'}`}
+              hint="Anything you've edited is kept. The rest reload when you open the episode again."
+              onClick={() => { clearDisposable(show.id); closeShowMenu(); }}
+            />
+          )}
           <Row label="Share this show" hint="Generate a code others can redeem" onClick={act(() => openShareSheet(shareShow(show.id)))} />
           <Row label="Redeem a character code" onClick={act(() => openRedeem('cast'))} />
           {show.wikiUrl && <Row label="Wikipedia" onClick={act(() => openWebView(show.wikiUrl, 'Wikipedia'))} />}

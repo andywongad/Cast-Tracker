@@ -66,9 +66,11 @@ export function missingFromCast(
 /** A new cast record for someone picked out of an episode. */
 export function personToCastMember(
   p: EpisodePerson,
-  opts: { isDrama: boolean; season: number; episode: number; castLength: number },
+  opts: { isDrama: boolean; season: number; episode: number; castLength: number; auto?: boolean },
 ): CastMember {
   return {
+    // Provenance, so a record nobody chose and nobody has edited can be cleared later.
+    ...(opts.auto ? { auto: true as const } : {}),
     id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6),
     color: PALETTE[opts.castLength % PALETTE.length],
     name: personLabel(p, opts.isDrama),
@@ -92,7 +94,7 @@ export function personToCastMember(
 export function addPeopleToShow(
   show: { cast: CastMember[] },
   people: EpisodePerson[],
-  opts: { isDrama: boolean; season: number; episode: number },
+  opts: { isDrama: boolean; season: number; episode: number; auto?: boolean },
 ) {
   for (const p of people) {
     const name = personLabel(p, opts.isDrama);

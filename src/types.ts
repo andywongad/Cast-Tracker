@@ -106,6 +106,17 @@ export interface CastMember {
   photoCrop?: PhotoCrop | null;
   /** Which optional fields the user has switched on for this member — kept even when left blank. */
   shownFields?: string[];
+  /**
+   * Pulled in by selecting an episode rather than chosen by the user.
+   *
+   * Provenance only — it never becomes false. Whether a record is disposable is decided by
+   * `isDisposable` in lib/castValue.ts, which asks whether anything of the user's is in it. That
+   * way editing a record promotes it with no write to this field and no call site to remember.
+   *
+   * Absent on every record written before this existed, which reads as "the user's", the safe
+   * default for anything already on someone's device.
+   */
+  auto?: true;
   // relationship-map state, keyed by "season_episodeLabel"
   relByEp?: Record<string, MapRelationship[]>;
   mapCellByEp?: Record<string, MapCell | null>;
