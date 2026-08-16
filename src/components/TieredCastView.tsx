@@ -31,6 +31,7 @@ export default function TieredCastView({
   episodePeople,
   onAddMissing,
   onAddPerson,
+  guestsAutoAdded,
 }: {
   show: Show;
   cast: CastMember[];
@@ -41,23 +42,37 @@ export default function TieredCastView({
   onAddMissing?: () => void;
   /** Adds one person from the episode to the cast. Absent = don't offer placeholders at all. */
   onAddPerson?: (p: EpisodePerson) => void;
+  /** True when this show's guests are pulled in on selection rather than tapped in one by one. */
+  guestsAutoAdded?: boolean;
 }) {
   const [othersOpen, setOthersOpen] = useState(false);
 
   // Collapse again when the episode changes — the list it describes is a different one now.
   useEffect(() => { setOthersOpen(false); }, [episode?.number]);
 
+  const isDrama = show.type === 'DRAMA';
   const byActorId = useMemo(() => {
     const m = new Map<number, CastMember>();
     for (const c of cast) if (c.actorTmdbId) m.set(c.actorTmdbId, c);
     return m;
   }, [cast]);
 
+  const regularIds = new Set(regulars.map((r) => r.id));
   const regularMembers = regulars.map((r) => byActorId.get(r.id)).filter((c): c is CastMember => !!c);
   const missingRegulars = regulars.length - regularMembers.length;
 
-  const guestMembers = (episode?.guests || [])
-    .map((g) => byActorId.get(g.id))
+  /**
+   * Guests come from the episode's own credits, not the season payload's `guest_stars`.
+   *
+   * The two disagree, and not slightly: TMDb bills Law & Order's guests under `cast` rather than
+   * `guest_stars`, so the season payload reported one guest for S25 E3 where the episode credits
+   * list eighteen. That was enough to make this tier show a single card while the rest of the
+   * episode sat in the collapsed "others" pile below it. `episodePeople` is the same list the
+   * placeholders and the auto-add already use, so all three now agree by construction.
+   */
+  const guestMembers = episodePeople
+    .filter((p) => !regularIds.has(p.id))
+    .map((p) => byActorId.get(p.id))
     .filter((c): c is CastMember => !!c)
     // A guest who is also a regular belongs in the tier above, not both.
     .filter((c) => !regularMembers.some((r) => r.id === c.id));
@@ -80,14 +95,12 @@ export default function TieredCastView({
   const handAdded = leftover.filter((c) => !c.actorTmdbId);
   const elsewhereInShow = leftover.filter((c) => !!c.actorTmdbId);
 
-  const isDrama = show.type === 'DRAMA';
   /**
    * Placeholders come from one list — this episode's credits — and are split across the two tiers
    * by whether the person is one of the show's regulars. Computing each tier from its own source
    * let them disagree about who is in the episode; this can't.
    */
   const missing = onAddPerson ? missingFromCast(episodePeople, cast, isDrama) : [];
-  const regularIds = new Set(regulars.map((r) => r.id));
   const missingRegularPeople = missing.filter((p) => regularIds.has(p.id));
   const missingGuestPeople = missing.filter((p) => !regularIds.has(p.id));
 
@@ -127,7 +140,9 @@ export default function TieredCastView({
         guestMembers.length > 0 || missingGuestPeople.length > 0 ? (
           <Section
             title={`Guests in Ep ${episode.number}`}
-            note={episode.name || undefined}
+            /* Say so when the app added these itself. A cast list that grows on its own is
+               worth a word of explanation, not a silent surprise. */
+            note={[episode.name || null, guestsAutoAdded ? 'added automatically' : null].filter(Boolean).join(' · ') || undefined}
             members={guestMembers}
             ghosts={missingGuestPeople}
           />

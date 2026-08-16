@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { epNumFromLabel } from '../lib/utils';
@@ -35,7 +35,14 @@ export default function ShowScreen() {
   const [totalEpisodes, setTotalEpisodes] = useState(0);
   const [seasonEpisodes, setSeasonEpisodes] = useState<SeasonEpisode[]>([]);
   const [episodesLoading, setEpisodesLoading] = useState(false);
-  const [episodeCast, setEpisodeCast] = useState<EpisodePerson[]>([]);
+  /**
+   * Tagged with the episode it was fetched for. An untagged list is a trap: selecting a new
+   * episode re-runs everything downstream immediately, while the fetch is still in flight, so
+   * consumers see the *previous* episode's people under the new episode's number. The auto-add
+   * below marked that episode handled and then skipped the real data when it landed, which showed
+   * up as guests appearing one episode late.
+   */
+  const [episodeCast, setEpisodeCast] = useState<{ key: string; people: EpisodePerson[] }>({ key: '', people: [] });
 
   useEffect(() => { if (activeShowId) pushRecent(activeShowId); }, [activeShowId, pushRecent]);
   useEffect(() => { setSeasonsReal(false); }, [show?.tmdbId]);
@@ -146,10 +153,10 @@ export default function ShowScreen() {
    */
   useEffect(() => {
     const tmdbId = show?.tmdbId;
-    if (!tmdbId || !hasTmdbKey()) { setEpisodeCast([]); return; }
+    if (!tmdbId || !hasTmdbKey()) { setEpisodeCast({ key: '', people: [] }); return; }
     const key = `${tmdbId}:${currentSeason}:${currentEp}`;
     const hit = episodeCastCache.get(key);
-    if (hit) { setEpisodeCast(hit); return; }
+    if (hit) { setEpisodeCast({ key, people: hit }); return; }
 
     let alive = true;
     getEpisodeCredits(tmdbId, currentSeason, currentEp).then((list) => {
@@ -157,7 +164,7 @@ export default function ShowScreen() {
       // Cache even an empty result: a season/episode TMDb has no credits for shouldn't be asked
       // about again every time it's selected.
       episodeCastCache.set(key, people);
-      if (alive) setEpisodeCast(people);
+      if (alive) setEpisodeCast({ key, people });
     });
     return () => { alive = false; };
   }, [show?.tmdbId, currentSeason, currentEp]);
@@ -187,6 +194,47 @@ export default function ShowScreen() {
   }, [shape, show?.title]);
 
   const episodeOptions = useMemo(() => Array.from({ length: episodeCount }, (_, i) => `Ep ${i + 1}`), [episodeCount]);
+
+  /**
+   * On a procedural or an anthology, selecting an episode adds its guests straight away.
+   *
+   * These shows hand you a brand-new guest cast every episode -- Law & Order credits about
+   * eighteen -- so the placeholder grid meant pressing "add all" on every single episode before
+   * the screen was useful. Placeholders earn their keep when most of the episode is already
+   * yours; here almost none of it ever is.
+   *
+   * Limited to these two shapes on purpose, and the reason is the same one that made auto-import
+   * a bad default in the first place. Procedural episodes are self-contained, so pulling in the
+   * guests from episode 20 tells you nothing about episode 5. On a serialised ensemble it would,
+   * which is why The Sopranos keeps its placeholders and its "nothing is saved until you tap".
+   *
+   * Regulars are left as placeholders even here: there are a fixed few, you add them once, and
+   * they are exactly the characters an arc could spoil.
+   */
+  const isTiered = shape?.shape === 'procedural' || shape?.shape === 'anthology';
+  // Keyed per episode so this fires once per selection rather than on every render that follows.
+  const autoAdded = useRef(new Set<string>());
+  useEffect(() => {
+    if (!isTiered || !show?.id || !show.tmdbId || !credits.length) return;
+    // Only act on credits that belong to the episode currently selected, never on the previous
+    // episode's list still sitting in state while this one loads.
+    const key = `${show.tmdbId}:${currentSeason}:${currentEp}`;
+    if (episodeCast.key !== key || !episodeCast.people.length) return;
+    if (autoAdded.current.has(key)) return;
+
+    const regularIds = new Set(coreCast(credits, totalEpisodes).map((r) => r.id));
+    const guests = episodeCast.people.filter((p) => !regularIds.has(p.id));
+    const missingGuests = missingFromCast(guests, show.cast, show.type === 'DRAMA');
+    autoAdded.current.add(key);
+    if (!missingGuests.length) return;
+
+    updateData((d) => {
+      const s2 = d.shows.find((x) => x.id === show.id);
+      if (!s2) return;
+      addPeopleToShow(s2, missingGuests, { isDrama: show.type === 'DRAMA', season: currentSeason, episode: currentEp });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTiered, show?.id, currentSeason, currentEp, episodeCast, credits, totalEpisodes]);
 
   // Scripted only. Reality's stored season is already correct, so spending a request per season
   // on it would buy nothing.
@@ -261,7 +309,11 @@ export default function ShowScreen() {
   // Plain consts, not useMemo: this sits after the `if (!show) return null` guard above, so a hook
   // here would change the hook count on a show that's been deleted.
   const selectedEpisode = seasonEpisodes.find((e) => e.number === bulkEp) || null;
-  const missingPeople = missingFromCast(episodeCast, show.cast, show.type === 'DRAMA');
+  // Stale-guarded: while a new episode's credits load this is empty rather than the last
+  // episode's, so placeholders never advertise the wrong episode.
+  const currentEpisodeCast =
+    episodeCast.key === `${show.tmdbId}:${currentSeason}:${currentEp}` ? episodeCast.people : [];
+  const missingPeople = missingFromCast(currentEpisodeCast, show.cast, show.type === 'DRAMA');
 
   const addPeople = (people: EpisodePerson[]) => {
     updateData((d) => {
@@ -463,9 +515,10 @@ export default function ShowScreen() {
                   cast={visibleCast}
                   regulars={coreCast(credits, totalEpisodes)}
                   episode={selectedEpisode}
-                  episodePeople={episodeCast}
+                  episodePeople={currentEpisodeCast}
                   onAddMissing={() => openAddCast()}
                   onAddPerson={showBulk && !cq ? (person) => addPeople([person]) : undefined}
+                  guestsAutoAdded={isTiered}
                 />
               ) : (
                 /* Placeholders are suppressed while searching: the query filters your cast, and a
