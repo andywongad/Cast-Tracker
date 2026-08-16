@@ -4,6 +4,7 @@ import type { AggregateCastMember, SeasonEpisode } from '../lib/tmdb';
 import type { EpisodePerson } from '../lib/episodeCast';
 import { missingFromCast } from '../lib/episodeCast';
 import CastGrid from './CastGrid';
+import CastSkeleton from './CastSkeleton';
 
 /**
  * Two-tier cast view: a Regulars row that persists across every season and episode, and below it
@@ -33,6 +34,7 @@ export default function TieredCastView({
   onAddPerson,
   guestsAutoAdded,
   searching,
+  loading,
 }: {
   show: Show;
   cast: CastMember[];
@@ -47,6 +49,8 @@ export default function TieredCastView({
   guestsAutoAdded?: boolean;
   /** A cast search is running, so `cast` is already narrowed to matches. */
   searching?: boolean;
+  /** The episode's credits are still in flight. */
+  loading?: boolean;
 }) {
   const [othersOpen, setOthersOpen] = useState(false);
 
@@ -126,7 +130,16 @@ export default function TieredCastView({
           Everyone credited on Ep {episode.number}, added automatically.
         </div>
       )}
-      {(regularMembers.length > 0 || missingRegularPeople.length > 0) && (
+      {loading && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>
+            Loading Ep {episode?.number}
+          </div>
+          <CastSkeleton rows={2} />
+        </div>
+      )}
+
+      {!loading && (regularMembers.length > 0 || missingRegularPeople.length > 0) && (
         <Section
           /* "in this episode", not "in every episode": these are the regulars TMDb bills on the
              selected episode, which on a show running twenty-five seasons is not the same set
@@ -149,7 +162,7 @@ export default function TieredCastView({
         </button>
       )}
 
-      {episode ? (
+      {!loading && episode ? (
         guestMembers.length > 0 || missingGuestPeople.length > 0 ? (
           <Section
             title={`Guests in Ep ${episode.number}`}

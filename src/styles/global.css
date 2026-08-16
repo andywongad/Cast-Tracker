@@ -182,6 +182,21 @@ a { color: inherit; }
   display: flex; flex-direction: column; min-width: 0; cursor: pointer;
 }
 
+/* Loading placeholder. A slow shimmer rather than a pulse — a pulse at card size reads as the
+   page flickering. Respects reduced-motion by holding still. */
+.ct-skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--border) 37%, var(--surface) 63%);
+  background-size: 400% 100%;
+  animation: ct-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes ct-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ct-skeleton { animation: none; background: var(--surface); }
+}
+
 /* Someone in this episode who isn't in your cast yet. Same footprint as a real card so adding one
    doesn't reflow the row; dashed and unfilled so it reads as an offer rather than a record. */
 .ct-card-ghost {

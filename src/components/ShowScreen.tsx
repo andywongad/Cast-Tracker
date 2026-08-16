@@ -12,6 +12,7 @@ import RelationshipMap from './RelationshipMap';
 import DensityToggle from './DensityToggle';
 import SeasonEpisodeRails from './SeasonEpisodeRails';
 import TieredCastView from './TieredCastView';
+import SerialCastView from './SerialCastView';
 
 /** Episode credits already fetched this session, keyed showId:season:episode. */
 const episodeCastCache = new Map<string, EpisodePerson[]>();
@@ -43,6 +44,7 @@ export default function ShowScreen() {
    * up as guests appearing one episode late.
    */
   const [episodeCast, setEpisodeCast] = useState<{ key: string; people: EpisodePerson[] }>({ key: '', people: [] });
+  const [episodeCastLoading, setEpisodeCastLoading] = useState(false);
 
   useEffect(() => { if (activeShowId) pushRecent(activeShowId); }, [activeShowId, pushRecent]);
   useEffect(() => { setSeasonsReal(false); }, [show?.tmdbId]);
@@ -153,18 +155,20 @@ export default function ShowScreen() {
    */
   useEffect(() => {
     const tmdbId = show?.tmdbId;
-    if (!tmdbId || !hasTmdbKey()) { setEpisodeCast({ key: '', people: [] }); return; }
+    if (!tmdbId || !hasTmdbKey()) { setEpisodeCast({ key: '', people: [] }); setEpisodeCastLoading(false); return; }
     const key = `${tmdbId}:${currentSeason}:${currentEp}`;
     const hit = episodeCastCache.get(key);
-    if (hit) { setEpisodeCast({ key, people: hit }); return; }
+    // A cached episode is not a load — going straight to the cards beats flashing a skeleton.
+    if (hit) { setEpisodeCast({ key, people: hit }); setEpisodeCastLoading(false); return; }
 
     let alive = true;
+    setEpisodeCastLoading(true);
     getEpisodeCredits(tmdbId, currentSeason, currentEp).then((list) => {
       const people = toEpisodePeople(list);
       // Cache even an empty result: a season/episode TMDb has no credits for shouldn't be asked
       // about again every time it's selected.
       episodeCastCache.set(key, people);
-      if (alive) setEpisodeCast({ key, people });
+      if (alive) { setEpisodeCast({ key, people }); setEpisodeCastLoading(false); }
     });
     return () => { alive = false; };
   }, [show?.tmdbId, currentSeason, currentEp]);
@@ -213,10 +217,17 @@ export default function ShowScreen() {
    * never open costs no request and adds no record.
    */
   const isTiered = shape?.shape === 'procedural' || shape?.shape === 'anthology';
+  /**
+   * Every scripted show, not just the procedurals. Selecting an episode is the gesture that means
+   * "show me these people", and it shouldn't matter whether the show happens to reuse its cast.
+   * Reality is excluded: its casts are per-season rosters, its episode credits are mostly hosts,
+   * and the season is the unit people think in there.
+   */
+  const autoLoads = show?.type === 'DRAMA';
   // Keyed per episode so this fires once per selection rather than on every render that follows.
   const autoAdded = useRef(new Set<string>());
   useEffect(() => {
-    if (!isTiered || !show?.id || !show.tmdbId) return;
+    if (!autoLoads || !show?.id || !show.tmdbId) return;
     // Only act on credits that belong to the episode currently selected, never on the previous
     // episode's list still sitting in state while this one loads.
     const key = `${show.tmdbId}:${currentSeason}:${currentEp}`;
@@ -233,7 +244,7 @@ export default function ShowScreen() {
       addPeopleToShow(s2, missing, { isDrama: show.type === 'DRAMA', season: currentSeason, episode: currentEp });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isTiered, show?.id, currentSeason, currentEp, episodeCast]);
+  }, [autoLoads, show?.id, currentSeason, currentEp, episodeCast]);
 
   // Scripted only. Reality's stored season is already correct, so spending a request per season
   // on it would buy nothing.
@@ -251,6 +262,8 @@ export default function ShowScreen() {
     seasons,
     seasonsReal && !!shape && !isTiered && show?.type === 'DRAMA',
   );
+  // Where the viewer is, and therefore the ceiling on what "so far" may include.
+  const viewerAt = { season: currentSeason, episode: currentEp };
 
   if (!show) return null;
 
@@ -528,21 +541,32 @@ export default function ShowScreen() {
                   regulars={coreCast(credits, totalEpisodes)}
                   episode={selectedEpisode}
                   episodePeople={currentEpisodeCast}
+                  loading={episodeCastLoading}
                   onAddMissing={() => openAddCast()}
                   onAddPerson={showBulk && !cq ? (person) => addPeople([person]) : undefined}
                   guestsAutoAdded={isTiered}
                   searching={!!cq}
                 />
-              ) : (
-                /* Placeholders are suppressed while searching: the query filters your cast, and a
-                   row of people you haven't added underneath the matches answers a question nobody
-                   asked. */
-                <CastGrid
+              ) : autoLoads ? (
+                /* Serialised scripted show: the episode on top, everyone met so far underneath.
+                   Placeholders are the fallback for the moment before auto-add lands, or if the
+                   credits fetch failed; once it has run there is nothing missing to show. */
+                <SerialCastView
                   show={show}
                   cast={visibleCast}
+                  episodePeople={currentEpisodeCast}
+                  episodeNumber={currentEp}
+                  at={viewerAt}
+                  firstSeasons={firstSeasons}
+                  loading={episodeCastLoading}
                   ghosts={missingPeople}
                   onAddGhost={showBulk && !cq ? (person) => addPeople([person]) : undefined}
+                  searching={!!cq}
                 />
+              ) : (
+                /* Reality: the season roster is the unit, and tapping an episode doesn't change
+                   which contestants that season had. */
+                <CastGrid show={show} cast={visibleCast} />
               )}
             </>
           )}

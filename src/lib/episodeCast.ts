@@ -116,3 +116,35 @@ export function addPeopleToShow(
     show.cast.push(personToCastMember(p, { ...opts, castLength: show.cast.length }));
   }
 }
+
+/**
+ * The earliest point in the show where we have any evidence of this character.
+ *
+ * Two sources, and they answer slightly different questions. The stored `season`/`firstEp` is
+ * where *you* met them — stamped when they were added and pulled earlier by the low-water-mark
+ * rule as you work backwards. The first-season map is where TMDb says they actually debut, which
+ * is more accurate but only accurate to a season.
+ *
+ * Take the earlier season either one knows about. Trust the stored episode only when the stored
+ * season is the one that won, since an episode number from a different season means nothing.
+ */
+export function metPosition(
+  c: CastMember,
+  firstSeasons: Record<number, number> | null,
+): { season: number; episode: number } {
+  const storedSeason = c.season || 1;
+  const tmdbSeason = (c.actorTmdbId && firstSeasons?.[c.actorTmdbId]) || Infinity;
+  const season = Math.min(storedSeason, tmdbSeason);
+  const episode = season === storedSeason && c.firstEp ? epNumFromLabel(c.firstEp) : 1;
+  return { season, episode };
+}
+
+/** True when `c` was first seen at or before the given point in the show. */
+export function metBy(
+  c: CastMember,
+  at: { season: number; episode: number },
+  firstSeasons: Record<number, number> | null,
+): boolean {
+  const p = metPosition(c, firstSeasons);
+  return p.season < at.season || (p.season === at.season && p.episode <= at.episode);
+}
