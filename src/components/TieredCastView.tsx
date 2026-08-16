@@ -32,6 +32,7 @@ export default function TieredCastView({
   onAddMissing,
   onAddPerson,
   guestsAutoAdded,
+  searching,
 }: {
   show: Show;
   cast: CastMember[];
@@ -44,6 +45,8 @@ export default function TieredCastView({
   onAddPerson?: (p: EpisodePerson) => void;
   /** True when this show's guests are pulled in on selection rather than tapped in one by one. */
   guestsAutoAdded?: boolean;
+  /** A cast search is running, so `cast` is already narrowed to matches. */
+  searching?: boolean;
 }) {
   const [othersOpen, setOthersOpen] = useState(false);
 
@@ -116,10 +119,20 @@ export default function TieredCastView({
 
   return (
     <div>
+      {/* Said once, at the top, rather than tucked into a single tier: on these shows the whole
+          screen is the selected episode, and everything on it was brought in by selecting it. */}
+      {guestsAutoAdded && episode && (
+        <div style={{ fontSize: 12.5, color: 'var(--text-faint)', marginBottom: 14 }}>
+          Everyone credited on Ep {episode.number}, added automatically.
+        </div>
+      )}
       {(regularMembers.length > 0 || missingRegularPeople.length > 0) && (
         <Section
+          /* "in this episode", not "in every episode": these are the regulars TMDb bills on the
+             selected episode, which on a show running twenty-five seasons is not the same set
+             throughout. */
           title="Regulars"
-          note={`in every episode${missingRegularPeople.length > 0 ? ` · tap to add ${missingRegularPeople.length}` : ''}`}
+          note={`in Ep ${episode?.number ?? ''}${missingRegularPeople.length > 0 ? ` · tap to add ${missingRegularPeople.length}` : ''}`}
           members={regularMembers}
           ghosts={missingRegularPeople}
         />
@@ -142,7 +155,7 @@ export default function TieredCastView({
             title={`Guests in Ep ${episode.number}`}
             /* Say so when the app added these itself. A cast list that grows on its own is
                worth a word of explanation, not a silent surprise. */
-            note={[episode.name || null, guestsAutoAdded ? 'added automatically' : null].filter(Boolean).join(' · ') || undefined}
+            note={episode.name || undefined}
             members={guestMembers}
             ghosts={missingGuestPeople}
           />
@@ -161,7 +174,15 @@ export default function TieredCastView({
         />
       )}
 
-      {elsewhereInShow.length > 0 && (
+      {/* Everyone from other episodes is hidden while browsing: the screen is the selected
+          episode, and on a long-running procedural this pile is most of the library — 458 rows
+          behind a count, which is the opposite of "show me this episode".
+
+          It comes back while searching, because search is then the only route to a character from
+          an episode you're not on. `cast` is already narrowed to matches by then, so this lists
+          the matches rather than the whole library. Hand-added records stay visible either way;
+          they can never be matched to an episode, so hiding them would strand them. */}
+      {searching && elsewhereInShow.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <button
             onClick={() => setOthersOpen((v) => !v)}

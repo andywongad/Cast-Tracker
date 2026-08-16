@@ -196,49 +196,61 @@ export default function ShowScreen() {
   const episodeOptions = useMemo(() => Array.from({ length: episodeCount }, (_, i) => `Ep ${i + 1}`), [episodeCount]);
 
   /**
-   * On a procedural or an anthology, selecting an episode adds its guests straight away.
+   * On a procedural or an anthology, selecting an episode brings in everyone credited on it --
+   * the episode's regulars as well as its guests.
    *
-   * These shows hand you a brand-new guest cast every episode -- Law & Order credits about
-   * eighteen -- so the placeholder grid meant pressing "add all" on every single episode before
-   * the screen was useful. Placeholders earn their keep when most of the episode is already
-   * yours; here almost none of it ever is.
+   * These shows hand you a new cast every episode, so the placeholder grid meant pressing "add
+   * all" before the screen was useful. Placeholders earn their keep when most of the episode is
+   * already yours; here almost none of it ever is, and that goes for the regulars too on a show
+   * whose run is long enough that its leads change.
    *
    * Limited to these two shapes on purpose, and the reason is the same one that made auto-import
    * a bad default in the first place. Procedural episodes are self-contained, so pulling in the
-   * guests from episode 20 tells you nothing about episode 5. On a serialised ensemble it would,
+   * cast of episode 20 tells you nothing about episode 5. On a serialised ensemble it would,
    * which is why The Sopranos keeps its placeholders and its "nothing is saved until you tap".
    *
-   * Regulars are left as placeholders even here: there are a fixed few, you add them once, and
-   * they are exactly the characters an arc could spoil.
+   * Only the selected episode is ever fetched or added. Nothing is pre-loaded: an episode you
+   * never open costs no request and adds no record.
    */
   const isTiered = shape?.shape === 'procedural' || shape?.shape === 'anthology';
   // Keyed per episode so this fires once per selection rather than on every render that follows.
   const autoAdded = useRef(new Set<string>());
   useEffect(() => {
-    if (!isTiered || !show?.id || !show.tmdbId || !credits.length) return;
+    if (!isTiered || !show?.id || !show.tmdbId) return;
     // Only act on credits that belong to the episode currently selected, never on the previous
     // episode's list still sitting in state while this one loads.
     const key = `${show.tmdbId}:${currentSeason}:${currentEp}`;
     if (episodeCast.key !== key || !episodeCast.people.length) return;
     if (autoAdded.current.has(key)) return;
 
-    const regularIds = new Set(coreCast(credits, totalEpisodes).map((r) => r.id));
-    const guests = episodeCast.people.filter((p) => !regularIds.has(p.id));
-    const missingGuests = missingFromCast(guests, show.cast, show.type === 'DRAMA');
+    const missing = missingFromCast(episodeCast.people, show.cast, show.type === 'DRAMA');
     autoAdded.current.add(key);
-    if (!missingGuests.length) return;
+    if (!missing.length) return;
 
     updateData((d) => {
       const s2 = d.shows.find((x) => x.id === show.id);
       if (!s2) return;
-      addPeopleToShow(s2, missingGuests, { isDrama: show.type === 'DRAMA', season: currentSeason, episode: currentEp });
+      addPeopleToShow(s2, missing, { isDrama: show.type === 'DRAMA', season: currentSeason, episode: currentEp });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isTiered, show?.id, currentSeason, currentEp, episodeCast, credits, totalEpisodes]);
+  }, [isTiered, show?.id, currentSeason, currentEp, episodeCast]);
 
   // Scripted only. Reality's stored season is already correct, so spending a request per season
   // on it would buy nothing.
-  const firstSeasons = useFirstSeasons(show?.tmdbId ?? null, seasons, seasonsReal && show?.type === 'DRAMA');
+  /**
+   * Scripted, and not a procedural. Reality's stored season is already correct, so it needs
+   * nothing here — and a procedural doesn't filter by season at all now that the screen shows one
+   * episode's cast, so building the map would spend a request per season on an answer nothing
+   * reads. That is 25 requests on Law & Order, none of which anyone asked for.
+   *
+   * Gated on `shape` being known rather than just on `isTiered`, or the first render — before the
+   * series credits land and the show can be classified — would start the fetch anyway.
+   */
+  const firstSeasons = useFirstSeasons(
+    show?.tmdbId ?? null,
+    seasons,
+    seasonsReal && !!shape && !isTiered && show?.type === 'DRAMA',
+  );
 
   if (!show) return null;
 
@@ -519,6 +531,7 @@ export default function ShowScreen() {
                   onAddMissing={() => openAddCast()}
                   onAddPerson={showBulk && !cq ? (person) => addPeople([person]) : undefined}
                   guestsAutoAdded={isTiered}
+                  searching={!!cq}
                 />
               ) : (
                 /* Placeholders are suppressed while searching: the query filters your cast, and a
