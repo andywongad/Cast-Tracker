@@ -54,3 +54,16 @@ export function isDisposable(c: CastMember): boolean {
 export function countDisposable(cast: CastMember[]): number {
   return cast.reduce((n, c) => n + (isDisposable(c) ? 1 : 0), 0);
 }
+
+/**
+ * How many records a backup would actually carry.
+ *
+ * Not the same as the number on screen, and the difference is the point. Auto-loaded records are
+ * excluded from an export because they reload from TMDb the moment their episode is opened —
+ * so a library showing 400 people might have twelve worth saving. Anything that talks to the user
+ * about backing up has to use this number, or it either nags about nothing or quietly implies a
+ * backup covers more than it does.
+ */
+export function countKept(cast: CastMember[]): number {
+  return cast.reduce((n, c) => n + (isDisposable(c) ? 0 : 1), 0);
+}

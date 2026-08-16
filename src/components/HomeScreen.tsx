@@ -7,7 +7,7 @@ import { bgStyle } from '../lib/utils';
 import DensityToggle from './DensityToggle';
 
 export default function HomeScreen() {
-  const { data, settings, recentShows, showById, backupState, dismissBackupNudge, setShowColumns } = useStore();
+  const { data, settings, recentShows, showById, backupState, dismissBackupNudge, setShowColumns, keptTotal } = useStore();
   const { query, setQuery, openAddShow, openRedeem, openEditShow, openSettings } = useUI();
   const [tmdbResults, setTmdbResults] = useState<TmdbShowResult[]>([]);
   const [tmdbSearching, setTmdbSearching] = useState(false);
@@ -15,10 +15,22 @@ export default function HomeScreen() {
   const q = query.trim().toLowerCase();
   const isSearching = q.length > 0;
 
-  // Surface the device-only storage risk once there's enough in here to be worth losing,
-  // and only until the user either exports or waves it off.
-  const trackedCast = useMemo(() => data.shows.reduce((n, s) => n + s.cast.length, 0), [data.shows]);
-  const showBackupNudge = trackedCast >= 8 && !backupState.lastExportAt && !backupState.dismissedAt;
+  /**
+   * Surface the device-only storage risk once there's enough here to be worth losing.
+   *
+   * Counted on records a backup would actually carry, not on everything on screen. Auto-loaded
+   * cast reloads from TMDb by itself, and counting it would have this nagging about a library of
+   * four hundred people when twelve of them are the user's.
+   *
+   * Comes back as that number grows past whatever it was when the nudge was last exported or
+   * dismissed. Dismissing used to silence it permanently, which quietly turned "not yet" into
+   * "never" for the person who most needed asking again later.
+   */
+  const trackedCast = keptTotal;
+  const acked = backupState.ackedAtCount ?? 0;
+  const neverActioned = !backupState.lastExportAt && !backupState.dismissedAt;
+  const grownSince = trackedCast >= acked + 15;
+  const showBackupNudge = trackedCast >= 8 && (neverActioned || grownSince);
 
   useEffect(() => {
     if (!isSearching || !hasTmdbKey()) { setTmdbResults([]); setTmdbSearching(false); return; }
@@ -63,7 +75,10 @@ export default function HomeScreen() {
         <div style={{ background: 'var(--card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, padding: 16, marginBottom: 22 }}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Your cast lives only on this device</div>
           <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>
-            There&rsquo;s no account or sync — clearing your browser data would erase {trackedCast} {trackedCast === 1 ? 'person' : 'people'} across {data.shows.length} {data.shows.length === 1 ? 'show' : 'shows'}. Export a backup file to keep a copy.
+            There&rsquo;s no account or sync. Resetting the app or clearing your browser data would
+            erase the {trackedCast} {trackedCast === 1 ? 'character' : 'characters'} you&rsquo;ve
+            edited or added yourself, across {data.shows.length} {data.shows.length === 1 ? 'show' : 'shows'},
+            with no way to get them back. Export a file to keep a copy.
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={openSettings} style={{ flex: 1, height: 40, border: 'none', borderRadius: 12, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Export a backup</button>

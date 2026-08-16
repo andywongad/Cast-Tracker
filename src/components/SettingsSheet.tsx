@@ -6,7 +6,7 @@ import { isAuthPreviewEnabled } from '../lib/auth';
 import Sheet from './Sheet';
 
 export default function SettingsSheet() {
-  const { settings, setTheme, setAutoSave, exportBackup, importBackup, resetAll } = useStore();
+  const { settings, setTheme, setAutoSave, exportBackup, importBackup, resetAll, backupState, keptTotal } = useStore();
   const { session } = useAuth();
   const { settingsOpen, closeSettings, resetToHome, openFeedback, openAuth } = useUI();
   const [resetConfirm, setResetConfirm] = useState(false);
@@ -33,11 +33,43 @@ export default function SettingsSheet() {
     URL.revokeObjectURL(url);
   };
 
+  /**
+   * The safe path is one tap, not two.
+   *
+   * Reset wipes shows, cast, shares and recents with no recovery — this is device-only storage and
+   * there is no history to roll back to. Offering "export" and "reset" as separate buttons means
+   * the destructive one is always the shorter route, and the moment somebody is reaching for reset
+   * is exactly when they are least inclined to detour. So the primary action does both, in order.
+   */
+  const doExportThenReset = () => { doExport(); doReset(); };
+
+  const lastBackup = backupState.lastExportAt;
+  const daysSinceBackup = lastBackup ? Math.floor((Date.now() - lastBackup) / 86400000) : null;
+  // Two shapes: one that stands as its own sentence, one that sits inside brackets mid-sentence.
+  const backupAge =
+    lastBackup === null ? 'never exported' :
+    daysSinceBackup === 0 ? 'exported today' :
+    daysSinceBackup === 1 ? 'exported yesterday' :
+    `exported ${daysSinceBackup} days ago`;
+  const backupAgeSentence = backupAge.charAt(0).toUpperCase() + backupAge.slice(1);
+
   const onImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ''; // allow re-picking the same file
     if (!file) return;
-    if (!window.confirm('Importing replaces all shows and cast currently on this device. Continue?')) return;
+    /**
+     * Import is as destructive as reset — it replaces every show on the device. Same reasoning:
+     * offer to save what's here first, in the same breath as the warning, rather than expecting
+     * someone to have thought of it beforehand.
+     */
+    if (keptTotal > 0) {
+      const save = window.confirm(
+        `Importing replaces all ${keptTotal} ${keptTotal === 1 ? 'record' : 'records'} on this device.\n\n` +
+        'OK to export a backup of them first, or Cancel to skip the backup.',
+      );
+      if (save) doExport();
+    }
+    if (!window.confirm('Replace everything on this device with the file you picked?')) return;
     const reader = new FileReader();
     reader.onload = () => {
       const res = importBackup(String(reader.result || ''));
@@ -78,7 +110,15 @@ export default function SettingsSheet() {
         <div style={{ borderTop: '1px solid var(--border)', margin: '20px 0 16px' }} />
 
         <label className="ct-label-muted">BACKUP</label>
-        <div style={{ fontSize: 13.5, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 10 }}>Your data lives only on this device. Export a backup file to keep it safe or move it to another device.</div>
+        {/* Says the number and the age, because both were invisible. A library showing four hundred
+            people might have twelve worth saving — the rest reload from TMDb — and a file that
+            small looks broken unless you're told why it's small. */}
+        <div style={{ fontSize: 13.5, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 10 }}>
+          Your data lives only on this device &mdash; no account, no server copy.{' '}
+          {keptTotal === 0
+            ? 'Nothing has been edited yet, so there is nothing a backup would need to carry: auto-loaded cast reloads by itself.'
+            : `A backup carries the ${keptTotal} ${keptTotal === 1 ? 'record' : 'records'} you've edited or added by hand; auto-loaded cast is left out because it reloads by itself. ${backupAgeSentence}.`}
+        </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
           <button onClick={doExport} className="ct-btn-ghost" style={{ flex: 1, height: 44 }}>⬇ Export</button>
           <button onClick={() => fileInputRef.current?.click()} className="ct-btn-ghost" style={{ flex: 1, height: 44 }}>⬆ Import</button>
@@ -92,10 +132,22 @@ export default function SettingsSheet() {
 
         {resetConfirm ? (
           <>
-            <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 10 }}>This clears all shows, cast, shares, and recents &mdash; can&rsquo;t be undone.</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 10 }}>
+              This clears all shows, cast, shares and recents. There is no undo and no copy on a
+              server &mdash; {keptTotal === 0
+                ? 'nothing here has been edited, so a backup would be empty.'
+                : `you have ${keptTotal} ${keptTotal === 1 ? 'record' : 'records'} a backup would carry (${backupAge}).`}
+            </div>
+            {keptTotal > 0 && (
+              <button onClick={doExportThenReset} className="ct-btn-primary" style={{ width: '100%', height: 44, marginBottom: 8 }}>
+                Export a backup, then reset
+              </button>
+            )}
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <button onClick={() => setResetConfirm(false)} className="ct-btn-ghost" style={{ flex: 1, height: 44 }}>Cancel</button>
-              <button onClick={doReset} style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', background: '#C24B4B', color: '#fff', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>Yes, reset</button>
+              <button onClick={doReset} style={{ flex: 1, height: 44, borderRadius: 12, border: '1px solid #C24B4B', background: 'transparent', color: '#C24B4B', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
+                {keptTotal > 0 ? 'Reset without a backup' : 'Reset'}
+              </button>
             </div>
           </>
         ) : (

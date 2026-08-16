@@ -1,8 +1,8 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { AppData, AppSettings, Show, ShareStore, SharePayload, CastMember } from '../types';
 import * as storage from '../lib/storage';
 import { genId, genShareCode, initials, colorForIndex } from '../lib/utils';
-import { isDisposable, countDisposable } from '../lib/castValue';
+import { isDisposable, countDisposable, countKept } from '../lib/castValue';
 
 interface ShareSheetState {
   code: string;
@@ -36,6 +36,8 @@ interface StoreValue {
   exportBackup: () => Backup;
   /** How many of a show's records were auto-loaded and still hold nothing of the user's. */
   disposableCount: (showId: string) => number;
+  /** Records across the whole library that a backup would carry — the ones that can't reload. */
+  keptTotal: number;
   /** Drops those records. Anything edited is kept, and anything dropped comes back on re-open. */
   clearDisposable: (showId: string) => number;
   backupState: storage.BackupState;
@@ -83,11 +85,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const patchBackupState = useCallback((patch: Partial<storage.BackupState>) => {
     setBackupState((prev) => { const next = { ...prev, ...patch }; storage.persistBackupState(next); return next; });
   }, []);
-  const dismissBackupNudge = useCallback(() => patchBackupState({ dismissedAt: Date.now() }), [patchBackupState]);
+  /**
+   * Both waving the nudge away and acting on it record how much was worth saving at the time, so
+   * the nudge can come back once there's meaningfully more. Dismissing used to silence it forever,
+   * which is fine for someone with eight characters and wrong for the same person six weeks later
+   * with a hundred they've annotated.
+   */
+  const dismissBackupNudge = useCallback(
+    () => patchBackupState({ dismissedAt: Date.now(), ackedAtCount: keptTotalRef.current }),
+    [patchBackupState],
+  );
 
   const exportBackup = useCallback((): Backup => {
     // Exporting is what clears the nudge — the user has a copy off-device now.
-    patchBackupState({ lastExportAt: Date.now() });
+    patchBackupState({ lastExportAt: Date.now(), ackedAtCount: keptTotalRef.current });
     /**
      * Auto-loaded records are left out. They're TMDb's, not yours, they can outnumber your own
      * by a hundred to one after a season of browsing, and every one of them comes back the moment
@@ -96,6 +107,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const slim: AppData = { shows: data.shows.map((s) => ({ ...s, cast: s.cast.filter((c) => !isDisposable(c)) })) };
     return { app: 'cast-tracker', version: 1, exportedAt: Date.now(), data: slim, settings, shares: shareStore, recent: recentShows };
   }, [data, settings, shareStore, recentShows, patchBackupState]);
+
+  // Read inside callbacks that must not re-create themselves every time the count moves.
+  const keptTotalRef = useRef(0);
+  const keptTotal = useMemo(
+    () => data.shows.reduce((n, s) => n + countKept(s.cast), 0),
+    [data.shows],
+  );
+  keptTotalRef.current = keptTotal;
 
   const disposableCount = useCallback(
     (showId: string) => countDisposable(data.shows.find((s) => s.id === showId)?.cast || []),
@@ -211,8 +230,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<StoreValue>(() => ({
     data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave,
     exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem,
-    backupState, dismissBackupNudge, disposableCount, clearDisposable,
-  }), [data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
+    backupState, dismissBackupNudge, disposableCount, clearDisposable, keptTotal,
+  }), [keptTotal, data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

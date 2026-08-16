@@ -81,11 +81,17 @@ const BACKUP_KEY = 'ct.backup.v1';
 export interface BackupState {
   lastExportAt: number | null;
   dismissedAt: number | null;
+  /** Records worth saving at the moment of the last export or dismissal — the mark to grow from. */
+  ackedAtCount?: number;
 }
 
 export function loadBackupState(): BackupState {
   const s = safeParse<Partial<BackupState>>(localStorage.getItem(BACKUP_KEY), {});
-  return { lastExportAt: s.lastExportAt ?? null, dismissedAt: s.dismissedAt ?? null };
+  return {
+    lastExportAt: s.lastExportAt ?? null,
+    dismissedAt: s.dismissedAt ?? null,
+    ackedAtCount: s.ackedAtCount,
+  };
 }
 
 export function persistBackupState(s: BackupState) {
