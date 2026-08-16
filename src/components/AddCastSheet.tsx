@@ -20,7 +20,7 @@ const OPTIONAL_FIELDS: { key: OptionalField; label: string }[] = [
   { key: 'age', label: 'Age' },
   { key: 'hometown', label: 'Hometown' },
   { key: 'occupation', label: 'Occupation' },
-  { key: 'firstEp', label: 'Added from' },
+  { key: 'firstEp', label: 'First appears in' },
   { key: 'customFields', label: 'Add your own…' },
 ];
 
@@ -636,11 +636,18 @@ export default function AddCastSheet() {
             )}
             {hasField('firstEp') && (
               <div style={{ marginBottom: 12 }}>
-                <label className="ct-label">ADDED FROM</label>
+                <label className="ct-label">FIRST APPEARS IN</label>
                 <select value={form.firstEp} onChange={(e) => setForm((f) => ({ ...f, firstEp: e.target.value }))} className="ct-input">
                   <option value="">Not sure yet</option>
                   {firstEpOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
                 </select>
+                {/* This is the only way to record a mid-season arrival on a show TMDb doesn't
+                    credit episode by episode — Single's Inferno returns the same eighteen people
+                    for all ten episodes of a season, so nothing can infer it. */}
+                <div style={{ fontSize: 12.5, color: 'var(--text-faint)', lineHeight: 1.45, marginTop: 6 }}>
+                  They&rsquo;ll show from this episode onwards. Set it for someone who joins partway
+                  through a season.
+                </div>
               </div>
             )}
             {hasField('customFields') && (

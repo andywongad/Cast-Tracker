@@ -218,12 +218,12 @@ export default function ShowScreen() {
    */
   const isTiered = shape?.shape === 'procedural' || shape?.shape === 'anthology';
   /**
-   * Every scripted show, not just the procedurals. Selecting an episode is the gesture that means
-   * "show me these people", and it shouldn't matter whether the show happens to reuse its cast.
-   * Reality is excluded: its casts are per-season rosters, its episode credits are mostly hosts,
-   * and the season is the unit people think in there.
+   * Every show TMDb knows about. Selecting an episode is the gesture that means "show me these
+   * people", and it shouldn't matter what kind of show it is. Reality keeps its flat season-roster
+   * layout, but that roster is bounded by first appearance now, so tapping an episode still has to
+   * bring in whoever turns up in it.
    */
-  const autoLoads = show?.type === 'DRAMA';
+  const autoLoads = !!show?.tmdbId;
   // Keyed per episode so this fires once per selection rather than on every render that follows.
   const autoAdded = useRef(new Set<string>());
   useEffect(() => {
@@ -296,7 +296,19 @@ export default function ShowScreen() {
   const visibleCastAll = !hasSeasons
     ? show.cast
     : show.type !== 'DRAMA'
-      ? show.cast.filter((c) => (c.season || 1) === currentSeason)
+      /**
+       * Reality: the season roster, but only as far as you've watched. A contestant appears from
+       * the episode they first turn up in and stays for the rest of the season — Single's Inferno
+       * brings new arrivals in partway through, and showing them from episode one gives away that
+       * they're coming.
+       *
+       * `firstEp` carries that. The low-water-mark rule pulls it earlier as episodes are opened,
+       * so it corrects itself on shows where TMDb credits each episode separately, and it can be
+       * set by hand on shows where TMDb doesn't.
+       */
+      ? show.cast.filter(
+          (c) => (c.season || 1) === currentSeason && epNumFromLabel(c.firstEp || 'Ep 1') <= currentEp,
+        )
       : firstSeasons
         ? show.cast.filter((c) => {
             const first = c.actorTmdbId ? firstSeasons[c.actorTmdbId] : undefined;
@@ -548,7 +560,7 @@ export default function ShowScreen() {
                   guestsAutoAdded={isTiered}
                   searching={!!cq}
                 />
-              ) : autoLoads ? (
+              ) : show.type === 'DRAMA' ? (
                 /* Serialised scripted show: the episode on top, everyone met so far underneath.
                    Placeholders are the fallback for the moment before auto-add lands, or if the
                    credits fetch failed; once it has run there is nothing missing to show. */
