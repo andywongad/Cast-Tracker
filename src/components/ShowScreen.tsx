@@ -4,7 +4,7 @@ import { useUI } from '../hooks/useUI';
 import { epNumFromLabel } from '../lib/utils';
 import { getShowDetails, getEpisodeCredits, getAggregateCredits, getSeasonEpisodes, hasTmdbKey, type AggregateCastMember, type SeasonEpisode } from '../lib/tmdb';
 import { classifyShow, coreCast, type ShapeReport } from '../lib/showShape';
-import { toEpisodePeople, missingFromCast, addPeopleToShow, type EpisodePerson } from '../lib/episodeCast';
+import { toEpisodePeople, missingFromCast, addPeopleToShow, episodeChangesAnything, type EpisodePerson } from '../lib/episodeCast';
 import { useFirstSeasons } from '../lib/firstSeason';
 import { fetchTvmazeCast, matchCast } from '../lib/tvmaze';
 import CastGrid from './CastGrid';
@@ -234,15 +234,27 @@ export default function ShowScreen() {
     if (episodeCast.key !== key || !episodeCast.people.length) return;
     if (autoAdded.current.has(key)) return;
 
-    const missing = missingFromCast(episodeCast.people, show.cast, show.type === 'DRAMA');
+    /**
+     * The whole episode, not only the people missing from the cast.
+     *
+     * Handing over just the missing ones made the low-water-mark unreachable: it lives in the
+     * branch for someone already present, and `missingFromCast` had already filtered every one of
+     * those out. So a contestant first picked up on episode 9 kept "Ep 9" forever, even after you
+     * opened episode 2 and saw them there — the first-appearance data could only ever be too late,
+     * and never corrected itself. Passing everyone lets it settle on the earliest episode you have
+     * actually opened them in.
+     */
+    const opts = { isDrama: show.type === 'DRAMA', season: currentSeason, episode: currentEp };
     autoAdded.current.add(key);
-    if (!missing.length) return;
+    // Most selections change nothing, and updateData clones and re-persists the whole store
+    // whether the callback touches it or not.
+    if (!episodeChangesAnything(show.cast, episodeCast.people, opts)) return;
 
     updateData((d) => {
       const s2 = d.shows.find((x) => x.id === show.id);
       if (!s2) return;
       // auto: nobody asked for these by name, so they stay disposable until edited.
-      addPeopleToShow(s2, missing, { isDrama: show.type === 'DRAMA', season: currentSeason, episode: currentEp, auto: true });
+      addPeopleToShow(s2, episodeCast.people, { ...opts, auto: true });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoLoads, show?.id, currentSeason, currentEp, episodeCast]);

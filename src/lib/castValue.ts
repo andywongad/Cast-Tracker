@@ -18,7 +18,14 @@ import type { CastMember } from '../types';
  * would silently throw away a user's work.
  */
 
-/** Fields only a person fills in. `photo` is excluded: TMDb supplies one for nearly every record. */
+/**
+ * Fields only a person fills in.
+ *
+ * `photo` is excluded because TMDb supplies one for nearly every record. `firstEp` is excluded for
+ * the same reason and checked through `firstEpPinned` below instead: every auto-loaded record
+ * carries an episode stamp, so counting the field itself would mark the entire library as the
+ * user's and make "clear auto-loaded" do nothing.
+ */
 const USER_AUTHORED = [
   'nickname', 'whoTheyAre', 'desc', 'notes', 'native',
   'age', 'hometown', 'occupation', 'social', 'gender',
@@ -36,9 +43,12 @@ export function hasUserContent(c: CastMember): boolean {
     const v = c[f];
     if (Array.isArray(v) && v.length > 0) return true;
   }
-  // Reframing a photo, uploading one, or hiding someone from the map are all deliberate acts.
+  // Reframing a photo, uploading one, hiding someone from the map, choosing which optional fields
+  // to show, or saying which episode someone arrives in are all deliberate acts.
   if (c.photoCrop) return true;
   if (c.hideFromMap) return true;
+  if (c.firstEpPinned) return true;
+  if (c.shownFields && c.shownFields.length > 0) return true;
   if (typeof c.photo === 'string' && c.photo.startsWith('data:')) return true;
   return false;
 }

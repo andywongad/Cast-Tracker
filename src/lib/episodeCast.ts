@@ -84,6 +84,39 @@ export function personToCastMember(
 }
 
 /**
+ * Would `addPeopleToShow` change anything for this episode?
+ *
+ * Needed because the caller has to hand over the episode's *whole* cast, not just the people
+ * missing from it — the low-water-mark below only reaches records that are already there. Passing
+ * the whole list means most selections have nothing to do, and `updateData` clones and re-persists
+ * the entire store whether or not the callback touches it, so it's worth asking first.
+ */
+export function episodeChangesAnything(
+  cast: CastMember[],
+  people: EpisodePerson[],
+  opts: { isDrama: boolean; season: number; episode: number },
+): boolean {
+  for (const p of people) {
+    const name = personLabel(p, opts.isDrama);
+    if (!name) continue;
+    const existing = cast.find((c) => (p.id && c.actorTmdbId === p.id) || c.name === name);
+    if (!existing) return true;
+    if (existing.firstEpPinned) continue;
+    if (isEarlierThan(existing, opts)) return true;
+  }
+  return false;
+}
+
+/** Is `at` before where this record currently says the character was first seen? */
+function isEarlierThan(c: CastMember, at: { season: number; episode: number }): boolean {
+  const knownSeason = c.season || 1;
+  // No recorded episode means unknown, so anything beats it. epNumFromLabel returns 1 for an
+  // unparseable label, which would read as "episode 1" and block every correction.
+  const knownEp = c.firstEp ? epNumFromLabel(c.firstEp) : Infinity;
+  return at.season < knownSeason || (at.season === knownSeason && at.episode < knownEp);
+}
+
+/**
  * Add these people to a show, in place, inside an updateData callback.
  *
  * Shared by the placeholder cards and the add-all action so the two can't drift on how a record
@@ -102,13 +135,17 @@ export function addPeopleToShow(
 
     const existing = show.cast.find((c) => (p.id && c.actorTmdbId === p.id) || c.name === name);
     if (existing) {
-      const knownSeason = existing.season || 1;
-      // No recorded episode means unknown, so anything beats it. epNumFromLabel returns 1 for an
-      // unparseable label, which would read as "episode 1" and block every correction.
-      const knownEp = existing.firstEp ? epNumFromLabel(existing.firstEp) : Infinity;
-      const isEarlier =
-        opts.season < knownSeason || (opts.season === knownSeason && opts.episode < knownEp);
-      if (isEarlier) {
+      /**
+       * A first appearance the user set is theirs, not the import's to move.
+       *
+       * Without this the feature erased itself on first use: TMDb credits all eighteen Single's
+       * Inferno people on every episode of a season, so setting a contestant to "first appears in
+       * Ep 7" and then opening Ep 1 restamped them Ep 1 and showed them from the start again —
+       * exactly the spoiler the setting exists to prevent. Season moves with it, since the two
+       * together are the position.
+       */
+      if (existing.firstEpPinned) continue;
+      if (isEarlierThan(existing, opts)) {
         existing.season = opts.season;
         existing.firstEp = `Ep ${opts.episode}`;
       }

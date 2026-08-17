@@ -107,6 +107,16 @@ export interface CastMember {
   /** Which optional fields the user has switched on for this member — kept even when left blank. */
   shownFields?: string[];
   /**
+   * The user set `firstEp` deliberately, rather than it being stamped by an episode import.
+   *
+   * Both bits of information are needed and neither can be inferred from the other. `firstEp`
+   * alone can't distinguish "you told me they arrive in episode 7" from "episode 7 is where I
+   * happened to pick them up", and every auto-loaded record carries a value — so treating any
+   * non-empty `firstEp` as a user's choice would make the whole library undeletable, and treating
+   * none of them as one lets an import silently overwrite what the user said.
+   */
+  firstEpPinned?: true;
+  /**
    * Pulled in by selecting an episode rather than chosen by the user.
    *
    * Provenance only — it never becomes false. Whether a record is disposable is decided by

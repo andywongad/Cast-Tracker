@@ -37,6 +37,8 @@ interface FormState {
   occupation: string;
   notes: string;
   firstEp: string;
+  /** The user picked the episode from the control, rather than it arriving with an import. */
+  firstEpPinned: boolean;
   season: number;
   actorName: string;
   actorTmdbId: number | null;
@@ -53,7 +55,7 @@ interface FormState {
 function blankForm(season: number): FormState {
   return {
     name: '', otherNames: [], nickname: '', desc: '', photo: null, photoCrop: null, gender: '', age: '', hometown: '', occupation: '',
-    notes: '', firstEp: '', season, actorName: '', actorTmdbId: null, social: '', socialPlatform: 'Instagram',
+    notes: '', firstEp: '', firstEpPinned: false, season, actorName: '', actorTmdbId: null, social: '', socialPlatform: 'Instagram',
     wikiUrl: '', imdbUrl: '', versions: [], relationships: [], customFields: [], activeFields: [],
   };
 }
@@ -68,6 +70,8 @@ function toSavedFields(f: FormState) {
     shownFields: [...f.activeFields],
     gender: f.gender, age: f.age.trim(), hometown: f.hometown.trim(), occupation: f.occupation.trim(),
     social: f.social.trim(), socialPlatform: f.socialPlatform, firstEp: f.firstEp.trim(), season: f.season || 1,
+    // `undefined` rather than false, so a record nobody has pinned stays byte-identical to before.
+    firstEpPinned: f.firstEpPinned ? (true as const) : undefined,
     actorName: f.actorName.trim(), actorTmdbId: f.actorTmdbId, wikiUrl: f.wikiUrl.trim(), imdbUrl: f.imdbUrl.trim(),
   };
 }
@@ -127,7 +131,8 @@ export default function AddCastSheet() {
       const initial: FormState = {
         name: editing.name, otherNames: editing.otherNames || [], nickname: editing.nickname, desc: editing.desc,
         photo: editing.photo, photoCrop: editing.photoCrop ?? null, gender: editing.gender || '', age: editing.age, hometown: editing.hometown,
-        occupation: editing.occupation, notes: editing.notes || '', firstEp: editing.firstEp, season: editing.season || 1,
+        occupation: editing.occupation, notes: editing.notes || '', firstEp: editing.firstEp,
+        firstEpPinned: editing.firstEpPinned === true, season: editing.season || 1,
         actorName: editing.actorName || '', actorTmdbId: editing.actorTmdbId, social: editing.social,
         socialPlatform: editing.socialPlatform || 'Instagram', wikiUrl: editing.wikiUrl, imdbUrl: editing.imdbUrl,
         versions: (editing.versions || []).map((v) => ({ ...v })), relationships: (editing.relationships || []).map((r) => ({ ...r })),
@@ -362,7 +367,7 @@ export default function AddCastSheet() {
           case 'age': return { ...f, age: '' };
           case 'hometown': return { ...f, hometown: '' };
           case 'occupation': return { ...f, occupation: '' };
-          case 'firstEp': return { ...f, firstEp: '' };
+          case 'firstEp': return { ...f, firstEp: '', firstEpPinned: false };
           case 'customFields': return { ...f, customFields: [] };
         }
       });
@@ -404,6 +409,7 @@ export default function AddCastSheet() {
       shownFields: [...form.activeFields],
       gender: form.gender, age: form.age.trim(), hometown: form.hometown.trim(), occupation: form.occupation.trim(),
       social: form.social.trim(), socialPlatform: form.socialPlatform, firstEp: form.firstEp.trim(), season: form.season || 1,
+      firstEpPinned: form.firstEpPinned ? (true as const) : undefined,
       actorName: form.actorName.trim(), actorTmdbId: form.actorTmdbId, wikiUrl: form.wikiUrl.trim(), imdbUrl: form.imdbUrl.trim(),
     };
     updateData((d) => {
@@ -637,7 +643,14 @@ export default function AddCastSheet() {
             {hasField('firstEp') && (
               <div style={{ marginBottom: 12 }}>
                 <label className="ct-label">FIRST APPEARS IN</label>
-                <select value={form.firstEp} onChange={(e) => setForm((f) => ({ ...f, firstEp: e.target.value }))} className="ct-input">
+                <select
+                  value={form.firstEp}
+                  // Picking from this control is the deliberate act. Pinning on save instead would
+                  // catch every record that merely passed through the form, and autosave would
+                  // pin the entire cast.
+                  onChange={(e) => setForm((f) => ({ ...f, firstEp: e.target.value, firstEpPinned: e.target.value !== '' }))}
+                  className="ct-input"
+                >
                   <option value="">Not sure yet</option>
                   {firstEpOptions.map((ep) => <option key={ep} value={ep}>{ep}</option>)}
                 </select>
