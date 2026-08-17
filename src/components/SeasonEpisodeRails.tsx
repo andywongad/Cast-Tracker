@@ -4,22 +4,20 @@ import type { SeasonEpisode } from '../lib/tmdb';
 /**
  * Season rail over episode rail, both horizontally scrollable.
  *
- * The selected chip in each rail is `position: sticky; left: 0`, so it stays pinned at the left
- * edge while the rest of the rail scrolls behind it — you never lose track of where you are in a
- * 50-season run. Items really do pass underneath, which is why the selected chip carries an opaque
- * fill and a ring (see .ct-rail-item-selected).
+ * The selected chip in each rail is sticky on both edges, so it rides the left edge once you've
+ * scrolled past it and the right edge while you're still short of it — you never lose track of
+ * where you are in a 50-season run, in either direction. Items really do pass underneath, which is
+ * why the selected chip carries an opaque fill and a ring (see .ct-rail-item-selected).
  *
  * Replaces two native selects. Those collapsed into one row and got iOS's wheel picker for free;
  * these cost about 100px more vertical space, and buy a selection that stays pinned in view.
  */
 function Rail({
   children,
-  selectedKey,
   listKey,
   label,
 }: {
   children: React.ReactNode;
-  selectedKey: string | number;
   /** Changes when the rail's contents are replaced wholesale, which resets the scroll to the start. */
   listKey?: string | number;
   label: string;
@@ -35,23 +33,10 @@ function Rail({
     if (listKey !== undefined && railRef.current) railRef.current.scrollLeft = 0;
   }, [listKey]);
 
-  /**
-   * Bring the selection into view when it changes from outside the rail.
-   *
-   * Skipped when the selected chip is already pinned at the left edge: it's sticky, so it reads as
-   * in view even when the rail is scrolled well past it, and scrolling to it would yank the rail
-   * back under the user for no visible gain.
-   */
-  useEffect(() => {
-    const rail = railRef.current;
-    if (!rail) return;
-    const chip = rail.querySelector('[data-selected="true"]') as HTMLElement | null;
-    if (!chip) return;
-    const railBox = rail.getBoundingClientRect();
-    const chipBox = chip.getBoundingClientRect();
-    const visible = chipBox.left >= railBox.left - 1 && chipBox.right <= railBox.right + 1;
-    if (!visible) chip.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-  }, [selectedKey]);
+  /* There was an effect here that scrolled the selection into view when it changed from outside
+     the rail, and a `selectedKey` prop to drive it. It only ran when the chip was out of view, and
+     the chip is now clamped to whichever edge it would otherwise leave, so that condition can no
+     longer be true. Both removed rather than left to never fire. */
 
   return (
     <div className="ct-hscroll">
@@ -88,7 +73,7 @@ export default function SeasonEpisodeRails({
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <Rail selectedKey={currentSeason} label="Season">
+      <Rail label="Season">
         {seasons.map((n) => {
           const selected = n === currentSeason;
           return (
@@ -111,7 +96,7 @@ export default function SeasonEpisodeRails({
           push the button off the edge instead of scrolling. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-      <Rail selectedKey={`${currentSeason}:${currentEpisode}`} listKey={currentSeason} label="Episode">
+      <Rail listKey={currentSeason} label="Episode">
         {episodesLoading && episodes.length === 0 ? (
           <div style={{ minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-faint)' }}>
             Loading episodes&hellip;

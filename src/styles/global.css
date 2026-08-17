@@ -218,9 +218,14 @@ a { color: inherit; }
    The rail scrolls horizontally with momentum and snaps; the selected chip is position:sticky at
    the left edge, so it stays put while the rest of the rail passes behind it. That means it needs
    an opaque background and a stacking context — items genuinely scroll underneath it. */
+/* No scroll snapping. It fought the sticky selection: the selected chip's snap area is computed
+   from its stuck position rather than its real one, so after the rail was reset to the start on a
+   season change the engine pulled it 59px to the next chip — putting Ep 2 directly behind the
+   pinned Ep 1 and making the rail read "Ep 1, Ep 3, Ep 4". Measured: with snapping off it rests at
+   0, with it on it rests at 59, and disabling the sticky offsets changes nothing either way.
+   Snapping 52px chips was never worth much; a rail that hides an episode is worth a lot less. */
 .ct-rail {
   display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;
-  scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding: 2px 0;
@@ -233,7 +238,7 @@ a { color: inherit; }
    Nothing to do about it short of padding the rail by more than the chips save, so the number
    below is honest about what you can actually hit. */
 .ct-rail-item {
-  flex: none; scroll-snap-align: start;
+  flex: none;
   min-height: 36px;
   display: inline-flex; align-items: center; justify-content: center;
   padding: 0 14px; border-radius: 999px;
@@ -253,8 +258,15 @@ a { color: inherit; }
   font-size: 13px;
 }
 
+/* Pinned at whichever edge it would otherwise leave.
+
+   `left: 0` alone kept the selection in view only while scrolling forward past it; scrolling back
+   toward episode 1 pushed a selected Ep 10 off the right-hand edge and you lost your place going
+   the other way. Both offsets set means the chip is clamped into the scrollport from either side:
+   it rides the left edge once you've scrolled past it, the right edge while you're still short of
+   it, and sits in its true position whenever that position is on screen. */
 .ct-rail-item-selected {
-  position: sticky; left: 0; z-index: 1;
+  position: sticky; left: 0; right: 0; z-index: 1;
   border-color: transparent;
   background: var(--accent); color: var(--accent-text);
   /* Reads as a layer above the rail rather than a chip in it, since things pass behind it. */
