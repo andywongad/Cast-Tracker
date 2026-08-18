@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useUI } from '../hooks/useUI';
 import { CCY_RATES, YEARS, fmtMoney, getLiveRates, convertCurrency, inflate } from '../lib/currency';
 import { LANGUAGES, translateText } from '../lib/translate';

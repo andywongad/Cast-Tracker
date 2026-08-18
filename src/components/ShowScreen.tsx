@@ -35,7 +35,7 @@ function cacheEpisode(key: string, people: EpisodePerson[]) {
 }
 
 export default function ShowScreen() {
-  const { data, settings, updateData, showById, pushRecent, setCastColumns } = useStore();
+  const { settings, updateData, showById, pushRecent, setCastColumns } = useStore();
   const { activeShowId, openAddCast } = useUI();
   const show = showById(activeShowId);
 
@@ -298,7 +298,6 @@ export default function ShowScreen() {
   if (!show) return null;
 
   const isRealityShow = show.type === 'REALITY' || show.type === 'VARIETY';
-  const mapOpen = isRealityShow && !gridMode;
   const hasSeasons = seasons.length > 0;
   // Ascending, matching the episode list beside it — Season 1 first, then 2, and so on. The old
   // descending order made sense when these were pills competing for horizontal space; in a

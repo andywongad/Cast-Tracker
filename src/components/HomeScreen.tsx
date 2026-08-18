@@ -8,7 +8,7 @@ import DensityToggle from './DensityToggle';
 
 export default function HomeScreen() {
   const { data, settings, recentShows, showById, backupState, dismissBackupNudge, setShowColumns, keptTotal } = useStore();
-  const { query, setQuery, openAddShow, openRedeem, openEditShow, openSettings } = useUI();
+  const { query, setQuery, openAddShow, openRedeem, openSettings } = useUI();
   const [tmdbResults, setTmdbResults] = useState<TmdbShowResult[]>([]);
   const [tmdbSearching, setTmdbSearching] = useState(false);
 

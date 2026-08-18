@@ -145,12 +145,6 @@ function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: Cro
     });
   };
 
-  /** Pointer position relative to the crop frame, which is the space anchors live in. */
-  const localPoint = (e: React.PointerEvent) => {
-    const r = frameRef.current?.getBoundingClientRect();
-    return r ? { x: e.clientX - r.left, y: e.clientY - r.top } : { x: e.clientX, y: e.clientY };
-  };
-
   const onPointerDown = (e: React.PointerEvent) => {
     // Capture keeps a drag alive when the finger leaves the frame, but it throws if the pointer
     // isn't active — and an exception here would abort the gesture before it's even recorded.

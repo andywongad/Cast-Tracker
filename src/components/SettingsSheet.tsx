@@ -30,7 +30,10 @@ export default function SettingsSheet() {
     a.href = url;
     a.download = `cast-tracker-backup-${stamp}.json`;
     a.click();
-    URL.revokeObjectURL(url);
+    // Revoked on the next tick, not inline. Chrome reads the blob during the click, but Safari and
+    // Firefox have both been observed cancelling the download when the URL is released in the same
+    // synchronous block — and a backup that silently doesn't arrive is the worst possible bug here.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   /**

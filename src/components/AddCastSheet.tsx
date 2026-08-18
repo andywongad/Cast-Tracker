@@ -399,33 +399,6 @@ export default function AddCastSheet() {
   const updateVersion = (id: string, patch: Partial<CastVersion>) => setForm((f) => ({ ...f, versions: f.versions.map((v) => (v.id === id ? { ...v, ...patch } : v)) }));
   const removeVersion = (id: string) => { setForm((f) => ({ ...f, versions: f.versions.filter((v) => v.id !== id) })); setVersionCardId(null); };
 
-  const save = () => {
-    if (!form.name.trim()) return;
-    const fields = {
-      name: form.name.trim(), native: '', nickname: form.nickname.trim(), otherNames: form.otherNames.map((s) => s.trim()).filter(Boolean),
-      desc: form.desc.trim(), photo: form.photo, notes: form.notes.trim(), versions: form.versions,
-      relationships: form.relationships.filter((r) => r.targetId && r.label.trim()).map((r) => ({ ...r, label: r.label.trim() })),
-      customFields: form.customFields.map((cf) => ({ ...cf, label: cf.label.trim(), value: cf.value.trim() })).filter((cf) => cf.label || cf.value),
-      shownFields: [...form.activeFields],
-      gender: form.gender, age: form.age.trim(), hometown: form.hometown.trim(), occupation: form.occupation.trim(),
-      social: form.social.trim(), socialPlatform: form.socialPlatform, firstEp: form.firstEp.trim(), season: form.season || 1,
-      firstEpPinned: form.firstEpPinned ? (true as const) : undefined,
-      actorName: form.actorName.trim(), actorTmdbId: form.actorTmdbId, wikiUrl: form.wikiUrl.trim(), imdbUrl: form.imdbUrl.trim(),
-    };
-    updateData((d) => {
-      const s = d.shows.find((x) => x.id === show.id);
-      if (!s) return;
-      if (editing) {
-        const c = s.cast.find((x) => x.id === editing.id);
-        if (c) Object.assign(c, fields);
-      } else {
-        const color = ['#5B4FD6', '#3F5FA8', '#8B4FA0', '#4F8B7A', '#A0574F', '#4F6BA0', '#7A4FA0'][s.cast.length % 7];
-        s.cast.push({ id: genId('p'), color, ...fields });
-      }
-    });
-    closeAddCast();
-  };
-
   const deleteCast = () => {
     if (!editing) return;
     if (!window.confirm(`Delete this ${termLower}?`)) return;
