@@ -284,6 +284,10 @@ a { color: inherit; }
    below is honest about what you can actually hit. */
 .ct-rail-item {
   flex: none;
+  /* Two taps on an episode chip open its recap, and Safari would otherwise read the same two taps
+     as zoom-to-fit — leaving the page magnified over a sheet the user has to pinch back out of.
+     This also drops the 300ms click delay that double-tap-to-zoom exists to reserve. */
+  touch-action: manipulation;
   min-height: 36px;
   display: inline-flex; align-items: center; justify-content: center;
   padding: 0 14px; border-radius: 999px;

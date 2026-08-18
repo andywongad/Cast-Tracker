@@ -5,6 +5,7 @@ import type { EpisodePerson } from '../lib/episodeCast';
 import { missingFromCast } from '../lib/episodeCast';
 import CastGrid from './CastGrid';
 import CastSkeleton from './CastSkeleton';
+import React from 'react';
 import { CastSection } from './SerialCastView';
 
 /**
@@ -35,6 +36,7 @@ export default function TieredCastView({
   onAddPerson,
   guestsAutoAdded,
   searching,
+  recapAction,
   loading,
 }: {
   show: Show;
@@ -50,6 +52,8 @@ export default function TieredCastView({
   guestsAutoAdded?: boolean;
   /** A cast search is running, so `cast` is already narrowed to matches. */
   searching?: boolean;
+  /** Opens the previous episode's recap. Rides on the heading row, so it costs no height. */
+  recapAction?: React.ReactNode;
   /** The episode's credits are still in flight. */
   loading?: boolean;
 }) {
@@ -140,6 +144,7 @@ export default function TieredCastView({
           members={regularMembers}
           ghosts={missingRegularPeople}
           onAddGhost={onAddPerson}
+          action={recapAction}
         />
       )}
 

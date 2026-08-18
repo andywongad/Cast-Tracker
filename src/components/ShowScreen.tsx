@@ -12,6 +12,8 @@ import RelationshipMap from './RelationshipMap';
 import DensityToggle from './DensityToggle';
 import SeasonEpisodeRails from './SeasonEpisodeRails';
 import TieredCastView from './TieredCastView';
+import RecapSheet from './RecapSheet';
+import RecapButton from './RecapButton';
 import SerialCastView from './SerialCastView';
 
 /**
@@ -36,7 +38,7 @@ function cacheEpisode(key: string, people: EpisodePerson[]) {
 
 export default function ShowScreen() {
   const { settings, updateData, showById, pushRecent, setCastColumns } = useStore();
-  const { activeShowId, openAddCast } = useUI();
+  const { activeShowId, openAddCast, openRecap } = useUI();
   const show = showById(activeShowId);
 
   // A placeholder so the rail has something to draw before TMDb answers. `seasonsReal` says
@@ -381,6 +383,38 @@ export default function ShowScreen() {
     episodeCast.key === `${show.tmdbId}:${currentSeason}:${currentEp}` ? episodeCast.people : [];
   const missingPeople = missingFromCast(currentEpisodeCast, show.cast, show.type === 'DRAMA');
 
+  /**
+   * Which episode "previously" means, given where you are.
+   *
+   * Episode 2 or later points at the one before it in this season. Episode 1 points at the last
+   * episode of the season before — which is exactly when a recap earns its keep, so it is handled
+   * rather than suppressed. The very first episode of a show has nothing behind it.
+   *
+   * The episode number for the cross-season case is resolved by RecapSheet, which fetches that
+   * season only when the sheet is opened; here we only need to know that one exists.
+   */
+  const previousOf = (season: number, episode: number): { season: number; episode: number } | null =>
+    episode > 1
+      ? { season, episode: episode - 1 }
+      : season > 1
+        ? { season: season - 1, episode: 0 } // 0 = last of that season, resolved on open
+        : null;
+
+  const previousEpisode = previousOf(currentSeason, currentEp);
+
+  /** Double-tapping a chip is the shortcut into the same sheet the heading button opens. */
+  const openRecapFor = (episode: number) => {
+    const prev = previousOf(currentSeason, episode);
+    if (prev && show.tmdbId) openRecap(prev.season, prev.episode);
+  };
+
+  const recapAction = previousEpisode && show.tmdbId ? (
+    <RecapButton
+      label={`What happened previously, before season ${currentSeason} episode ${currentEp}`}
+      onClick={() => openRecap(previousEpisode.season, previousEpisode.episode)}
+    />
+  ) : undefined;
+
   const addPeople = (people: EpisodePerson[]) => {
     updateData((d) => {
       const s2 = d.shows.find((x) => x.id === show.id);
@@ -437,6 +471,7 @@ export default function ShowScreen() {
               currentEpisode={bulkEp}
               onEpisodeChange={(n) => setMapEpisode(`Ep ${n}`)}
               episodesLoading={episodesLoading}
+              onEpisodeRecap={openRecapFor}
               /* Selecting an episode now shows its cast as placeholder cards, so this is no longer
                  the way in — it's the shortcut for taking all of them at once, and it only appears
                  when there is actually something left to take. Two lines, breaking after "Add all",
@@ -592,6 +627,7 @@ export default function ShowScreen() {
                   onAddPerson={showBulk && !cq ? (person) => addPeople([person]) : undefined}
                   guestsAutoAdded={isTiered}
                   searching={!!cq}
+                  recapAction={recapAction}
                 />
               ) : show.type === 'DRAMA' ? (
                 /* Serialised scripted show: the episode on top, everyone met so far underneath.
@@ -608,6 +644,7 @@ export default function ShowScreen() {
                   ghosts={missingPeople}
                   onAddGhost={showBulk && !cq ? (person) => addPeople([person]) : undefined}
                   searching={!!cq}
+                  recapAction={recapAction}
                 />
               ) : (
                 /* Reality: the season roster is the unit, and tapping an episode doesn't change
@@ -627,6 +664,12 @@ export default function ShowScreen() {
           onToggleHelp={() => setMapHelpOpen((v) => !v)}
         />
       )}
+
+      <RecapSheet
+        episodesForSeason={seasonEpisodes}
+        currentSeason={currentSeason}
+        showTmdbId={show.tmdbId ?? null}
+      />
     </div>
   );
 }

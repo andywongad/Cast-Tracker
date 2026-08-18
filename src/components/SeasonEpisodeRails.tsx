@@ -55,6 +55,7 @@ export default function SeasonEpisodeRails({
   currentEpisode,
   onEpisodeChange,
   episodesLoading,
+  onEpisodeRecap,
   trailing,
 }: {
   seasons: number[];
@@ -65,12 +66,33 @@ export default function SeasonEpisodeRails({
   onEpisodeChange: (n: number) => void;
   episodesLoading: boolean;
   /**
+   * Double-tapping an episode opens its recap. Strictly an accelerator — the labelled "Previously"
+   * button on the section heading is the real route in, because a hidden gesture is no route at
+   * all for a keyboard user, and on iOS VoiceOver double-tap already means "activate".
+   */
+  onEpisodeRecap?: (episode: number) => void;
+  /**
    * Sits at the end of the episode row rather than on a line of its own. The import button used
    * to take a full row under the rails, and every pixel of header is a pixel of cast you can't
    * see — which is the whole point of this screen.
    */
   trailing?: React.ReactNode;
 }) {
+  /**
+   * The first tap of a double-tap still selects, immediately — the second tap only adds the recap.
+   * Waiting ~300ms to see whether a second tap is coming would make every episode change feel
+   * sluggish to the overwhelming majority of taps that are single. Re-selecting the episode you
+   * are already on is a no-op, so the doubled selection costs nothing.
+   */
+  const lastTap = useRef<{ episode: number; at: number }>({ episode: -1, at: 0 });
+  const tapEpisode = (n: number) => {
+    const now = Date.now();
+    const isSecond = lastTap.current.episode === n && now - lastTap.current.at < 320;
+    lastTap.current = isSecond ? { episode: -1, at: 0 } : { episode: n, at: now };
+    onEpisodeChange(n);
+    if (isSecond) onEpisodeRecap?.(n);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <Rail label="Season">
@@ -110,7 +132,7 @@ export default function SeasonEpisodeRails({
                 role="tab"
                 aria-selected={selected}
                 data-selected={selected}
-                onClick={() => onEpisodeChange(ep.number)}
+                onClick={() => tapEpisode(ep.number)}
                 className={`ct-rail-item ct-rail-item-sm${selected ? ' ct-rail-item-selected' : ''}`}
                 // Number only. Titles were tried and taken back out: they made every chip a
                 // different width, which is hard to scan and cost most of the rail's visible

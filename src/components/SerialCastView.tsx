@@ -1,3 +1,4 @@
+import React from 'react';
 import type { CastMember, Show } from '../types';
 import type { EpisodePerson } from '../lib/episodeCast';
 import { metBy } from '../lib/episodeCast';
@@ -32,6 +33,7 @@ export function CastSection({
   members,
   ghosts,
   onAddGhost,
+  action,
 }: {
   show: Show;
   title: string;
@@ -39,12 +41,19 @@ export function CastSection({
   members: CastMember[];
   ghosts?: EpisodePerson[];
   onAddGhost?: (p: EpisodePerson) => void;
+  /**
+   * Sits at the end of the heading row, which exists whether or not anything is in it — so a
+   * control placed here is free. Anything on its own line would cost a permanent ~24px to serve
+   * an occasional need, on the screen whose whole job is showing as much cast as possible.
+   */
+  action?: React.ReactNode;
 }) {
   return (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>{title}</div>
         {note && <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>{note}</div>}
+        {action && <div style={{ marginLeft: 'auto' }}>{action}</div>}
       </div>
       <CastGrid show={show} cast={members} ghosts={ghosts} onAddGhost={onAddGhost} />
     </div>
@@ -62,6 +71,7 @@ export default function SerialCastView({
   ghosts,
   onAddGhost,
   searching,
+  recapAction,
 }: {
   show: Show;
   cast: CastMember[];
@@ -75,6 +85,8 @@ export default function SerialCastView({
   ghosts?: EpisodePerson[];
   onAddGhost?: (p: EpisodePerson) => void;
   searching?: boolean;
+  /** Opens the previous episode's recap. Rides on the heading row, so it costs no height. */
+  recapAction?: React.ReactNode;
 }) {
   const episodeIds = new Set(episodePeople.map((p) => p.id));
   const inEpisode = cast.filter((c) => c.actorTmdbId && episodeIds.has(c.actorTmdbId));
@@ -102,7 +114,7 @@ export default function SerialCastView({
           <CastSkeleton rows={2} />
         </div>
       ) : inEpisode.length > 0 ? (
-        <CastSection show={show} title={`Everyone credited on Ep ${episodeNumber}`} members={inEpisode} ghosts={ghosts} onAddGhost={onAddGhost} />
+        <CastSection show={show} title={`Everyone credited on Ep ${episodeNumber}`} members={inEpisode} ghosts={ghosts} onAddGhost={onAddGhost} action={recapAction} />
       ) : (
         <div style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 20 }}>
           TMDb lists no cast for Ep {episodeNumber}.

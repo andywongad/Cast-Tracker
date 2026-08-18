@@ -46,7 +46,9 @@ type Layer =
   | { k: 'translator' }
   | { k: 'share' }
   | { k: 'redeem'; mode: 'show' | 'cast' }
-  | { k: 'webView'; url: string; label: string };
+  | { k: 'webView'; url: string; label: string }
+  /** The previous episode's recap. Carries which episode it is *about*, not the one you're on. */
+  | { k: 'recap'; season: number; episode: number };
 
 /** Namespaced so anything else that lands in history.state is left alone. */
 const STATE_KEY = 'ct.nav';
@@ -130,6 +132,10 @@ interface UIValue {
   webView: { open: boolean; url: string; label: string };
   openWebView: (url: string, label: string) => void;
   closeWebView: () => void;
+
+  recap: { open: boolean; season: number; episode: number };
+  openRecap: (season: number, episode: number) => void;
+  closeRecap: () => void;
 }
 
 const UIContext = createContext<UIValue | null>(null);
@@ -281,6 +287,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const openWebView = useCallback((url: string, label: string) => push({ k: 'webView', url, label }), [push]);
   const closeWebView = useCallback(() => pop(), [pop]);
 
+  const openRecap = useCallback((season: number, episode: number) => push({ k: 'recap', season, episode }), [push]);
+  const closeRecap = useCallback(() => pop(), [pop]);
+
   // Every flag the app used to hold separately is now read off the stack, so there is exactly one
   // source of truth for what's on screen and it's the same one the back gesture manipulates.
   const derived = useMemo(() => {
@@ -290,6 +299,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     const castDetail = lastOf(stack, 'castDetail');
     const redeemLayer = lastOf(stack, 'redeem');
     const webViewLayer = lastOf(stack, 'webView');
+    const recapLayer = lastOf(stack, 'recap');
     return {
       screen: (showLayer ? 'show' : 'home') as 'home' | 'show',
       activeShowId: showLayer?.id ?? null,
@@ -305,6 +315,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       shareOpen: stack.some((l) => l.k === 'share'),
       redeem: { open: !!redeemLayer, mode: redeemLayer?.mode ?? ('show' as const) },
       webView: { open: !!webViewLayer, url: webViewLayer?.url ?? '', label: webViewLayer?.label ?? '' },
+      recap: { open: !!recapLayer, season: recapLayer?.season ?? 0, episode: recapLayer?.episode ?? 0 },
     };
   }, [stack]);
 
@@ -325,12 +336,14 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     shareSheet: derived.shareOpen ? shareData : null, openShareSheet, closeShareSheet,
     redeem: derived.redeem, openRedeem, closeRedeem,
     webView: derived.webView, openWebView, closeWebView,
+    recap: derived.recap, openRecap, closeRecap,
   }), [derived, query, addShowPrefill, converterPrefill, shareData,
       openShow, goHome, resetToHome, openAddShow, openEditShow, closeAddShow,
       openAddCast, openEditCast, closeAddCast, openCastDetail, closeCastDetail,
       openSettings, closeSettings, openAuth, closeAuth, openShowMenu, closeShowMenu,
       openFeedback, closeFeedback, openConverter, closeConverter, openTranslator, closeTranslator,
-      openShareSheet, closeShareSheet, openRedeem, closeRedeem, openWebView, closeWebView]);
+      openShareSheet, closeShareSheet, openRedeem, closeRedeem, openWebView, closeWebView,
+      openRecap, closeRecap]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }

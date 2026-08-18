@@ -172,6 +172,8 @@ export async function getSeasonCastIds(tmdbId: number, season: number): Promise<
 export interface SeasonEpisode {
   number: number;
   name: string;
+  /** What happened. Rides along on the season payload; the mapper used to discard it. */
+  overview: string;
   /** Guest stars credited on this episode. Comes free with the season payload. */
   guests: EpisodeCastMember[];
 }
@@ -190,6 +192,7 @@ export async function getSeasonEpisodes(tmdbId: number, season: number): Promise
   return (data.episodes || []).map((e) => ({
     number: e.episode_number,
     name: e.name || '',
+    overview: e.overview || '',
     guests: (e.guest_stars || []).map((p: any) => ({
       id: p.id,
       name: p.name,
