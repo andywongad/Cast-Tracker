@@ -23,7 +23,17 @@ export const SHOW_TYPE_SHORT: Record<ShowType, string> = {
   VARIETY: 'RE',
 };
 
-export const PALETTE = ['#5B4FD6', '#3F5FA8', '#8B4FA0', '#4F8B7A', '#A0574F', '#4F6BA0', '#7A4FA0'];
+/**
+ * Tile and avatar backgrounds, taken from the same photograph as the theme.
+ *
+ * These sit behind white initials and a white cast count, so every one has to be dark enough to
+ * carry that — which is why they come from the water rather than the mist. They were an indigo and
+ * purple set left over from the old accent, and being the largest blocks of colour on the home
+ * screen, leaving them would have meant the palette stopped at the chrome and the content
+ * contradicted it. One warm tone at the end so a wall of tiles isn't monotonous, matched to the
+ * gate rather than picked freely.
+ */
+export const PALETTE = ['#2E4356', '#3C5067', '#48607A', '#1B3448', '#5A7189', '#10293F', '#9C4433'];
 
 export function colorForIndex(i: number): string {
   return PALETTE[i % PALETTE.length];

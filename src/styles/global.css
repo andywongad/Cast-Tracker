@@ -104,7 +104,7 @@ a { color: inherit; }
 }
 
 .ct-btn-primary {
-  height: 52px; border: none; border-radius: 16px; background: var(--accent); color: var(--accent-text);
+  height: 52px; border: none; border-radius: 16px; background: var(--cta); color: var(--cta-text);
   font-size: 15px; font-weight: 500; cursor: pointer; letter-spacing: -0.01em;
 }
 .ct-btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }

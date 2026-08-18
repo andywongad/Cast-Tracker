@@ -413,7 +413,7 @@ export default function AddCastSheet() {
       afPreview.forEach((p) => {
         const name = isDrama && p.character ? p.character : p.name;
         if (!name || s.cast.some((c) => c.name === name)) return;
-        const color = ['#5B4FD6', '#3F5FA8', '#8B4FA0', '#4F8B7A', '#A0574F', '#4F6BA0', '#7A4FA0'][s.cast.length % 7];
+        const color = colorForIndex(s.cast.length);
         s.cast.push({
           id: genId('p'), color, name, native: '', nickname: '', otherNames: [], desc: '', photo: p.photo || null,
           notes: '', gender: '', age: '', hometown: '', occupation: '', social: '', socialPlatform: 'Instagram',

@@ -1,6 +1,6 @@
 import type { CastMember } from '../types';
 import type { AggregateCastMember, EpisodeCastMember } from './tmdb';
-import { epNumFromLabel } from './utils';
+import { epNumFromLabel, colorForIndex } from './utils';
 
 /**
  * Who TMDb credits in one episode, and which of them you haven't added yet.
@@ -27,8 +27,6 @@ export interface EpisodePerson {
   character: string;
   photo: string | null;
 }
-
-const PALETTE = ['#5B4FD6', '#3F5FA8', '#8B4FA0', '#4F8B7A', '#A0574F', '#4F6BA0', '#7A4FA0'];
 
 /** What this person is called on a card: the character for scripted, the person for reality. */
 export function personLabel(p: EpisodePerson, isDrama: boolean): string {
@@ -72,7 +70,7 @@ export function personToCastMember(
     // Provenance, so a record nobody chose and nobody has edited can be cleared later.
     ...(opts.auto ? { auto: true as const } : {}),
     id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6),
-    color: PALETTE[opts.castLength % PALETTE.length],
+    color: colorForIndex(opts.castLength),
     name: personLabel(p, opts.isDrama),
     native: '', nickname: '', otherNames: [], desc: '', photo: p.photo || null, notes: '',
     gender: '', age: '', hometown: '', occupation: '', social: '', socialPlatform: 'Instagram',
