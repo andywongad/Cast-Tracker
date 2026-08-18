@@ -5,6 +5,16 @@ import { useDismissible } from './Sheet';
 const FRAME = 220;
 /** Uploads are stored at this longest edge — big enough to re-crop later, small enough for localStorage. */
 const UPLOAD_MAX = 800;
+/**
+ * Largest file we'll hand to the decoder.
+ *
+ * The output is capped at UPLOAD_MAX and re-encoded, but that happens *after* the browser has
+ * decoded the original into a bitmap: a 50-megapixel phone photo is roughly 200MB in memory at
+ * 4 bytes a pixel, which is enough to take the tab down on a mid-range Android before any crop
+ * runs. 20MB comfortably clears a 48MP JPEG while ruling out RAW-sized files and the pathological
+ * cases. The message tells the user what to do about it, since resizing before upload works.
+ */
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 /**
  * A remote image already loaded without CORS sits in the HTTP cache as an opaque response, and the
@@ -52,6 +62,7 @@ function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: Cro
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [failed, setFailed] = useState(false);
+  const [tooLarge, setTooLarge] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -68,16 +79,25 @@ function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: Cro
     // Resume the stored framing; size is a percentage where 100 = zoom 1.
     setZoom(initial ? Math.min(3, Math.max(1, initial.size / 100)) : 1);
     if (file) {
+      // Checked before createObjectURL, so an oversized file is never decoded at all.
+      if (file.size > MAX_UPLOAD_BYTES) {
+        setTooLarge(true);
+        setFailed(true);
+        setSrc(null);
+        return;
+      }
+      setTooLarge(false);
       const url = URL.createObjectURL(file);
       setSrc(url);
       return () => URL.revokeObjectURL(url);
     }
+    setTooLarge(false);
     setSrc(srcProp ? corsUrl(srcProp) : null);
   }, [file, srcProp, initial]);
 
   useEffect(() => { offsetRef.current = offset; }, [offset]);
 
-  if (!src) return null;
+  if (!src && !tooLarge) return null;
 
   // Render maths mirror cropStyle(): width is `size%` of the frame, height follows aspect.
   const dispW = FRAME * zoom;
@@ -220,7 +240,10 @@ function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: Cro
     >
       <div style={{ background: 'var(--sheet)', borderRadius: 20, padding: 20, width: 280, maxWidth: '88vw', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
         <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4, textAlign: 'center' }}>{file ? 'Adjust photo' : 'Reframe photo'}</div>
-        <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 14, textAlign: 'center' }}>Drag to move &middot; pinch or use the slider to zoom</div>
+        {!tooLarge && (
+          <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 14, textAlign: 'center' }}>Drag to move &middot; pinch or use the slider to zoom</div>
+        )}
+        {src && (
         <div
           ref={frameRef}
           onPointerDown={onPointerDown} onPointerMove={onPointerMove}
@@ -238,7 +261,9 @@ function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: Cro
             style={{ position: 'absolute', left: offset.x, top: offset.y, width: dispW, height: dispH, maxWidth: 'none', userSelect: 'none', pointerEvents: 'none' }}
           />
         </div>
+        )}
 
+        {src && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: failed ? 10 : 18 }}>
           <input type="range" min={1} max={3} step={0.01} value={zoom} onChange={(e) => onZoom(parseFloat(e.target.value))} style={{ flex: 1 }} />
           <button
@@ -249,10 +274,13 @@ function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: Cro
             Original
           </button>
         </div>
+        )}
 
         {failed && (
           <div style={{ fontSize: 13.5, color: '#C24B4B', lineHeight: 1.45, marginBottom: 12, textAlign: 'center' }}>
-            This image can&rsquo;t be reframed here. Upload your own copy instead.
+            {tooLarge
+              ? `That photo is ${Math.round((file?.size ?? 0) / 1024 / 1024)}MB, which is too large to open here. Resize it below 20MB and try again.`
+              : 'This image can\u2019t be reframed here. Upload your own copy instead.'}
           </div>
         )}
         <div style={{ display: 'flex', gap: 9 }}>

@@ -29,6 +29,8 @@ interface StoreValue {
   shareStore: ShareStore;
   recentShows: string[];
   updateData: (fn: (d: AppData) => void) => void;
+  /** The last save to localStorage failed — almost always a full quota. Changes are on screen only. */
+  storageFailed: boolean;
   setTheme: (t: 'Light' | 'Dark') => void;
   setShowColumns: (n: number) => void;
   setCastColumns: (n: number) => void;
@@ -59,11 +61,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [shareStore, setShareStore] = useState<ShareStore>(() => storage.loadShares());
   const [recentShows, setRecentShows] = useState<string[]>(() => storage.loadRecent());
 
+  const [storageFailed, setStorageFailed] = useState(false);
+
   const updateData = useCallback((fn: (d: AppData) => void) => {
     setData((prev) => {
       const next: AppData = structuredClone(prev);
       fn(next);
-      storage.persistData(next);
+      /**
+       * A failed write used to be indistinguishable from a successful one: the edit stayed in
+       * React state, the user saw it, and it was gone on reload. Recording the outcome lets the
+       * app say so. Cleared again on the next write that lands, so freeing space fixes it without
+       * a restart.
+       */
+      setStorageFailed(!storage.persistData(next));
       return next;
     });
   }, []);
@@ -230,8 +240,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<StoreValue>(() => ({
     data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave,
     exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem,
-    backupState, dismissBackupNudge, disposableCount, clearDisposable, keptTotal,
-  }), [keptTotal, data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
+    backupState, dismissBackupNudge, disposableCount, clearDisposable, keptTotal, storageFailed,
+  }), [keptTotal, storageFailed, data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

@@ -19,9 +19,44 @@ import CastDetailSheet from './components/CastDetailSheet';
 import AuthSheet from './components/AuthSheet';
 import ShowMenuSheet from './components/ShowMenuSheet';
 
+/**
+ * Shown when a save to localStorage fails, which in practice means the quota is full.
+ *
+ * Above the scroll area rather than inside a screen, because the moment it matters you could be
+ * anywhere — adding cast, editing a character — and every one of those edits is now living only in
+ * memory. It names the way out rather than just the problem: an export keeps the part that can't
+ * be re-fetched, and clearing auto-loaded cast is what actually frees the space.
+ */
+function StorageFailedBar({ onOpenSettings }: { onOpenSettings: () => void }) {
+  return (
+    <div
+      role="alert"
+      style={{
+        flex: 'none', padding: '10px 16px', background: '#C24B4B', color: '#fff',
+        fontSize: 12.5, lineHeight: 1.45, display: 'flex', alignItems: 'center', gap: 10,
+      }}
+    >
+      <span style={{ flex: 1 }}>
+        <strong>Changes aren&rsquo;t being saved.</strong> This device&rsquo;s storage is full, so
+        anything you edit now will be gone when you reopen the app.
+      </span>
+      <button
+        onClick={onOpenSettings}
+        style={{
+          flex: 'none', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 9,
+          background: 'transparent', color: '#fff', fontSize: 12, fontWeight: 700,
+          padding: '7px 10px', cursor: 'pointer',
+        }}
+      >
+        Free up space
+      </button>
+    </div>
+  );
+}
+
 function Shell() {
-  const { settings } = useStore();
-  const { screen, activeShowId } = useUI();
+  const { settings, storageFailed } = useStore();
+  const { screen, activeShowId, openSettings } = useUI();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   useEffect(() => {
@@ -73,6 +108,7 @@ function Shell() {
   return (
     <div className="ct-app" data-keyboard={keyboardOpen ? 'open' : undefined} style={rootStyle}>
       <TopBar />
+      {storageFailed && <StorageFailedBar onOpenSettings={openSettings} />}
       <div id="ct-scroll" className="ct-scroll">
         {screen === 'home' ? <HomeScreen /> : <ShowScreen key={activeShowId} />}
       </div>

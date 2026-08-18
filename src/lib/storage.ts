@@ -1,4 +1,4 @@
-import type { AppData, AppSettings, ShareStore } from '../types';
+import type { AppData, AppSettings, CastMember, ShareStore, Show } from '../types';
 
 const DATA_KEY = 'ct.v2';
 const SETTINGS_KEY = 'ct.settings.v1';
@@ -14,15 +14,76 @@ function safeParse<T>(raw: string | null, fallback: T): T {
   }
 }
 
-export function loadData(): AppData {
-  return safeParse<AppData>(localStorage.getItem(DATA_KEY), { shows: [] });
+/** Where unreadable data is parked rather than thrown away. See loadData. */
+const QUARANTINE_KEY = 'ct.v2.unreadable';
+
+/**
+ * Arrays the UI walks without checking first, so a record missing one is a crash rather than a
+ * gap. `versions` is the live example: CastCard reads `c.versions.length` unguarded.
+ */
+function coerceCast(raw: unknown): CastMember[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((c): c is CastMember => !!c && typeof c === 'object' && typeof (c as CastMember).id === 'string')
+    .map((c) => ({
+      ...c,
+      otherNames: Array.isArray(c.otherNames) ? c.otherNames : [],
+      versions: Array.isArray(c.versions) ? c.versions : [],
+      relationships: Array.isArray(c.relationships) ? c.relationships : [],
+    }));
 }
 
-export function persistData(data: AppData) {
+function coerceShow(raw: unknown): Show | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const s = raw as Show;
+  if (typeof s.id !== 'string' || !s.id) return null;
+  return { ...s, title: typeof s.title === 'string' ? s.title : '', cast: coerceCast(s.cast) };
+}
+
+/**
+ * Read the library, surviving anything that isn't the shape we expect.
+ *
+ * The previous version cast the parsed JSON straight to AppData. That only ever caught a *parse*
+ * failure — `JSON.parse("null")` succeeds and returns null, so `loadData()` returned null and the
+ * first `data.shows.reduce(...)` threw on every visit, with no way out short of clearing site
+ * data. An older schema, a half-written import, or one malformed record did the same.
+ *
+ * Two rules here. A show that can't be understood is dropped rather than taking the library down
+ * with it. And when the top-level shape is unusable, the raw text is copied to a quarantine key
+ * before we hand back an empty library — otherwise the first save would overwrite the only copy
+ * of data that might still be recoverable by hand.
+ */
+export function loadData(): AppData {
+  const raw = localStorage.getItem(DATA_KEY);
+  const parsed = safeParse<unknown>(raw, null);
+
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as AppData).shows)) {
+    if (raw) {
+      try {
+        localStorage.setItem(QUARANTINE_KEY, raw);
+      } catch {
+        // Nothing better to do: if there's no room to park it, there was no room to keep it.
+      }
+    }
+    return { shows: [] };
+  }
+
+  return { shows: (parsed as AppData).shows.map(coerceShow).filter((s): s is Show => !!s) };
+}
+
+/**
+ * Returns whether the write landed.
+ *
+ * It used to swallow the failure, which meant a full quota looked exactly like a successful save:
+ * the edit stayed on screen, backed by nothing, and vanished on reload. The caller now knows, so
+ * it can say so — see `storageFailed` in useStore.
+ */
+export function persistData(data: AppData): boolean {
   try {
     localStorage.setItem(DATA_KEY, JSON.stringify(data));
+    return true;
   } catch {
-    // storage full / unavailable — silently ignore, matches prototype behavior
+    return false;
   }
 }
 
@@ -70,6 +131,7 @@ export function persistRecent(arr: string[]) {
 
 export function clearAllData() {
   localStorage.removeItem(DATA_KEY);
+  localStorage.removeItem(QUARANTINE_KEY);
   localStorage.removeItem(SHARE_KEY);
   localStorage.removeItem(RECENT_KEY);
   localStorage.removeItem(BACKUP_KEY);
