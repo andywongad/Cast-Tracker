@@ -14,8 +14,25 @@ import SeasonEpisodeRails from './SeasonEpisodeRails';
 import TieredCastView from './TieredCastView';
 import SerialCastView from './SerialCastView';
 
-/** Episode credits already fetched this session, keyed showId:season:episode. */
+/**
+ * Episode credits already fetched this session, keyed showId:season:episode.
+ *
+ * Capped because it was unbounded: roughly 2.5KB per episode visited, held for the life of the
+ * tab, and a long session on a procedural walks through a lot of episodes. A Map iterates in
+ * insertion order, so the oldest key is the first one. Evicting only costs a refetch, which the
+ * edge usually answers.
+ */
+const EPISODE_CACHE_MAX = 60;
 const episodeCastCache = new Map<string, EpisodePerson[]>();
+
+function cacheEpisode(key: string, people: EpisodePerson[]) {
+  episodeCastCache.set(key, people);
+  while (episodeCastCache.size > EPISODE_CACHE_MAX) {
+    const oldest = episodeCastCache.keys().next().value;
+    if (oldest === undefined) break;
+    episodeCastCache.delete(oldest);
+  }
+}
 
 export default function ShowScreen() {
   const { data, settings, updateData, showById, pushRecent, setCastColumns } = useStore();
@@ -167,7 +184,7 @@ export default function ShowScreen() {
       const people = toEpisodePeople(list);
       // Cache even an empty result: a season/episode TMDb has no credits for shouldn't be asked
       // about again every time it's selected.
-      episodeCastCache.set(key, people);
+      cacheEpisode(key, people);
       if (alive) { setEpisodeCast({ key, people }); setEpisodeCastLoading(false); }
     });
     return () => { alive = false; };

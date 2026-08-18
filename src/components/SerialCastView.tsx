@@ -25,7 +25,7 @@ import CastSkeleton from './CastSkeleton';
  * and 24 rebuilt for a single keystroke in the search box, every image with them. Hoisting makes
  * it the same type across renders, which is what lets the memo on the cards do anything.
  */
-function Section({
+export function CastSection({
   show,
   title,
   note,
@@ -102,7 +102,7 @@ export default function SerialCastView({
           <CastSkeleton rows={2} />
         </div>
       ) : inEpisode.length > 0 ? (
-        <Section show={show} title={`Everyone credited on Ep ${episodeNumber}`} members={inEpisode} ghosts={ghosts} onAddGhost={onAddGhost} />
+        <CastSection show={show} title={`Everyone credited on Ep ${episodeNumber}`} members={inEpisode} ghosts={ghosts} onAddGhost={onAddGhost} />
       ) : (
         <div style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 20 }}>
           TMDb lists no cast for Ep {episodeNumber}.
@@ -112,7 +112,7 @@ export default function SerialCastView({
       {/* No placeholders on this section — they belong to the episode above, and passing them to
           both would render each one twice. */}
       {metSoFar.length > 0 && (
-        <Section show={show} title="Everyone you've met so far" note={`${metSoFar.length}`} members={metSoFar} />
+        <CastSection show={show} title="Everyone you've met so far" note={`${metSoFar.length}`} members={metSoFar} />
       )}
     </div>
   );

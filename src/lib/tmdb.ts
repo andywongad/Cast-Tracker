@@ -29,6 +29,18 @@ export interface TmdbShowResult {
 }
 
 /**
+ * Requests currently in flight, by URL.
+ *
+ * Two callers asking for the same thing at the same moment is normal here, not exceptional:
+ * StrictMode double-invokes every effect in development, and tapping along the episode rail fires
+ * a fetch per tap while the previous one is still open. Sharing the promise means the second
+ * caller waits on the first instead of opening a second request for the same bytes. Entries are
+ * removed on settle, so this never acts as a response cache — a later call still goes to the
+ * network, and the edge decides whether that costs anything.
+ */
+const inFlight = new Map<string, Promise<unknown>>();
+
+/**
  * Always through /api/tmdb, which holds the key server-side. Locally, vite.config.ts proxies
  * /api to a deployed origin, so dev and production take the identical path.
  *
@@ -36,17 +48,28 @@ export interface TmdbShowResult {
  * It silently outranked the proxy, so a stale key left in .env — a rotated one, returning 401 —
  * made search fail with no error anywhere. One path is worth more than offline convenience.
  */
+
 async function get<T>(path: string, params: Record<string, string | number> = {}): Promise<T | null> {
   const flat = Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]));
   const url = `/api/tmdb?${new URLSearchParams({ path, ...flat }).toString()}`;
 
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
+  const pending = inFlight.get(url);
+  if (pending) return pending as Promise<T | null>;
+
+  const request = (async (): Promise<T | null> => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return (await res.json()) as T;
+    } catch {
+      return null;
+    }
+  })();
+
+  inFlight.set(url, request);
+  // Always clears, including on the failure paths above, so one bad response can't wedge the URL.
+  request.finally(() => { if (inFlight.get(url) === request) inFlight.delete(url); });
+  return request;
 }
 
 export function inferShowType(genreIds: number[] | undefined): ShowType {

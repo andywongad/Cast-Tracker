@@ -5,6 +5,7 @@ import type { EpisodePerson } from '../lib/episodeCast';
 import { missingFromCast } from '../lib/episodeCast';
 import CastGrid from './CastGrid';
 import CastSkeleton from './CastSkeleton';
+import { CastSection } from './SerialCastView';
 
 /**
  * Two-tier cast view: a Regulars row that persists across every season and episode, and below it
@@ -111,16 +112,6 @@ export default function TieredCastView({
   const missingRegularPeople = missing.filter((p) => regularIds.has(p.id));
   const missingGuestPeople = missing.filter((p) => !regularIds.has(p.id));
 
-  const Section = ({ title, note, members, ghosts }: { title: string; note?: string; members: CastMember[]; ghosts?: EpisodePerson[] }) => (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>{title}</div>
-        {note && <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>{note}</div>}
-      </div>
-      <CastGrid show={show} cast={members} ghosts={ghosts} onAddGhost={onAddPerson} />
-    </div>
-  );
-
   return (
     <div>
       {/* Said once, at the top, rather than tucked into a single tier: on these shows the whole
@@ -139,15 +130,16 @@ export default function TieredCastView({
         </div>
       )}
 
+      {/* "in Ep N", not "in every episode": these are the regulars TMDb bills on the selected
+          episode, which on a show running twenty-five seasons is not the same set throughout. */}
       {!loading && (regularMembers.length > 0 || missingRegularPeople.length > 0) && (
-        <Section
-          /* "in this episode", not "in every episode": these are the regulars TMDb bills on the
-             selected episode, which on a show running twenty-five seasons is not the same set
-             throughout. */
+        <CastSection
+          show={show}
           title="Regulars"
           note={`in Ep ${episode?.number ?? ''}${missingRegularPeople.length > 0 ? ` · tap to add ${missingRegularPeople.length}` : ''}`}
           members={regularMembers}
           ghosts={missingRegularPeople}
+          onAddGhost={onAddPerson}
         />
       )}
 
@@ -164,13 +156,15 @@ export default function TieredCastView({
 
       {!loading && episode ? (
         guestMembers.length > 0 || missingGuestPeople.length > 0 ? (
-          <Section
+          <CastSection
+            show={show}
             title={`Guests in Ep ${episode.number}`}
             /* Say so when the app added these itself. A cast list that grows on its own is
                worth a word of explanation, not a silent surprise. */
             note={episode.name || undefined}
             members={guestMembers}
             ghosts={missingGuestPeople}
+            onAddGhost={onAddPerson}
           />
         ) : (
           <div style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 20 }}>
@@ -180,7 +174,8 @@ export default function TieredCastView({
       ) : null}
 
       {handAdded.length > 0 && (
-        <Section
+        <CastSection
+          show={show}
           title="Added by hand"
           note="not linked to TMDb, so they can't be placed in an episode"
           members={handAdded}
