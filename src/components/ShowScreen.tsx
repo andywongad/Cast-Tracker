@@ -467,6 +467,8 @@ export default function ShowScreen() {
                 value={castQuery}
                 onChange={(e) => setCastQuery(e.target.value)}
                 placeholder="Search this cast&hellip;"
+                type="search"
+                aria-label="Search this show's cast"
                 /* Raised rather than outlined: this sits under a row of chips that already carry
                    strokes, and another bordered box in that stack reads as one more of them.
                    Shadow is how everything else in this design separates. */

@@ -64,12 +64,12 @@ export default function HomeScreen() {
     <div data-screen-label="Home" style={{ padding: '16px 16px 40px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, height: 46, padding: '0 14px', borderRadius: 13, background: 'var(--field-bg)', boxShadow: 'var(--shadow-card)', marginBottom: 18 }}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="var(--text-muted)" strokeWidth="1.6" /><path d="M11 11l3.5 3.5" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round" /></svg>
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search shows" style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 15, color: 'var(--text)' }} />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search shows" type="search" aria-label="Search your shows and TMDb" style={{ flex: 1, alignSelf: 'stretch', minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 15, color: 'var(--text)' }} />
         {isSearching && <button onClick={() => setQuery('')} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', padding: 0 }}>&times;</button>}
       </div>
 
       {/* Hidden while searching — it's unrelated to the query and pushes results toward the keyboard. */}
-      {!isSearching && <button onClick={() => openRedeem('show')} style={{ background: 'none', border: 'none', padding: 0, margin: '-10px 0 18px', fontSize: 12.5, fontWeight: 700, color: 'var(--accent-soft)', cursor: 'pointer' }}>Have a show code? Redeem it &rarr;</button>}
+      {!isSearching && <button onClick={() => openRedeem('show')} style={{ background: 'none', border: 'none', padding: '6px 0', margin: '-14px 0 14px', minHeight: 24, fontSize: 12.5, fontWeight: 700, color: 'var(--accent-soft)', cursor: 'pointer' }}>Have a show code? Redeem it &rarr;</button>}
 
       {showBackupNudge && !isSearching && (
         <div style={{ background: 'var(--card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, padding: 16, marginBottom: 22 }}>
@@ -89,7 +89,7 @@ export default function HomeScreen() {
 
       {recentList.length > 0 && !isSearching && (
         <>
-          <div className="ct-eyebrow">Recently Viewed</div>
+          <h2 className="ct-eyebrow" style={{ margin: 0 }}>Recently Viewed</h2>
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, marginBottom: 22 }}>
             {recentList.map((s) => <RecentShowTile key={s.id} show={s} />)}
           </div>
@@ -153,7 +153,7 @@ export default function HomeScreen() {
                 {/* Count stays welded to its label; the control sits apart, or the two runs of
                     numerals read as one string ("3 2 3 4"). */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
-                  <span className="ct-eyebrow" style={{ marginBottom: 0 }}>Currently watching</span>
+                  <h2 className="ct-eyebrow" style={{ marginBottom: 0, marginTop: 0 }}>Currently watching</h2>
                   <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700 }}>{currentShows.length}</span>
                 </div>
                 <DensityToggle value={cols} options={[2, 3, 4]} onChange={setShowColumns} label="Show columns" />
@@ -164,7 +164,7 @@ export default function HomeScreen() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span className="ct-eyebrow" style={{ marginBottom: 0 }}>Completed</span>
+                <h2 className="ct-eyebrow" style={{ marginBottom: 0, marginTop: 0 }}>Completed</h2>
                 <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700 }}>{completedShows.length}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>

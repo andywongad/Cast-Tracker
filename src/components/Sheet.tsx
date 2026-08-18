@@ -27,6 +27,55 @@ import React, { useEffect, useRef } from 'react';
 const openStack: object[] = [];
 
 /**
+ * Focus behaviour for a modal: move in on open, keep Tab inside, hand it back on close.
+ *
+ * The sheets already said `role="dialog"` and `aria-modal="true"`, which is a promise to assistive
+ * technology that the rest of the page is inert. Nothing enforced it: focus stayed on whatever
+ * button opened the sheet, Tab walked straight out into the cast grid behind the scrim, and
+ * closing left focus on an element that no longer existed — which drops it to the body and sends a
+ * screen reader back to the top of the app.
+ */
+export function useModalFocus(ref: React.RefObject<HTMLElement>) {
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const returnTo = document.activeElement as HTMLElement | null;
+
+    const focusables = () =>
+      [...node.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+        .filter((el) => el.offsetParent !== null);
+
+    // The sheet itself when it has no controls yet, so focus is inside the dialog either way.
+    const first = focusables()[0] ?? node;
+    first.focus({ preventScroll: true });
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const items = focusables();
+      if (!items.length) { e.preventDefault(); return; }
+      const firstItem = items[0];
+      const lastItem = items[items.length - 1];
+      const active = document.activeElement;
+      // Wrap at both ends. Recomputed per keypress because sheets grow and shrink as fields open.
+      if (e.shiftKey && (active === firstItem || !node.contains(active))) {
+        e.preventDefault();
+        lastItem.focus();
+      } else if (!e.shiftKey && active === lastItem) {
+        e.preventDefault();
+        firstItem.focus();
+      }
+    };
+
+    node.addEventListener('keydown', onKey);
+    return () => {
+      node.removeEventListener('keydown', onKey);
+      // Back where it came from, if that element is still on the page.
+      if (returnTo && document.contains(returnTo)) returnTo.focus({ preventScroll: true });
+    };
+  }, [ref]);
+}
+
+/**
  * Escape closes the topmost dismissible thing. Split out from the component because two overlays
  * aren't bottom sheets — the in-app browser is full screen and the photo cropper is centred — but
  * should still answer to Escape.
@@ -71,14 +120,18 @@ export default function Sheet({
   children: React.ReactNode;
 }) {
   useDismissible(onClose);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useModalFocus(sheetRef);
   return (
     <div className="ct-scrim" style={scrimStyle} onClick={onClose}>
       <div
+        ref={sheetRef}
         className="ct-sheet"
         style={sheetStyle}
         role="dialog"
         aria-modal="true"
         aria-label={label}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="ct-sheet-grabber" aria-hidden="true" />

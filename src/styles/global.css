@@ -38,6 +38,51 @@ textarea { resize: none; }
 button { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; }
 
+/* Keyboard focus.
+   
+   There was one :focus rule in the whole stylesheet, so tabbing through the app moved an invisible
+   cursor — you could operate it blind or not at all. :focus-visible rather than :focus so the ring
+   appears for keyboard and assistive input without drawing a box every time a finger or mouse hits
+   a button, which is why authors reach for the outline:none that causes this in the first place.
+
+   Two rings, the outer one in the page colour, so it stays visible whether the element sits on the
+   background, a card, or the accent itself. The offset keeps it off the glyph. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Rounded controls keep their own silhouette rather than getting a square ring. */
+:where(.ct-card, .ct-rail-item, .ct-btn-primary, .ct-btn-ghost, .ct-tab-btn, .ct-pill, .ct-iconbtn):focus-visible {
+  border-radius: inherit;
+}
+
+/* Honour a system-level request for less motion. Only the loading shimmer did this before, while
+   every button transition, the sheet, and the map kept animating. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visible only to screen readers — used for labels that would be redundant on screen. */
+.ct-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Lets a keyboard user jump the top bar straight to the content. Off-screen until focused. */
+.ct-skip-link {
+  position: absolute; left: 8px; top: -60px; z-index: 100;
+  background: var(--cta); color: var(--cta-text);
+  padding: 10px 14px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  transition: top 0.15s ease;
+}
+.ct-skip-link:focus { top: 8px; }
+
 .ct-app {
   position: relative;
   /* --app-h tracks visualViewport (see App.tsx); 100dvh is the pre-JS fallback. */

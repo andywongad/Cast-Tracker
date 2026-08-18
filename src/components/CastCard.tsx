@@ -31,7 +31,20 @@ function CastCard({
   const displayOtherNames = (c.otherNames || []).filter(Boolean);
 
   return (
-    <div className="ct-card" onClick={() => openCastDetail(c.id)}>
+    /* The card stays a div and the click target is a button stretched across it.
+       
+       It was a div with an onClick, so the whole cast grid was mouse-only and announced as
+       unlabelled text. Making the card itself a button would have nested the version chips —
+       buttons inside a button — which is invalid and costs those chips their own keyboard access.
+       A stretched hit area gives the card one focusable control with a real name, and anything
+       that needs its own (the chips below) simply sits above it. */
+    <div className="ct-card" style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => openCastDetail(c.id)}
+        aria-label={[displayName, displayOtherNames.length ? `also known as ${displayOtherNames.join(', ')}` : null, displayNickname ? `your nickname: ${displayNickname}` : null, c.whoTheyAre || null].filter(Boolean).join('. ')}
+        style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'none', border: 'none', padding: 0, cursor: 'pointer', borderRadius: 22 }}
+      />
       <div style={{ position: 'relative', aspectRatio: '1', borderRadius: 14, overflow: 'hidden', backgroundColor: 'var(--surface)', marginBottom: 10, ...cropStyle(shownPhoto, activeVersion ? null : c.photoCrop) }}>
         {!shownPhoto && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 800, color: 'var(--initials-tint)' }}>{initials(displayName)}</div>
@@ -44,7 +57,7 @@ function CastCard({
           sheet to reach for. */}
 
       {c.versions.length > 0 && (
-        <div style={{ display: 'flex', gap: 5, overflowX: 'auto', minWidth: 0, marginBottom: 8 }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 5, overflowX: 'auto', minWidth: 0, marginBottom: 8 }}>
           <button onClick={() => setActiveVersionId(null)} style={{ flex: 'none', height: 22, padding: '0 9px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: !activeVersionId ? 'none' : '1px solid var(--border)', background: !activeVersionId ? 'var(--accent)' : 'transparent', color: !activeVersionId ? '#fff' : 'var(--text-secondary)' }}>Present</button>
           {c.versions.map((v) => (
             <button key={v.id} onClick={() => setActiveVersionId(v.id)} style={{ flex: 'none', height: 22, padding: '0 9px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', border: activeVersionId === v.id ? 'none' : '1px solid var(--border)', background: activeVersionId === v.id ? 'var(--accent)' : 'transparent', color: activeVersionId === v.id ? '#fff' : 'var(--text-secondary)' }}>{v.age || v.name || 'Version'}</button>

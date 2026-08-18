@@ -41,6 +41,8 @@ export interface ThemeTokens {
   accentSoft: string;
   initialsTint: string;
   scrim: string;
+  /** Keyboard focus ring. Must clear 3:1 against every surface it can land on (WCAG 1.4.11). */
+  focusRing: string;
   /** Cards separate by soft diffused shadow, not strokes — these carry that weight. */
   shadowCard: string;
   shadowLift: string;
@@ -64,19 +66,19 @@ export interface ThemeTokens {
 export const THEMES: Record<ThemeName, ThemeTokens> = {
   Dark: {
     bg: '#0B1926', card: '#122433', sheet: '#0F2130', surface: '#162C3D', fieldBg: '#26485F', border: '#1D3346',
-    inputBorder: '#274156', divider: '#24394C', text: '#E9EFF6', textMuted: '#8296AC',
-    textSecondary: '#9CB0C5', textTertiary: '#C6D3E0', textFaint: '#566A80', iconMuted: '#3E566C',
+    inputBorder: '#274156', divider: '#24394C', text: '#E9EFF6', textMuted: '#9AAFC4',
+    textSecondary: '#9CB0C5', textTertiary: '#C6D3E0', textFaint: '#8FA3B9', iconMuted: '#627687',
     accent: '#8FA9C4', accentText: '#0B1926', accentTint: 'rgba(143,169,196,0.16)', accentSoft: '#9FB8D0',
-    cta: '#E2664F', ctaText: '#0B1926', initialsTint: 'rgba(233,239,246,0.5)', scrim: 'rgba(4,12,20,0.65)',
+    cta: '#E2664F', ctaText: '#0B1926', focusRing: '#E2664F', initialsTint: 'rgba(233,239,246,0.5)', scrim: 'rgba(4,12,20,0.65)',
     shadowCard: '0 1px 2px rgba(0,0,0,0.45), 0 8px 24px rgba(3,10,18,0.4)',
     shadowLift: '0 2px 6px rgba(0,0,0,0.5), 0 16px 40px rgba(3,10,18,0.55)',
   },
   Light: {
     bg: '#E8EDF3', card: '#FFFFFF', sheet: '#F7FAFC', surface: '#DFE7F0', fieldBg: '#FFFFFF', border: '#D2DCE8',
-    inputBorder: '#C9D5E3', divider: '#D2DCE8', text: '#15293B', textMuted: '#7A8CA3',
-    textSecondary: '#4C617A', textTertiary: '#2B3F55', textFaint: '#A3B1C2', iconMuted: '#BCC8D6',
+    inputBorder: '#C9D5E3', divider: '#D2DCE8', text: '#15293B', textMuted: '#4F6480',
+    textSecondary: '#4C617A', textTertiary: '#2B3F55', textFaint: '#556B84', iconMuted: '#7C848D',
     accent: '#3C5067', accentText: '#FFFFFF', accentTint: '#E2E9F1', accentSoft: '#3C5067',
-    cta: '#C1462E', ctaText: '#FFFFFF', initialsTint: 'rgba(21,41,59,0.32)', scrim: 'rgba(16,32,48,0.42)',
+    cta: '#C1462E', ctaText: '#FFFFFF', focusRing: '#C1462E', initialsTint: 'rgba(21,41,59,0.32)', scrim: 'rgba(16,32,48,0.42)',
     shadowCard: '0 1px 2px rgba(21,41,59,0.04), 0 8px 24px rgba(21,41,59,0.07)',
     shadowLift: '0 2px 8px rgba(21,41,59,0.07), 0 18px 44px rgba(21,41,59,0.12)',
   },

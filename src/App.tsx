@@ -107,11 +107,14 @@ function Shell() {
 
   return (
     <div className="ct-app" data-keyboard={keyboardOpen ? 'open' : undefined} style={rootStyle}>
+      {/* Landmarks. There were none — no main, no nav, no header — so a screen-reader user had no
+          way to move between the regions of the app and had to walk it linearly every time. */}
+      <a className="ct-skip-link" href="#ct-scroll">Skip to content</a>
       <TopBar />
       {storageFailed && <StorageFailedBar onOpenSettings={openSettings} />}
-      <div id="ct-scroll" className="ct-scroll">
+      <main id="ct-scroll" className="ct-scroll" tabIndex={-1}>
         {screen === 'home' ? <HomeScreen /> : <ShowScreen key={activeShowId} />}
-      </div>
+      </main>
       <WebViewOverlay />
       <CastDetailSheet />
       <ShareSheet />

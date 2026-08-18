@@ -27,7 +27,10 @@ function coerceCast(raw: unknown): CastMember[] {
     .filter((c): c is CastMember => !!c && typeof c === 'object' && typeof (c as CastMember).id === 'string')
     .map((c) => ({
       ...c,
-      otherNames: Array.isArray(c.otherNames) ? c.otherNames : [],
+      // A record with no name white-screens the character sheet, which calls c.name.trim()
+      // unguarded when building the AKA list. Pass 1 coerced the arrays and missed this.
+      name: typeof c.name === 'string' ? c.name : '',
+      otherNames: Array.isArray(c.otherNames) ? c.otherNames.filter((n): n is string => typeof n === 'string') : [],
       versions: Array.isArray(c.versions) ? c.versions : [],
       relationships: Array.isArray(c.relationships) ? c.relationships : [],
     }));
