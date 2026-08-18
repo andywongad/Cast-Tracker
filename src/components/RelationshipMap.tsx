@@ -2,12 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CastMember, MapCell, MapRelationship, Show } from '../types';
 import { useStore } from '../hooks/useStore';
 import { bgStyle, genId, initials } from '../lib/utils';
+import { MAP_LINE, MAP_HEART } from '../lib/theme';
 
 const COLS = 6;
 const ROWS = 8;
 const DEFAULT_TOP_ROW = -3; // anchor default layout near the top so images are visible without scrolling
-const MAP_LINE = '#E85D9C';
-const MAP_HEART = '#D2453B';
 
 function epKeyFor(season: number, ep: string) { return `${season}_${ep}`; }
 function getEpRel(c: CastMember, epKey: string): MapRelationship[] { return c.relByEp?.[epKey] || []; }
