@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { EpisodePerson } from '../lib/episodeCast';
 import { personLabel } from '../lib/episodeCast';
 import { initials, bgStyle } from '../lib/utils';
@@ -13,7 +13,7 @@ import { initials, bgStyle } from '../lib/utils';
  * Deliberately not a link to the character sheet. There is no record to open: everything the sheet
  * shows — your nickname, your notes, the AKA list — only exists once you've added them.
  */
-export default function GhostCastCard({
+function GhostCastCard({
   person,
   isDrama,
   onAdd,
@@ -57,3 +57,5 @@ export default function GhostCastCard({
     </button>
   );
 }
+
+export default memo(GhostCastCard);

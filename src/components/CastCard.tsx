@@ -1,15 +1,21 @@
-import { useState } from 'react';
-import type { CastMember, Show } from '../types';
+import { memo, useState } from 'react';
+import type { CastMember } from '../types';
 import { initials, cropStyle } from '../lib/utils';
 import { displayPhoto } from '../lib/tvmaze';
 import { useUI } from '../hooks/useUI';
 
-export default function CastCard({
-  show,
+/**
+ * Memoised, and no longer takes the show.
+ *
+ * The `show` prop was never read — only the character is. It mattered because `updateData`
+ * structuredClones the whole store on every write, so `show` got a fresh identity constantly and
+ * would have defeated the memo on every card for a change to any one of them. With it gone, a
+ * card only re-renders when its own record or the density changes.
+ */
+function CastCard({
   c,
   compact,
 }: {
-  show: Show;
   c: CastMember;
   compact: boolean;
 }) {
@@ -95,3 +101,5 @@ export default function CastCard({
     </div>
   );
 }
+
+export default memo(CastCard);
