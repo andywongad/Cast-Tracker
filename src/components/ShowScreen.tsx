@@ -467,7 +467,10 @@ export default function ShowScreen() {
                 value={castQuery}
                 onChange={(e) => setCastQuery(e.target.value)}
                 placeholder="Search this cast&hellip;"
-                style={{ flex: 1, minWidth: 0, height: 38, border: '1px solid var(--input-border)', borderRadius: 12, background: 'var(--surface)', color: 'var(--text)', padding: '0 14px', fontSize: 13.5 }}
+                /* Raised rather than outlined: this sits under a row of chips that already carry
+                   strokes, and another bordered box in that stack reads as one more of them.
+                   Shadow is how everything else in this design separates. */
+                style={{ flex: 1, minWidth: 0, height: 38, border: 'none', borderRadius: 12, background: 'var(--field-bg)', boxShadow: 'var(--shadow-card)', color: 'var(--text)', padding: '0 14px', fontSize: 13.5 }}
               />
               <div style={{ flex: 'none' }}>
                 <DensityToggle value={settings.castColumns || 2} options={[2, 3, 4]} onChange={setCastColumns} label="Cast columns" />

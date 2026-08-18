@@ -5,6 +5,16 @@ export interface ThemeTokens {
   card: string;
   sheet: string;
   surface: string;
+  /**
+   * Search fields, which sit on a page background rather than inside a sheet.
+   *
+   * They used `surface`, and so do the unselected season chips directly above them — the same
+   * fill, so the field read as one more chip in the row instead of the thing you type into. This
+   * lifts: white against the mist, and a step up out of the water in the dark, where white would
+   * be a hole in the page rather than a field. Form inputs inside a sheet keep `surface`, because
+   * there the sheet is already near-white and a well is the right read.
+   */
+  fieldBg: string;
   border: string;
   inputBorder: string;
   divider: string;
@@ -53,7 +63,7 @@ export interface ThemeTokens {
  */
 export const THEMES: Record<ThemeName, ThemeTokens> = {
   Dark: {
-    bg: '#0B1926', card: '#122433', sheet: '#0F2130', surface: '#162C3D', border: '#1D3346',
+    bg: '#0B1926', card: '#122433', sheet: '#0F2130', surface: '#162C3D', fieldBg: '#26485F', border: '#1D3346',
     inputBorder: '#274156', divider: '#24394C', text: '#E9EFF6', textMuted: '#8296AC',
     textSecondary: '#9CB0C5', textTertiary: '#C6D3E0', textFaint: '#566A80', iconMuted: '#3E566C',
     accent: '#8FA9C4', accentText: '#0B1926', accentTint: 'rgba(143,169,196,0.16)', accentSoft: '#9FB8D0',
@@ -62,7 +72,7 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     shadowLift: '0 2px 6px rgba(0,0,0,0.5), 0 16px 40px rgba(3,10,18,0.55)',
   },
   Light: {
-    bg: '#E8EDF3', card: '#FFFFFF', sheet: '#F7FAFC', surface: '#DFE7F0', border: '#D2DCE8',
+    bg: '#E8EDF3', card: '#FFFFFF', sheet: '#F7FAFC', surface: '#DFE7F0', fieldBg: '#FFFFFF', border: '#D2DCE8',
     inputBorder: '#C9D5E3', divider: '#D2DCE8', text: '#15293B', textMuted: '#7A8CA3',
     textSecondary: '#4C617A', textTertiary: '#2B3F55', textFaint: '#A3B1C2', iconMuted: '#BCC8D6',
     accent: '#3C5067', accentText: '#FFFFFF', accentTint: '#E2E9F1', accentSoft: '#3C5067',

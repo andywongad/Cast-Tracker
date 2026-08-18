@@ -62,7 +62,7 @@ export default function HomeScreen() {
 
   return (
     <div data-screen-label="Home" style={{ padding: '16px 16px 40px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, height: 46, padding: '0 14px', borderRadius: 13, background: 'var(--surface)', border: '1px solid var(--border)', marginBottom: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, height: 46, padding: '0 14px', borderRadius: 13, background: 'var(--field-bg)', boxShadow: 'var(--shadow-card)', marginBottom: 18 }}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="var(--text-muted)" strokeWidth="1.6" /><path d="M11 11l3.5 3.5" stroke="var(--text-muted)" strokeWidth="1.6" strokeLinecap="round" /></svg>
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search shows" style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 15, color: 'var(--text)' }} />
         {isSearching && <button onClick={() => setQuery('')} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', padding: 0 }}>&times;</button>}
