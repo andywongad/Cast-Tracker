@@ -8,6 +8,9 @@
   "functions": {
     "api/enrichment.ts": {
       "maxDuration": 30
+    },
+    "api/check-episodes.ts": {
+      "maxDuration": 300
     }
   }
 }

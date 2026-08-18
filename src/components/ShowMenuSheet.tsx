@@ -60,7 +60,7 @@ export default function ShowMenuSheet() {
         </div>
 
         <div style={{ marginBottom: 18 }}>
-          <NotificationToggle showId={show.id} />
+          <NotificationToggle showTmdbId={show.tmdbId} />
         </div>
 
         <div>
