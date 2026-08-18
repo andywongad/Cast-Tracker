@@ -21,7 +21,7 @@ export default function CastGrid({
   const compact = cols >= 3;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12 }}>
-      {cast.map((c) => <CastCard key={c.id} show={show} c={c} compact={compact} />)}
+      {cast.map((c) => <CastCard key={c.id} c={c} compact={compact} />)}
       {/* After the cast, not interleaved: the people you've actually added are what you came for,
           and shuffling placeholders in among them would move a card you were reaching for. */}
       {onAddGhost && (ghosts || []).map((p) => (

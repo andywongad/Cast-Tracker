@@ -17,6 +17,40 @@ import CastSkeleton from './CastSkeleton';
  * Nobody from later than your position appears in either section, so scrubbing forward on the
  * rail still can't show you a character you haven't met.
  */
+/**
+ * A titled block of cards. At module scope on purpose.
+ *
+ * Declared inside the component body it was a new component *type* on every render, so React could
+ * not reconcile it and tore the whole subtree down instead — measured at 24 card nodes destroyed
+ * and 24 rebuilt for a single keystroke in the search box, every image with them. Hoisting makes
+ * it the same type across renders, which is what lets the memo on the cards do anything.
+ */
+function Section({
+  show,
+  title,
+  note,
+  members,
+  ghosts,
+  onAddGhost,
+}: {
+  show: Show;
+  title: string;
+  note?: string;
+  members: CastMember[];
+  ghosts?: EpisodePerson[];
+  onAddGhost?: (p: EpisodePerson) => void;
+}) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>{title}</div>
+        {note && <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>{note}</div>}
+      </div>
+      <CastGrid show={show} cast={members} ghosts={ghosts} onAddGhost={onAddGhost} />
+    </div>
+  );
+}
+
 export default function SerialCastView({
   show,
   cast,
@@ -54,23 +88,6 @@ export default function SerialCastView({
     (c) => !inEpisodeIds.has(c.id) && (!c.actorTmdbId || metBy(c, at, firstSeasons)),
   );
 
-  // Placeholders belong to the episode section only — they're people in *this* episode. Passing
-  // them to both would render each one twice.
-  const Section = ({ title, note, members, withGhosts }: { title: string; note?: string; members: CastMember[]; withGhosts?: boolean }) => (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>{title}</div>
-        {note && <div style={{ fontSize: 12.5, color: 'var(--text-faint)' }}>{note}</div>}
-      </div>
-      <CastGrid
-        show={show}
-        cast={members}
-        ghosts={withGhosts ? ghosts : undefined}
-        onAddGhost={withGhosts ? onAddGhost : undefined}
-      />
-    </div>
-  );
-
   // While searching, the episode split is noise: you're looking for one person and you don't care
   // which half they're in. One list of matches.
   if (searching) return <CastGrid show={show} cast={cast} />;
@@ -85,19 +102,17 @@ export default function SerialCastView({
           <CastSkeleton rows={2} />
         </div>
       ) : inEpisode.length > 0 ? (
-        <Section title={`Everyone credited on Ep ${episodeNumber}`} members={inEpisode} withGhosts />
+        <Section show={show} title={`Everyone credited on Ep ${episodeNumber}`} members={inEpisode} ghosts={ghosts} onAddGhost={onAddGhost} />
       ) : (
         <div style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 20 }}>
           TMDb lists no cast for Ep {episodeNumber}.
         </div>
       )}
 
+      {/* No placeholders on this section — they belong to the episode above, and passing them to
+          both would render each one twice. */}
       {metSoFar.length > 0 && (
-        <Section
-          title="Everyone you've met so far"
-          note={`${metSoFar.length}`}
-          members={metSoFar}
-        />
+        <Section show={show} title="Everyone you've met so far" note={`${metSoFar.length}`} members={metSoFar} />
       )}
     </div>
   );
