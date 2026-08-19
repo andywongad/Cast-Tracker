@@ -8,3 +8,6 @@ tsconfig.tsbuildinfo
 .vite
 .vercel
 .env*
+
+# Supabase CLI scratch (version checks, local state)
+supabase/.temp
