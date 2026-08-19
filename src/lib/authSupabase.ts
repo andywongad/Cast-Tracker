@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { getSupabase } from './supabase';
 import { isValidEmail, type AuthAdapter, type AuthSession } from './auth';
 
 /**
@@ -29,13 +29,20 @@ function redirectTo(): string {
   return `${window.location.origin}${window.location.pathname}`;
 }
 
+/** Resolves the lazily-loaded client, or explains why there isn't one. */
+async function client() {
+  const c = getSupabase();
+  if (!c) throw new Error('Sync is not configured for this deployment.');
+  return c;
+}
+
 export const supabaseAuth: AuthAdapter = {
   async requestSignInLink(email: string) {
-    if (!supabase) throw new Error('Sync is not configured for this deployment.');
     // Kept from the stub: the local check gives an instant, specific error instead of a round trip
     // that comes back with a generic one.
     if (!isValidEmail(email)) throw new Error('Enter a valid email address.');
 
+    const supabase = await client();
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
@@ -58,7 +65,7 @@ export const supabaseAuth: AuthAdapter = {
   },
 
   async completeSignIn(): Promise<AuthSession> {
-    if (!supabase) throw new Error('Sync is not configured for this deployment.');
+    const supabase = await client();
     // `getUser` rather than `getSession`: getSession reports what is in local storage, which is
     // whatever was last written there. getUser validates the token against the auth server, so a
     // tampered or expired session fails here rather than later, against the database.
@@ -70,7 +77,9 @@ export const supabaseAuth: AuthAdapter = {
   },
 
   async signOut() {
-    if (!supabase) return;
+    const c = getSupabase();
+    if (!c) return;
+    const supabase = await c;
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(error.message);
   },
@@ -83,7 +92,9 @@ export const supabaseAuth: AuthAdapter = {
  * or not — so the caller can treat it as "did we just arrive from an email link".
  */
 export async function sessionFromUrl(): Promise<AuthSession | null> {
-  if (!supabase) return null;
+  const c = getSupabase();
+  if (!c) return null;
+  const supabase = await c;
   const { data } = await supabase.auth.getSession();
   return toSession(data.session?.user);
 }
@@ -93,9 +104,16 @@ export async function sessionFromUrl(): Promise<AuthSession | null> {
  * another tab, or the PKCE exchange finishing after load. Returns an unsubscribe.
  */
 export function onSessionChange(fn: (session: AuthSession | null) => void): () => void {
-  if (!supabase) return () => {};
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-    fn(toSession(session?.user));
+  const c = getSupabase();
+  if (!c) return () => {};
+  // The client may still be loading, so unsubscribing has to survive being called before the
+  // subscription exists — hence the flag rather than just returning the real unsubscribe.
+  let cancelled = false;
+  let stop: (() => void) | null = null;
+  c.then((supabase) => {
+    if (cancelled) return;
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => fn(toSession(session?.user)));
+    stop = () => data.subscription.unsubscribe();
   });
-  return () => data.subscription.unsubscribe();
+  return () => { cancelled = true; stop?.(); };
 }

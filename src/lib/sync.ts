@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { getSupabase } from './supabase';
 import { hasUserContent } from './castValue';
 import type { AppData, CastMember, Show } from '../types';
 
@@ -150,6 +150,14 @@ function serialise(v: CastMember | Show): string {
 
 /* -- network ---------------------------------------------------------------------------------- */
 
+/** The lazily-loaded client. Both callers below are user-initiated, so the load is never on the
+ *  critical path of first paint. */
+async function requireClient() {
+  const c = getSupabase();
+  if (!c) throw new Error('Sync is not configured.');
+  return c;
+}
+
 interface RemoteRow {
   show_id: string;
   record_id?: string;
@@ -183,7 +191,7 @@ export function collectPush(data: AppData, userId: string) {
 }
 
 export async function push(data: AppData, userId: string): Promise<{ shows: number; cast: number; deletes: number }> {
-  if (!supabase) throw new Error('Sync is not configured.');
+  const supabase = await requireClient();
   const { shows, cast } = collectPush(data, userId);
 
   if (shows.length) {
@@ -220,7 +228,7 @@ export async function push(data: AppData, userId: string): Promise<{ shows: numb
 }
 
 export async function pull(userId: string): Promise<{ rows: RemoteRow[]; newest: string | null }> {
-  if (!supabase) throw new Error('Sync is not configured.');
+  const supabase = await requireClient();
   const since = cursorFor(userId);
 
   // No `user_id` filter: RLS resolves `auth.uid()` from the caller's token and cannot return
