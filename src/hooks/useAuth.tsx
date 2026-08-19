@@ -1,10 +1,14 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { stubAuth, type AuthAdapter, type AuthSession } from '../lib/auth';
 
 /**
- * Session state for the sign-up preview. Held in React state only — never written to
- * localStorage — so a refresh signs you out. That's intentional: persisting it would make the
- * preview feel like a real account, which is exactly what this must not do.
+ * Session state.
+ *
+ * Nothing is persisted here on purpose, in either mode. With the stub that was the point — a
+ * refresh signs you out, so a preview can never be mistaken for a working account. With a real
+ * backend it is still right, just for a different reason: the session already lives in the auth
+ * client's own storage, refreshed and revoked by it, and a second copy of it here could only ever
+ * disagree. `bootstrap` and `subscribe` below read that one source instead of duplicating it.
  */
 interface AuthValue {
   session: AuthSession | null;
@@ -14,13 +18,35 @@ interface AuthValue {
   awaitingEmail: string | null;
   requestLink: (email: string) => Promise<void>;
   confirmSignIn: () => Promise<void>;
+  /** Finish sign-in with the code from the email. */
+  verifyCode: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
   reset: () => void;
+  /**
+   * True when sign-in is faked and no mail is sent, so the screens can say so. Derived from
+   * whether a bootstrap was supplied rather than from an env flag, because the thing that makes
+   * sign-in real is having a backend to come back from — not a variable claiming there is one.
+   */
+  simulated: boolean;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
 
-export function AuthProvider({ children, adapter = stubAuth }: { children: React.ReactNode; adapter?: AuthAdapter }) {
+export function AuthProvider({
+  children,
+  adapter = stubAuth,
+  bootstrap,
+  subscribe,
+}: {
+  children: React.ReactNode;
+  adapter?: AuthAdapter;
+  /** Reads any session that already exists — one restored from storage, or one a magic link just
+   *  created. Absent for the stub, which has nothing to restore. */
+  bootstrap?: () => Promise<AuthSession | null>;
+  /** Notifies of sessions appearing or disappearing outside this component: a token refresh, a
+   *  sign-out in another tab, or the link exchange finishing after first paint. */
+  subscribe?: (fn: (session: AuthSession | null) => void) => () => void;
+}) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
@@ -54,6 +80,22 @@ export function AuthProvider({ children, adapter = stubAuth }: { children: React
     }
   }, [adapter, awaitingEmail]);
 
+  const verifyCode = useCallback(async (code: string) => {
+    if (!awaitingEmail) return;
+    setPending(true);
+    setError('');
+    try {
+      setSession(await adapter.verifyCode(awaitingEmail, code));
+      setAwaitingEmail(null);
+    } catch (e) {
+      // Left on this screen deliberately: a mistyped code should cost one more attempt, not the
+      // whole flow and another email.
+      setError(e instanceof Error ? e.message : 'Something went wrong.');
+    } finally {
+      setPending(false);
+    }
+  }, [adapter, awaitingEmail]);
+
   const signOut = useCallback(async () => {
     setPending(true);
     try {
@@ -64,11 +106,36 @@ export function AuthProvider({ children, adapter = stubAuth }: { children: React
     }
   }, [adapter]);
 
+  /**
+   * Adopt whatever session already exists, and keep following it.
+   *
+   * This is what replaces the stub's "simulate clicking the link" button. A real magic link lands
+   * back on the app as a fresh page load, so by the time any of this runs the exchange has either
+   * happened or is about to — there is no button to press. Clearing `awaitingEmail` on arrival is
+   * what moves the sheet off "check your inbox" for someone who left it open in this tab.
+   */
+  useEffect(() => {
+    if (!bootstrap) return;
+    let alive = true;
+    bootstrap()
+      .then((s) => { if (alive && s) { setSession(s); setAwaitingEmail(null); } })
+      .catch(() => { /* No session is the ordinary case, not an error worth showing. */ });
+    return () => { alive = false; };
+  }, [bootstrap]);
+
+  useEffect(() => {
+    if (!subscribe) return;
+    return subscribe((s) => {
+      setSession(s);
+      if (s) setAwaitingEmail(null);
+    });
+  }, [subscribe]);
+
   const reset = useCallback(() => { setAwaitingEmail(null); setError(''); }, []);
 
   const value = useMemo(
-    () => ({ session, pending, error, awaitingEmail, requestLink, confirmSignIn, signOut, reset }),
-    [session, pending, error, awaitingEmail, requestLink, confirmSignIn, signOut, reset],
+    () => ({ session, pending, error, awaitingEmail, requestLink, confirmSignIn, verifyCode, signOut, reset, simulated: !bootstrap }),
+    [session, pending, error, awaitingEmail, requestLink, confirmSignIn, verifyCode, signOut, reset, bootstrap],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

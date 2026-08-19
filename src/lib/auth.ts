@@ -18,10 +18,23 @@ export interface AuthSession {
 }
 
 export interface AuthAdapter {
-  /** Real impl: send a magic link. Stub: resolves without sending anything. */
+  /** Real impl: send a magic link and a typed code. Stub: resolves without sending anything. */
   requestSignInLink(email: string): Promise<void>;
   /** Real impl: exchange a link token for a session. Stub: fabricates a local one. */
   completeSignIn(email: string): Promise<AuthSession>;
+  /**
+   * Exchange a code typed by the user for a session.
+   *
+   * Exists because the link on its own is not reliable enough on a phone. PKCE keeps its one-time
+   * verifier in the storage of the browser that asked for the link, and tapping a link in a mail
+   * app routinely opens an in-app webview or hands off to a different browser — which has no
+   * verifier, so the exchange fails and the app simply looks signed out. Measured that failure on
+   * this project: the address was confirmed, and `last_sign_in_at` stayed null with zero sessions.
+   *
+   * A typed code cannot go astray that way. It is entered in the browser that requested it, so no
+   * handoff exists to break, and unlike the implicit flow it puts no token in a URL.
+   */
+  verifyCode(email: string, code: string): Promise<AuthSession>;
   signOut(): Promise<void>;
 }
 
@@ -45,6 +58,11 @@ export const stubAuth: AuthAdapter = {
   },
   async completeSignIn(email: string) {
     await delay(400);
+    return { email, userId: null };
+  },
+  async verifyCode(email: string) {
+    await delay(400);
+    // The stub has no code to check — any six digits pass, which is the point of a preview.
     return { email, userId: null };
   },
   async signOut() {

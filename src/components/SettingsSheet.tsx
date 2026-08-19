@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { useAuth } from '../hooks/useAuth';
 import { isAuthPreviewEnabled } from '../lib/auth';
+import { isSyncConfigured } from '../lib/supabase';
 import Sheet from './Sheet';
 
 export default function SettingsSheet() {
@@ -86,7 +87,7 @@ export default function SettingsSheet() {
     <Sheet onClose={closeSettings} label="Settings">
         <div className="ct-sheet-title">Settings</div>
 
-        {isAuthPreviewEnabled() && (
+        {(isSyncConfigured() || isAuthPreviewEnabled()) && (
           <>
             <label className="ct-label-muted">ACCOUNT</label>
             <button onClick={openAuth} className="ct-btn-ghost" style={{ width: '100%', marginBottom: 6 }}>

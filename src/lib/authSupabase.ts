@@ -1,4 +1,4 @@
-import { getSupabase } from './supabase';
+import { getSupabase, needsClientOnLoad } from './supabase';
 import { isValidEmail, type AuthAdapter, type AuthSession } from './auth';
 
 /**
@@ -76,6 +76,25 @@ export const supabaseAuth: AuthAdapter = {
     return session;
   },
 
+  async verifyCode(email: string, code: string): Promise<AuthSession> {
+    const supabase = await client();
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      // 'email' covers both the sign-up confirmation and a returning sign-in, which is what this
+      // needs: the app makes no distinction between the two and neither should this.
+      type: 'email',
+    });
+    if (error) {
+      // Worth rewriting. Supabase says "Token has expired or is invalid", which reads as a bug in
+      // the app rather than a code that has aged out or been mistyped.
+      throw new Error('That code didn\u2019t work. It may have expired \u2014 request a new one.');
+    }
+    const session = toSession(data.user);
+    if (!session) throw new Error('That code didn\u2019t work. Request a new one.');
+    return session;
+  },
+
   async signOut() {
     const c = getSupabase();
     if (!c) return;
@@ -92,6 +111,10 @@ export const supabaseAuth: AuthAdapter = {
  * or not — so the caller can treat it as "did we just arrive from an email link".
  */
 export async function sessionFromUrl(): Promise<AuthSession | null> {
+  // The gate that keeps the deferral meaningful. Without it this runs on every cold load and pulls
+  // the client down for everyone, including the majority who have never signed in — which is the
+  // whole cost the dynamic import was there to avoid.
+  if (!needsClientOnLoad()) return null;
   const c = getSupabase();
   if (!c) return null;
   const supabase = await c;
@@ -104,6 +127,10 @@ export async function sessionFromUrl(): Promise<AuthSession | null> {
  * another tab, or the PKCE exchange finishing after load. Returns an unsubscribe.
  */
 export function onSessionChange(fn: (session: AuthSession | null) => void): () => void {
+  // Same gate. With no session to follow there is nothing for this to report, and subscribing
+  // would load the client purely to watch it stay signed out. Someone signing in during this
+  // session returns via a magic link, which is a fresh page load — and by then the gate is open.
+  if (!needsClientOnLoad()) return () => {};
   const c = getSupabase();
   if (!c) return () => {};
   // The client may still be loading, so unsubscribing has to survive being called before the

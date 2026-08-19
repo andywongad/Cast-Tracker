@@ -5,12 +5,16 @@ import { isValidEmail } from '../lib/auth';
 import Sheet from './Sheet';
 
 /**
- * Sign-up / sign-in screens for the auth preview. Three states: email entry, check-your-inbox,
- * and signed in. No password field anywhere — see the note in src/lib/auth.ts.
+ * Sign-in screens. Three states: email entry, check-your-inbox, and signed in. No password field
+ * anywhere — see the note in src/lib/auth.ts.
  *
- * The banner is not decoration. Anyone testing this needs to know nothing is being created,
- * or the feedback you get back will be about a product that doesn't exist.
+ * The same screens serve the stub and the real backend, switched by `simulated` from useAuth. That
+ * matters mostly for what they promise: a preview must say nothing is being created, and a real
+ * one must not — a banner reading "nothing leaves this device" left on top of a working sync would
+ * be a lie about where someone's data has gone.
  */
+/** Shown only against the stub. Without it, testers give you feedback on a product that
+ *  doesn't exist yet. */
 function PreviewBanner() {
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: 'var(--accent-tint)', borderRadius: 14, padding: '12px 14px', marginBottom: 20 }}>
@@ -25,10 +29,11 @@ function PreviewBanner() {
 
 export default function AuthSheet() {
   const { authOpen, closeAuth } = useUI();
-  const { session, pending, error, awaitingEmail, requestLink, confirmSignIn, signOut, reset } = useAuth();
+  const { session, pending, error, awaitingEmail, requestLink, confirmSignIn, verifyCode, signOut, reset, simulated } = useAuth();
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
 
-  useEffect(() => { if (authOpen) { setEmail(''); reset(); } }, [authOpen, reset]);
+  useEffect(() => { if (authOpen) { setEmail(''); setCode(''); reset(); } }, [authOpen, reset]);
 
   if (!authOpen) return null;
 
@@ -40,7 +45,7 @@ export default function AuthSheet() {
         {session ? (
           <>
             <div className="ct-sheet-title">You&rsquo;re signed in</div>
-            <PreviewBanner />
+            {simulated && <PreviewBanner />}
             <label className="ct-label">Signed in as</label>
             <div style={{ fontSize: 15, marginBottom: 22 }}>{session.email}</div>
             <button onClick={signOut} disabled={pending} className="ct-btn-ghost" style={{ width: '100%' }}>
@@ -50,23 +55,65 @@ export default function AuthSheet() {
         ) : awaitingEmail ? (
           <>
             <div className="ct-sheet-title">Check your inbox</div>
-            <PreviewBanner />
+            {simulated && <PreviewBanner />}
             <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.55, marginBottom: 22 }}>
-              We&rsquo;d send a sign-in link to <strong style={{ color: 'var(--text)' }}>{awaitingEmail}</strong>.
-              There&rsquo;s no mail server yet, so use the button below to stand in for clicking that link.
+              {simulated ? (
+                <>
+                  We&rsquo;d send a sign-in link to <strong style={{ color: 'var(--text)' }}>{awaitingEmail}</strong>.
+                  There&rsquo;s no mail server yet, so use the button below to stand in for clicking that link.
+                </>
+              ) : (
+                <>
+                  We&rsquo;ve emailed <strong style={{ color: 'var(--text)' }}>{awaitingEmail}</strong> a six-digit code.
+                  Enter it below. There&rsquo;s a link in that email too, if you&rsquo;d rather tap it.
+                </>
+              )}
             </div>
-            <button onClick={confirmSignIn} disabled={pending} className="ct-btn-primary" style={{ width: '100%', marginBottom: 10 }}>
-              {pending ? 'Signing in…' : 'Simulate clicking the link'}
-            </button>
+            {simulated ? (
+              <button onClick={confirmSignIn} disabled={pending} className="ct-btn-primary" style={{ width: '100%', marginBottom: 10 }}>
+                {pending ? 'Signing in…' : 'Simulate clicking the link'}
+              </button>
+            ) : (
+              <>
+                <label className="ct-label" htmlFor="auth-code">Code</label>
+                <input
+                  id="auth-code"
+                  // `text` with a numeric inputMode rather than type="number": a number field on
+                  // mobile brings a spinner and strips leading zeros, and a code can begin with one.
+                  type="text"
+                  inputMode="numeric"
+                  // Lets iOS and Android offer the code straight from the notification.
+                  autoComplete="one-time-code"
+                  autoFocus
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && code.length === 6 && !pending) verifyCode(code); }}
+                  placeholder="123456"
+                  className="ct-input"
+                  style={{ marginBottom: 14, letterSpacing: '0.35em', fontVariantNumeric: 'tabular-nums' }}
+                />
+                {error && <div style={{ fontSize: 12.5, color: '#C24B4B', marginBottom: 12 }}>{error}</div>}
+                <button
+                  onClick={() => verifyCode(code)}
+                  disabled={code.length !== 6 || pending}
+                  className="ct-btn-primary"
+                  style={{ width: '100%', marginBottom: 10 }}
+                >
+                  {pending ? 'Signing in…' : 'Sign in'}
+                </button>
+              </>
+            )}
             <button onClick={reset} className="ct-btn-ghost" style={{ width: '100%' }}>Use a different email</button>
           </>
         ) : (
           <>
             <div className="ct-sheet-title">Keep your cast anywhere</div>
-            <PreviewBanner />
+            {simulated && <PreviewBanner />}
             <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.55, marginBottom: 20 }}>
-              An account would let your shows follow you to another phone or laptop, and bring them back if
-              you clear your browser.
+              {simulated
+                ? 'An account would let your shows follow you to another phone or laptop, and bring them back if you clear your browser.'
+                : 'Your shows follow you to another phone or laptop, and come back if you clear your browser. You can keep using Cast Tracker without an account — signing in only adds this.'}
             </div>
 
             <label className="ct-label" htmlFor="auth-email">Email</label>
@@ -84,7 +131,7 @@ export default function AuthSheet() {
             />
             {/* No password field, by design — a stub can't protect one. */}
             <div style={{ fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.45, marginBottom: 18 }}>
-              No password — you&rsquo;d get a one-time sign-in link by email.
+              {simulated ? 'No password — you\u2019d get a one-time sign-in link by email.' : 'No password. We\u2019ll email you a one-time sign-in link.'}
             </div>
 
             {error && <div style={{ fontSize: 12.5, color: '#C24B4B', marginBottom: 12 }}>{error}</div>}

@@ -2,6 +2,8 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { StoreProvider, useStore } from './hooks/useStore';
 import { UIProvider, useUI } from './hooks/useUI';
 import { AuthProvider } from './hooks/useAuth';
+import { isSyncConfigured } from './lib/supabase';
+import { supabaseAuth, sessionFromUrl, onSessionChange } from './lib/authSupabase';
 import { THEMES, themeVars } from './lib/theme';
 import { registerServiceWorker } from './lib/notifications';
 import TopBar from './components/TopBar';
@@ -132,11 +134,22 @@ function Shell() {
   );
 }
 
+/**
+ * The real adapter when this deployment has Supabase, the stub otherwise.
+ *
+ * Defined at module scope, not inline: passing fresh function identities on every render would
+ * re-run the bootstrap and re-subscribe each time anything above re-rendered.
+ */
+const live = isSyncConfigured();
+const authProps = live
+  ? { adapter: supabaseAuth, bootstrap: sessionFromUrl, subscribe: onSessionChange }
+  : {};
+
 export default function App() {
   return (
     <StoreProvider>
       <UIProvider>
-        <AuthProvider>
+        <AuthProvider {...authProps}>
           <Shell />
         </AuthProvider>
       </UIProvider>
