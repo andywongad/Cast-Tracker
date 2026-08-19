@@ -70,7 +70,7 @@ export default function AuthSheet() {
               )}
             </div>
             {simulated ? (
-              <button onClick={confirmSignIn} disabled={pending} className="ct-btn-primary" style={{ width: '100%', marginBottom: 10 }}>
+              <button onClick={confirmSignIn} disabled={pending} className="ct-btn-primary ct-btn-primary-calm" style={{ width: '100%', marginBottom: 10 }}>
                 {pending ? 'Signing in…' : 'Simulate clicking the link'}
               </button>
             ) : (
@@ -100,7 +100,7 @@ export default function AuthSheet() {
                 <button
                   onClick={() => verifyCode(code)}
                   disabled={code.length < 6 || pending}
-                  className="ct-btn-primary"
+                  className="ct-btn-primary ct-btn-primary-calm"
                   style={{ width: '100%', marginBottom: 10 }}
                 >
                   {pending ? 'Signing in…' : 'Sign in'}
@@ -139,7 +139,7 @@ export default function AuthSheet() {
 
             {error && <div style={{ fontSize: 12.5, color: '#C24B4B', marginBottom: 12 }}>{error}</div>}
 
-            <button onClick={() => requestLink(email)} disabled={!canSubmit} className="ct-btn-primary" style={{ width: '100%', marginBottom: 10 }}>
+            <button onClick={() => requestLink(email)} disabled={!canSubmit} className="ct-btn-primary ct-btn-primary-calm" style={{ width: '100%', marginBottom: 10 }}>
               {pending ? 'Sending…' : 'Continue with email'}
             </button>
             <button onClick={closeAuth} className="ct-btn-ghost" style={{ width: '100%' }}>Not now</button>

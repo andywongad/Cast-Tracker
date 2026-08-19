@@ -152,6 +152,16 @@ a { color: inherit; }
   height: 52px; border: none; border-radius: 16px; background: var(--cta); color: var(--cta-text);
   font-size: 15px; font-weight: 500; cursor: pointer; letter-spacing: -0.01em;
 }
+
+/* The primary button in the calm half of the palette rather than the terracotta.
+   The CTA colour is the right weight for "add a show" — the thing the app wants you to do — but
+   on a sign-in form it reads as a warning: a red-orange block under a field asking for your email
+   looks like the button that stops something rather than the one that continues. Same slate blue
+   as the accent, which is where the palette's trust lives.
+   Contrast is better too, not worse: 8.28:1 light and 7.31:1 dark, against 5.02 and 5.29. */
+.ct-btn-primary-calm {
+  background: var(--accent); color: var(--accent-text);
+}
 .ct-btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
 .ct-btn-ghost {
   height: 52px; border: none; border-radius: 16px; background: var(--surface);
