@@ -222,17 +222,34 @@ export function collectPush(data: AppData, userId: string) {
   };
 }
 
-export async function push(data: AppData, userId: string): Promise<{ shows: number; cast: number; deletes: number }> {
+/**
+ * Returns the newest `server_at` it wrote, so the caller can move its cursor past its own writes.
+ *
+ * Without this the sync loops forever: pushing stamps a new `server_at` on every row, the next
+ * pull asks for everything newer than the old cursor and gets those same rows back, merging them
+ * counts as a data change, which schedules another sync, which pushes again. Advancing the cursor
+ * over our own writes is what breaks the cycle — they are already applied here by definition.
+ */
+export async function push(data: AppData, userId: string): Promise<{ shows: number; cast: number; deletes: number; newest: string | null }> {
   const supabase = await requireClient();
   const { shows, cast } = collectPush(data, userId);
 
+  let newest: string | null = null;
+  const noteNewest = (rows: { server_at: string }[] | null) => {
+    for (const r of rows ?? []) if (!newest || r.server_at > newest) newest = r.server_at;
+  };
+
   if (shows.length) {
-    const { error } = await supabase.from('sync_show').upsert(shows, { onConflict: 'user_id,show_id' });
+    const { data: written, error } = await supabase
+      .from('sync_show').upsert(shows, { onConflict: 'user_id,show_id' }).select('server_at');
     if (error) throw new Error(error.message);
+    noteNewest(written);
   }
   if (cast.length) {
-    const { error } = await supabase.from('sync_cast').upsert(cast, { onConflict: 'user_id,show_id,record_id' });
+    const { data: written, error } = await supabase
+      .from('sync_cast').upsert(cast, { onConflict: 'user_id,show_id,record_id' }).select('server_at');
     if (error) throw new Error(error.message);
+    noteNewest(written);
   }
 
   // Deletions last, so a tombstone can never be overwritten by the upsert of a record this device
@@ -248,15 +265,17 @@ export async function push(data: AppData, userId: string): Promise<{ shows: numb
       edited_at: new Date(g.deletedAt).toISOString(),
       deleted_at: new Date(g.deletedAt).toISOString(),
     };
-    const { error } = await supabase
+    const { data: written, error } = await supabase
       .from(table)
-      .upsert(row, { onConflict: g.recordId ? 'user_id,show_id,record_id' : 'user_id,show_id' });
+      .upsert(row, { onConflict: g.recordId ? 'user_id,show_id,record_id' : 'user_id,show_id' })
+      .select('server_at');
     if (error) throw new Error(error.message);
+    noteNewest(written);
   }
   // Cleared only after every one landed; a throw above leaves them queued for the next attempt.
   if (graves.length) writeTombstones([]);
 
-  return { shows: shows.length, cast: cast.length, deletes: graves.length };
+  return { shows: shows.length, cast: cast.length, deletes: graves.length, newest };
 }
 
 export async function pull(userId: string): Promise<{ rows: RemoteRow[]; newest: string | null }> {

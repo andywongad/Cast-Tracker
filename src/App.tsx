@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { StoreProvider, useStore } from './hooks/useStore';
 import { UIProvider, useUI } from './hooks/useUI';
 import { AuthProvider } from './hooks/useAuth';
+import { SyncProvider } from './hooks/useSync';
 import { isSyncConfigured } from './lib/supabase';
 import { supabaseAuth, sessionFromUrl, onSessionChange } from './lib/authSupabase';
 import { THEMES, themeVars } from './lib/theme';
@@ -150,7 +151,11 @@ export default function App() {
     <StoreProvider>
       <UIProvider>
         <AuthProvider {...authProps}>
-          <Shell />
+          {/* Inside AuthProvider because it keys off the session, and inside StoreProvider because
+              it both reads and writes the library. */}
+          <SyncProvider>
+            <Shell />
+          </SyncProvider>
         </AuthProvider>
       </UIProvider>
     </StoreProvider>

@@ -4,11 +4,13 @@ import { useUI } from '../hooks/useUI';
 import { useAuth } from '../hooks/useAuth';
 import { isAuthPreviewEnabled } from '../lib/auth';
 import { isSyncConfigured } from '../lib/supabase';
+import { useSync } from '../hooks/useSync';
 import Sheet from './Sheet';
 
 export default function SettingsSheet() {
   const { settings, setTheme, setAutoSave, exportBackup, importBackup, resetAll, backupState, keptTotal } = useStore();
   const { session } = useAuth();
+  const sync = useSync();
   const { settingsOpen, closeSettings, resetToHome, openFeedback, openAuth } = useUI();
   const [resetConfirm, setResetConfirm] = useState(false);
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -93,6 +95,16 @@ export default function SettingsSheet() {
             <button onClick={openAuth} className="ct-btn-ghost" style={{ width: '100%', marginBottom: 6 }}>
               {session ? `Signed in as ${session.email}` : 'Sign up or sign in'}
             </button>
+            {/* Says what sync has actually done, rather than implying it silently. A failure has to
+                be visible here: the whole point of an account is that your work is somewhere else,
+                and an error nobody sees is indistinguishable from it having worked. */}
+            {session && sync.state !== 'off' && (
+              <div style={{ fontSize: 12.5, color: sync.state === 'error' ? '#C24B4B' : 'var(--text-muted)', marginBottom: 6, lineHeight: 1.45 }}>
+                {sync.state === 'syncing' && 'Syncing\u2026'}
+                {sync.state === 'error' && (sync.error || 'Sync failed. It will try again shortly.')}
+                {sync.state === 'idle' && (sync.lastSyncedAt ? 'Everything is saved to your account.' : 'Waiting to sync.')}
+              </div>
+            )}
             <div style={{ fontSize: 13, color: 'var(--text-faint)', lineHeight: 1.45, marginBottom: 22 }}>
               Preview of a future feature — no account is created yet.
             </div>

@@ -29,7 +29,11 @@ interface StoreValue {
   settings: AppSettings;
   shareStore: ShareStore;
   recentShows: string[];
-  updateData: (fn: (d: AppData) => void) => void;
+  /**
+   * `stamp: false` applies a change without marking it as this device's work. Only sync uses it —
+   * see the note on the implementation.
+   */
+  updateData: (fn: (d: AppData) => void, opts?: { stamp?: boolean }) => void;
   /** The last save to localStorage failed — almost always a full quota. Changes are on screen only. */
   storageFailed: boolean;
   setTheme: (t: 'Light' | 'Dark') => void;
@@ -64,7 +68,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const [storageFailed, setStorageFailed] = useState(false);
 
-  const updateData = useCallback((fn: (d: AppData) => void) => {
+  const updateData = useCallback((fn: (d: AppData) => void, opts?: { stamp?: boolean }) => {
     setData((prev) => {
       const next: AppData = structuredClone(prev);
       fn(next);
@@ -77,7 +81,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
        * the clone above on a 336-record library, so a second pass over the same data is not the
        * expensive part of this function.
        */
-      stampEdits(prev, next);
+      /**
+       * Skipped when the change came from the server.
+       *
+       * Records arriving from a pull already carry the `editedAt` of whoever wrote them. Stamping
+       * them here would overwrite that with "now", making every pulled record look like a fresh
+       * local edit: it would bounce straight back on the next push, and — worse — it would win the
+       * next conflict against the device that actually made the edit. Applying is not editing.
+       */
+      if (opts?.stamp !== false) stampEdits(prev, next);
       /**
        * A failed write used to be indistinguishable from a successful one: the edit stayed in
        * React state, the user saw it, and it was gone on reload. Recording the outcome lets the
