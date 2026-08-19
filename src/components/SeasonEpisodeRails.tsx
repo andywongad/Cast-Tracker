@@ -2,6 +2,18 @@ import { useEffect, useRef } from 'react';
 import type { SeasonEpisode } from '../lib/tmdb';
 
 /**
+ * How close together two taps must be to count as a double-tap.
+ *
+ * Measured against each event's own `timeStamp`, which the browser sets when the tap happened,
+ * not `Date.now()` inside the handler. The first tap starts real work — a clone of the show, a
+ * localStorage write, a full grid re-render — and while that runs the second tap's handler simply
+ * waits its turn. Timing from handler entry charged that delay to the user, so a genuinely quick
+ * double-tap read as two slow single taps and the gesture silently did nothing. How long the app
+ * took to respond is not evidence about how fast someone tapped.
+ */
+const DOUBLE_TAP_MS = 320;
+
+/**
  * Season rail over episode rail, both horizontally scrollable.
  *
  * The selected chip in each rail is sticky on both edges, so it rides the left edge once you've
@@ -85,10 +97,9 @@ export default function SeasonEpisodeRails({
    * are already on is a no-op, so the doubled selection costs nothing.
    */
   const lastTap = useRef<{ episode: number; at: number }>({ episode: -1, at: 0 });
-  const tapEpisode = (n: number) => {
-    const now = Date.now();
-    const isSecond = lastTap.current.episode === n && now - lastTap.current.at < 320;
-    lastTap.current = isSecond ? { episode: -1, at: 0 } : { episode: n, at: now };
+  const tapEpisode = (n: number, at: number) => {
+    const isSecond = lastTap.current.episode === n && at - lastTap.current.at < DOUBLE_TAP_MS;
+    lastTap.current = isSecond ? { episode: -1, at: 0 } : { episode: n, at };
     onEpisodeChange(n);
     if (isSecond) onEpisodeRecap?.(n);
   };
@@ -132,7 +143,7 @@ export default function SeasonEpisodeRails({
                 role="tab"
                 aria-selected={selected}
                 data-selected={selected}
-                onClick={() => tapEpisode(ep.number)}
+                onClick={(e) => tapEpisode(ep.number, e.timeStamp)}
                 className={`ct-rail-item ct-rail-item-sm${selected ? ' ct-rail-item-selected' : ''}`}
                 // Number only. Titles were tried and taken back out: they made every chip a
                 // different width, which is hard to scan and cost most of the rail's visible
