@@ -10,7 +10,7 @@
  * remote edit overwriting a newer local one, and a stale delete destroying a record that was
  * edited afterwards.
  */
-import { stampEdits, applyRemote, readTombstones } from './sync';
+import { stampEdits, applyRemote, readTombstones, collectPush } from './sync';
 import type { AppData, CastMember } from '../types';
 
 const store: Record<string, string> = {};
@@ -63,6 +63,13 @@ console.log('stampEdits');
   const next = data([member('b')]);
   stampEdits(prev, next, 1000);
   check('deleting a disposable record leaves no tombstone', readTombstones().length === 0);
+}
+{ // a hand-added record with only a name is the user's, even though hasUserContent says otherwise
+  store['ct.sync.tombstones.v1'] = '[]';
+  const prev = data([member('a', { name: 'Carmy' }), member('b')]);   // no `auto` flag
+  const next = data([member('b')]);
+  stampEdits(prev, next, 1000);
+  check('deleting a hand-added, name-only record tombstones it', readTombstones().length === 1);
 }
 
 console.log('applyRemote — the conflict rule');
@@ -120,6 +127,14 @@ console.log('applyRemote — the conflict rule');
   const next = data([member('b')]);
   stampEdits(prev, next, 1000);
   check('an auto record the user edited still tombstones', readTombstones().length === 1);
+}
+
+console.log('collectPush — duplicate ids');
+{ // Postgres rejects the whole statement if a batch touches one row twice, so this must not happen
+  const dup = data([member('same', { nickname: 'first', editedAt: 100 }), member('same', { nickname: 'second', editedAt: 200 })]);
+  const { cast } = collectPush(dup, 'u1');
+  check('duplicate record ids collapse to one row', cast.length === 1, `got ${cast.length}`);
+  check('the newer edit is the one sent', (cast[0].payload as any).nickname === 'second');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

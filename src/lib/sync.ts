@@ -1,5 +1,5 @@
 import { getSupabase } from './supabase';
-import { hasUserContent } from './castValue';
+import { isDisposable } from './castValue';
 import type { AppData, CastMember, Show } from '../types';
 
 /**
@@ -11,9 +11,15 @@ import type { AppData, CastMember, Show } from '../types';
  * once". Whole-library last-write-wins was rejected: it silently destroys whatever was done on
  * the device that happens to sync first.
  *
- * Only records holding something the user typed are sent. Auto-loaded cast regenerates from TMDb
- * on any device, so uploading it would be replicating a cache — on the sample library that was 4
- * records worth keeping out of 357.
+ * What gets sent is exactly what a backup would carry: everything except records that were
+ * auto-loaded and still hold nothing of the user's. Those regenerate from TMDb on any device, so
+ * uploading them would be replicating a cache.
+ *
+ * The test is `isDisposable`, not `hasUserContent`, and the difference is not academic.
+ * `hasUserContent` deliberately ignores `name`, because TMDb fills it in for nearly every record —
+ * which means a character you added by hand and typed only a name for fails it. Filtering on that
+ * would have kept such a record in your export and silently dropped it from every other device.
+ * Sync and backup have to agree about what counts as yours.
  */
 
 const CURSOR_KEY = 'ct.sync.v1';
@@ -119,9 +125,10 @@ export function stampEdits(prev: AppData, next: AppData, now = Date.now()): void
     }
     // Whatever is left in prevCast was in the previous state and isn't in this one.
     for (const gone of prevCast.values()) {
-      // Only records that were worth syncing are worth tombstoning. An auto-loaded placeholder
-      // being evicted is not a deletion anyone needs replicated — it reappears from TMDb.
-      if (hasUserContent(gone)) graves.push({ showId: show.id, recordId: gone.id, deletedAt: now });
+      // Only records that were worth syncing are worth tombstoning, by the same test — an
+      // auto-loaded placeholder being evicted is not a deletion anyone needs replicated, since it
+      // reappears from TMDb the moment its episode is opened.
+      if (!isDisposable(gone)) graves.push({ showId: show.id, recordId: gone.id, deletedAt: now });
     }
     prevShows.delete(show.id);
   }
@@ -167,6 +174,28 @@ interface RemoteRow {
   deleted_at: string | null;
 }
 
+/**
+ * Collapse rows that share a primary key, newest edit winning.
+ *
+ * Postgres refuses an upsert whose batch touches the same row twice — "ON CONFLICT DO UPDATE
+ * command cannot affect row a second time" — and it refuses the *whole statement*, so one
+ * duplicated id stops every other record in the library from syncing. Found on real data: a show
+ * carrying eight records under a single id, left behind by a bad import.
+ *
+ * Deduplicating here rather than trusting ids to be unique, because this code cannot fix whatever
+ * produced them and should not be the thing that fails because of it. The same last-write-wins
+ * rule that settles conflicts between devices settles them within a batch.
+ */
+function dedupe<T extends { edited_at: string }>(rows: T[], key: (r: T) => string): T[] {
+  const best = new Map<string, T>();
+  for (const row of rows) {
+    const k = key(row);
+    const prev = best.get(k);
+    if (!prev || row.edited_at > prev.edited_at) best.set(k, row);
+  }
+  return [...best.values()];
+}
+
 /** What this device has that the server should know about. */
 export function collectPush(data: AppData, userId: string) {
   const shows = data.shows.map((s) => ({
@@ -178,7 +207,7 @@ export function collectPush(data: AppData, userId: string) {
   }));
 
   const cast = data.shows.flatMap((s) =>
-    s.cast.filter(hasUserContent).map((c) => ({
+    s.cast.filter((c) => !isDisposable(c)).map((c) => ({
       user_id: userId,
       show_id: s.id,
       record_id: c.id,
@@ -187,7 +216,10 @@ export function collectPush(data: AppData, userId: string) {
     })),
   );
 
-  return { shows, cast };
+  return {
+    shows: dedupe(shows, (r) => r.show_id),
+    cast: dedupe(cast, (r) => `${r.show_id}:${r.record_id}`),
+  };
 }
 
 export async function push(data: AppData, userId: string): Promise<{ shows: number; cast: number; deletes: number }> {

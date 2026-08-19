@@ -64,7 +64,7 @@ export default function AuthSheet() {
                 </>
               ) : (
                 <>
-                  We&rsquo;ve emailed <strong style={{ color: 'var(--text)' }}>{awaitingEmail}</strong> a six-digit code.
+                  We&rsquo;ve emailed <strong style={{ color: 'var(--text)' }}>{awaitingEmail}</strong> a sign-in code.
                   Enter it below. There&rsquo;s a link in that email too, if you&rsquo;d rather tap it.
                 </>
               )}
@@ -85,18 +85,21 @@ export default function AuthSheet() {
                   // Lets iOS and Android offer the code straight from the notification.
                   autoComplete="one-time-code"
                   autoFocus
-                  maxLength={6}
+                  // Not fixed at 6. Supabase's OTP length is configurable and this project's
+                  // currently issues 8, so a hardcoded 6 silently truncated a valid code and left
+                  // the button disabled with no way to proceed.
+                  maxLength={10}
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && code.length === 6 && !pending) verifyCode(code); }}
-                  placeholder="123456"
+                  onKeyDown={(e) => { if (e.key === 'Enter' && code.length >= 6 && !pending) verifyCode(code); }}
+                  placeholder="12345678"
                   className="ct-input"
                   style={{ marginBottom: 14, letterSpacing: '0.35em', fontVariantNumeric: 'tabular-nums' }}
                 />
                 {error && <div style={{ fontSize: 12.5, color: '#C24B4B', marginBottom: 12 }}>{error}</div>}
                 <button
                   onClick={() => verifyCode(code)}
-                  disabled={code.length !== 6 || pending}
+                  disabled={code.length < 6 || pending}
                   className="ct-btn-primary"
                   style={{ width: '100%', marginBottom: 10 }}
                 >
