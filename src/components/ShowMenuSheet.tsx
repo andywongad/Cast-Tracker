@@ -29,7 +29,7 @@ function Row({ label, hint, onClick, danger }: { label: string; hint?: string; o
 }
 
 export default function ShowMenuSheet() {
-  const { showById, shareShow, disposableCount, clearDisposable } = useStore();
+  const { showById, shareShow, disposableCount, clearDisposable, updateData } = useStore();
   const { activeShowId, showMenuOpen, closeShowMenu, openWebView, openShareSheet, openRedeem } = useUI();
   const show = showById(activeShowId);
 
@@ -43,6 +43,23 @@ export default function ShowMenuSheet() {
   const autoCount = disposableCount(show.id);
 
   const act = (fn: () => void) => () => { closeShowMenu(); fn(); };
+
+  const done = show.status === 'completed';
+  /**
+   * The only way a show moves between the two home sections.
+   *
+   * Both directions run through one control, so Completed can't become a dead end — a show binged
+   * in a weekend and then picked back up for a new season has to be able to come back, and a
+   * mis-tap has to be undoable from the same place it happened.
+   */
+  const toggleStatus = () => {
+    const id = show.id;
+    updateData((d) => {
+      const s = d.shows.find((x) => x.id === id);
+      if (s) s.status = s.status === 'completed' ? 'watching' : 'completed';
+    });
+    closeShowMenu();
+  };
 
   return (
     <Sheet onClose={closeShowMenu} label="Show options">
@@ -74,6 +91,14 @@ export default function ShowMenuSheet() {
               onClick={() => { clearDisposable(show.id); closeShowMenu(); }}
             />
           )}
+          {/* First, because it is the only row here that changes what the app shows you rather
+              than opening something. The hint names the destination: "completed" on its own
+              doesn't tell you a section exists for it. */}
+          <Row
+            label={done ? 'Move back to Currently watching' : 'Mark as completed'}
+            hint={done ? 'Returns this show to your in-progress list' : 'Moves it to Completed on the home screen'}
+            onClick={toggleStatus}
+          />
           <Row label="Share this show" hint="Generate a code others can redeem" onClick={act(() => openShareSheet(shareShow(show.id)))} />
           <Row label="Redeem a character code" onClick={act(() => openRedeem('cast'))} />
           {show.wikiUrl && <Row label="Wikipedia" onClick={act(() => openWebView(show.wikiUrl, 'Wikipedia'))} />}

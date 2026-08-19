@@ -40,7 +40,23 @@ function coerceShow(raw: unknown): Show | null {
   if (!raw || typeof raw !== 'object') return null;
   const s = raw as Show;
   if (typeof s.id !== 'string' || !s.id) return null;
-  return { ...s, title: typeof s.title === 'string' ? s.title : '', cast: coerceCast(s.cast) };
+  return {
+    ...s,
+    title: typeof s.title === 'string' ? s.title : '',
+    /**
+     * Anything that isn't the string 'completed' is watching, including absent.
+     *
+     * The grouping already behaved this way by accident — it asks `status !== 'completed'` — but
+     * nothing wrote a value for shows created before the field existed, so they carried
+     * `undefined` and were sorted correctly only because of how that comparison happens to fall.
+     * Now that a control writes this field, the default is stated here instead of being a
+     * property of one expression somebody could reasonably rewrite.
+     *
+     * Additive: it fills a gap in what is loaded, and never rewrites a value that is already there.
+     */
+    status: s.status === 'completed' ? 'completed' : 'watching',
+    cast: coerceCast(s.cast),
+  };
 }
 
 /**
