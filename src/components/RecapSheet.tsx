@@ -1,16 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useUI } from '../hooks/useUI';
-import { useStore } from '../hooks/useStore';
 import { getSeasonEpisodes, type SeasonEpisode } from '../lib/tmdb';
 import Sheet from './Sheet';
-
-/**
- * After this many showings the tip retires itself.
- *
- * Three, because a hint that outlives its usefulness stops being a hint and becomes furniture.
- * Someone perfectly happy tapping the button should not be told about the shortcut forever.
- */
-export const RECAP_TIP_LIMIT = 3;
 
 /**
  * What happened in the episode *before* the one you're on.
@@ -36,31 +27,8 @@ export default function RecapSheet({
   showTmdbId: number | null;
 }) {
   const { recap, closeRecap } = useUI();
-  const { settings, bumpRecapTip } = useStore();
   const [priorSeason, setPriorSeason] = useState<{ season: number; episodes: SeasonEpisode[] } | null>(null);
   const [loading, setLoading] = useState(false);
-
-  /**
-   * Decided once per *opening*, and held for as long as that opening lasts.
-   *
-   * Not `useState(() => …)`: this component stays mounted for the life of the show screen and
-   * merely renders null while closed, so a lazy initialiser would settle the question once at
-   * mount and answer the same way forever — the tip outstayed its three showings and the counter
-   * ran past the limit. Not read live from settings either, or the sentence would disappear out
-   * from under the person reading it the instant the count below is written.
-   */
-  const [showTip, setShowTip] = useState(false);
-  const seenRef = useRef(settings.recapTipShown);
-  seenRef.current = settings.recapTipShown;
-
-  // Counted when it is actually on screen rather than when the sheet mounts: on a series' first
-  // episode no sheet ever opens, and a tip nobody saw shouldn't burn one of its three showings.
-  useEffect(() => {
-    if (!recap.open) return;
-    const eligible = seenRef.current < RECAP_TIP_LIMIT;
-    setShowTip(eligible);
-    if (eligible) bumpRecapTip(seenRef.current + 1);
-  }, [recap.open, bumpRecapTip]);
 
   const wantsPriorSeason = recap.open && recap.season !== currentSeason;
 
@@ -119,12 +87,16 @@ export default function RecapSheet({
       {/* Taught here rather than on the show screen: this costs no pixels on the surface whose job
           is showing cast, and it only reaches people who have already used the feature and know
           what it gives them. A coach mark on the episode rail would have to sell the payoff *and*
-          the gesture to someone who asked for neither. */}
-      {showTip && (
-        <p style={{ fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-faint)', textAlign: 'center', margin: '12px 0 0' }}>
-          Tip: double-tap an episode to get here faster.
-        </p>
-      )}
+          the gesture to someone who asked for neither.
+
+          Shown every time, deliberately. It had a three-showing cap and retired itself the moment
+          the gesture was used; that bought back one line inside a sheet that is already only as
+          tall as its contents, at the cost of a counter in settings, a store setter, and a
+          per-opening effect. Not worth it — and a tip that vanishes is one a returning user can't
+          find again. */}
+      <p style={{ fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-faint)', textAlign: 'center', margin: '12px 0 0' }}>
+        Tip: double-tap an episode to get here faster.
+      </p>
     </Sheet>
   );
 }

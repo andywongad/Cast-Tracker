@@ -35,8 +35,6 @@ interface StoreValue {
   setShowColumns: (n: number) => void;
   setCastColumns: (n: number) => void;
   setAutoSave: (enabled: boolean) => void;
-  /** Raises `recapTipShown` to at least `to`. Never lowers it — see the implementation. */
-  bumpRecapTip: (to: number) => void;
   exportBackup: () => Backup;
   /** How many of a show's records were auto-loaded and still hold nothing of the user's. */
   disposableCount: (showId: string) => number;
@@ -92,18 +90,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const setShowColumns = useCallback((n: number) => persistSettingsPatch({ showColumns: n }), [persistSettingsPatch]);
   const setCastColumns = useCallback((n: number) => persistSettingsPatch({ castColumns: n }), [persistSettingsPatch]);
   const setAutoSave = useCallback((enabled: boolean) => persistSettingsPatch({ autoSave: enabled }), [persistSettingsPatch]);
-  /**
-   * Monotonic on purpose. The tip is counted when it renders and retired when the gesture is used;
-   * neither caller should ever be able to un-teach it, so this takes a floor rather than a value.
-   */
-  const bumpRecapTip = useCallback((to: number) => {
-    setSettings((prev) => {
-      if (prev.recapTipShown >= to) return prev;
-      const next = { ...prev, recapTipShown: to };
-      storage.persistSettings(next);
-      return next;
-    });
-  }, []);
 
   const [backupState, setBackupState] = useState<storage.BackupState>(() => storage.loadBackupState());
   const patchBackupState = useCallback((patch: Partial<storage.BackupState>) => {
@@ -252,10 +238,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [shareStore, updateData]);
 
   const value = useMemo<StoreValue>(() => ({
-    data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, bumpRecapTip,
+    data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave,
     exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem,
     backupState, dismissBackupNudge, disposableCount, clearDisposable, keptTotal, storageFailed,
-  }), [keptTotal, storageFailed, data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, bumpRecapTip, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
+  }), [keptTotal, storageFailed, data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

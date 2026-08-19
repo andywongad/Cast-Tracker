@@ -167,14 +167,6 @@ export interface AppSettings {
   showColumns: number;
   castColumns: number;
   autoSave: boolean;
-  /**
-   * How many times the "double-tap an episode" tip has been shown inside the recap sheet.
-   *
-   * Additive: absent in settings written before this existed, which `loadSettings` reads as 0, so
-   * nothing needs migrating. Performing the gesture jumps this straight to the retirement value —
-   * doing the thing is proof it was learned, and better proof than having seen a sentence.
-   */
-  recapTipShown: number;
 }
 
 export type SharePayload =

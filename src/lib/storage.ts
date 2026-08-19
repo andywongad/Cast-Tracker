@@ -97,7 +97,6 @@ export function loadSettings(): AppSettings {
     showColumns: s.showColumns ?? 2,
     castColumns: Math.min(s.castColumns ?? 2, 4),
     autoSave: s.autoSave ?? false,
-    recapTipShown: typeof s.recapTipShown === 'number' ? s.recapTipShown : 0,
   };
 }
 

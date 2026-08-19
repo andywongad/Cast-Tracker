@@ -12,7 +12,7 @@ import RelationshipMap from './RelationshipMap';
 import DensityToggle from './DensityToggle';
 import SeasonEpisodeRails from './SeasonEpisodeRails';
 import TieredCastView from './TieredCastView';
-import RecapSheet, { RECAP_TIP_LIMIT } from './RecapSheet';
+import RecapSheet from './RecapSheet';
 import RecapButton from './RecapButton';
 import SerialCastView from './SerialCastView';
 
@@ -37,7 +37,7 @@ function cacheEpisode(key: string, people: EpisodePerson[]) {
 }
 
 export default function ShowScreen() {
-  const { settings, updateData, showById, pushRecent, setCastColumns, bumpRecapTip } = useStore();
+  const { settings, updateData, showById, pushRecent, setCastColumns } = useStore();
   const { activeShowId, openAddCast, openRecap } = useUI();
   const show = showById(activeShowId);
 
@@ -406,9 +406,6 @@ export default function ShowScreen() {
   const openRecapFor = (episode: number) => {
     const prev = previousOf(currentSeason, episode);
     if (!prev || !show.tmdbId) return;
-    // They've done it, so there is nothing left to teach — retire the tip outright rather than
-    // letting it run out its remaining showings at someone who has already learned the gesture.
-    bumpRecapTip(RECAP_TIP_LIMIT);
     openRecap(prev.season, prev.episode);
   };
 
