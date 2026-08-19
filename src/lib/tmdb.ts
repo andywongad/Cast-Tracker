@@ -94,6 +94,12 @@ export interface ShowDetails {
   wikiGuess: string | null;
   /** Series-wide episode total — the denominator for show classification. */
   totalEpisodes: number;
+  /**
+   * TMDb's production status: 'Ended', 'Canceled', 'Returning Series', 'In Production', 'Planned'.
+   * Only the first two mean there is a final episode to have reached — a returning show has no
+   * end to be at, however far through it you are.
+   */
+  status: string;
 }
 
 export async function getShowDetails(tmdbId: number): Promise<ShowDetails | null> {
@@ -102,7 +108,7 @@ export async function getShowDetails(tmdbId: number): Promise<ShowDetails | null
   const seasons: number[] = (data.seasons || []).filter((s: any) => s.season_number > 0).map((s: any) => s.season_number);
   const imdbId = data.external_ids?.imdb_id || null;
   const wikiGuess = data.name ? `https://en.wikipedia.org/wiki/${encodeURIComponent(String(data.name).replace(/ /g, '_'))}` : null;
-  return { seasons, imdbId, wikiGuess, totalEpisodes: data.number_of_episodes || 0 };
+  return { seasons, imdbId, wikiGuess, totalEpisodes: data.number_of_episodes || 0, status: data.status || '' };
 }
 
 export async function getSeasonEpisodeCount(tmdbId: number, season: number): Promise<number | null> {

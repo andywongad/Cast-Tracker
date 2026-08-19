@@ -14,6 +14,7 @@ import SeasonEpisodeRails from './SeasonEpisodeRails';
 import TieredCastView from './TieredCastView';
 import RecapSheet from './RecapSheet';
 import RecapButton from './RecapButton';
+import FinishedPrompt, { shouldOfferCompletion } from './FinishedPrompt';
 import SerialCastView from './SerialCastView';
 
 /**
@@ -53,6 +54,9 @@ export default function ShowScreen() {
   const [photoNoteOpen, setPhotoNoteOpen] = useState(false);
   const [credits, setCredits] = useState<AggregateCastMember[]>([]);
   const [totalEpisodes, setTotalEpisodes] = useState(0);
+  // Only 'Ended'/'Canceled' shows have a last episode to be at. Comes off the details request
+  // that already runs for every show, so this costs nothing extra.
+  const [tmdbStatus, setTmdbStatus] = useState('');
   // The whole season payload, not just its episodes: the recap needs the season overview too,
   // and it arrives on the same request.
   const [season, setSeasonData] = useState<Season>({ overview: '', episodes: [] });
@@ -66,9 +70,12 @@ export default function ShowScreen() {
    */
   const [episodeCast, setEpisodeCast] = useState<{ key: string; people: EpisodePerson[] }>({ key: '', people: [] });
   const [episodeCastLoading, setEpisodeCastLoading] = useState(false);
+  // Only the setter is used: answering the prompt writes its dismissal to localStorage, and this
+  // exists purely to trigger the re-render that re-reads it. Nothing needs the value.
+  const [, setPromptNonce] = useState(0);
 
   useEffect(() => { if (activeShowId) pushRecent(activeShowId); }, [activeShowId, pushRecent]);
-  useEffect(() => { setSeasonsReal(false); }, [show?.tmdbId]);
+  useEffect(() => { setSeasonsReal(false); setTmdbStatus(''); }, [show?.tmdbId]);
 
   useEffect(() => {
     if (!show?.tmdbId) return;
@@ -77,6 +84,7 @@ export default function ShowScreen() {
       if (!alive || !d) return;
       if (d.seasons.length) { setSeasons(d.seasons); setSeasonsReal(true); }
       setTotalEpisodes(d.totalEpisodes);
+      setTmdbStatus(d.status);
       updateData((data2) => {
         const s = data2.shows.find((x) => x.id === show.id);
         if (!s) return;
@@ -395,6 +403,22 @@ export default function ShowScreen() {
    * The episode number for the cross-season case is resolved by RecapSheet, which fetches that
    * season only when the sheet is opened; here we only need to know that one exists.
    */
+  /**
+   * Recomputed each render rather than held in state. The dismissal lives in localStorage, written
+   * by the prompt itself; mirroring it into React state would give one question two answers that
+   * could disagree.
+   */
+  const offerCompletion = shouldOfferCompletion({
+    show,
+    tmdbStatus,
+    // `seasonsReal` gates this: the placeholder [1..8] would make season 8 look like the last one
+    // on a six-season show, and offer to complete it there.
+    seasons: seasonsReal ? seasons : [],
+    currentSeason,
+    currentEpisode: currentEp,
+    episodeCount: season.episodes.length,
+  });
+
   const previousOf = (season: number, episode: number): { season: number; episode: number } | null =>
     episode > 1
       ? { season, episode: episode - 1 }
@@ -555,6 +579,12 @@ export default function ShowScreen() {
                 + Add cast manually
               </button>
             </div>
+          )}
+          {/* Below the sticky rails and above the cast, so it is in the reading path without
+              pushing the rails off screen. Absent for everyone who isn't on the final episode of an
+              ended scripted show — almost every visit. */}
+          {offerCompletion && (
+            <FinishedPrompt show={show} onDismiss={() => setPromptNonce((n) => n + 1)} />
           )}
           {show.cast.length > 0 && (
             <>
