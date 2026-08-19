@@ -186,10 +186,24 @@ export interface SeasonEpisode {
  * episode rail with titles, and the guest tier for any episode in the season, both come from one
  * request rather than one per episode. A 24-episode season is 1 call, not 24.
  */
-export async function getSeasonEpisodes(tmdbId: number, season: number): Promise<SeasonEpisode[]> {
-  const data = await get<{ episodes: any[] }>(`/tv/${tmdbId}/season/${season}`);
-  if (!data) return [];
-  return (data.episodes || []).map((e) => ({
+export interface Season {
+  /**
+   * What the season is about, as a whole. A separate field from the episode overviews and often
+   * far better written — on shows whose per-episode text is a teaser rather than a synopsis, this
+   * is the only real summary TMDb has. Empty on plenty of seasons, so every reader needs a
+   * fallback.
+   */
+  overview: string;
+  episodes: SeasonEpisode[];
+}
+
+/** The season payload in full. Same request as `getSeasonEpisodes`, and deduped with it. */
+export async function getSeason(tmdbId: number, season: number): Promise<Season> {
+  const data = await get<{ overview?: string; episodes: any[] }>(`/tv/${tmdbId}/season/${season}`);
+  if (!data) return { overview: '', episodes: [] };
+  return {
+    overview: data.overview || '',
+    episodes: (data.episodes || []).map((e) => ({
     number: e.episode_number,
     name: e.name || '',
     overview: e.overview || '',
@@ -198,8 +212,13 @@ export async function getSeasonEpisodes(tmdbId: number, season: number): Promise
       name: p.name,
       character: p.character || p.roles?.[0]?.character || '',
       photo: img(p.profile_path, 'w185'),
+      })),
     })),
-  }));
+  };
+}
+
+export async function getSeasonEpisodes(tmdbId: number, season: number): Promise<SeasonEpisode[]> {
+  return (await getSeason(tmdbId, season)).episodes;
 }
 
 export interface PersonCredit {

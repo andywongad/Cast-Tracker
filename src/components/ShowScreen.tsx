@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { epNumFromLabel } from '../lib/utils';
-import { getShowDetails, getEpisodeCredits, getAggregateCredits, getSeasonEpisodes, hasTmdbKey, type AggregateCastMember, type SeasonEpisode } from '../lib/tmdb';
+import { getShowDetails, getEpisodeCredits, getAggregateCredits, getSeason, hasTmdbKey, type AggregateCastMember, type Season } from '../lib/tmdb';
 import { classifyShow, coreCast, type ShapeReport } from '../lib/showShape';
 import { toEpisodePeople, missingFromCast, addPeopleToShow, episodeChangesAnything, type EpisodePerson } from '../lib/episodeCast';
 import { useFirstSeasons } from '../lib/firstSeason';
@@ -53,7 +53,9 @@ export default function ShowScreen() {
   const [photoNoteOpen, setPhotoNoteOpen] = useState(false);
   const [credits, setCredits] = useState<AggregateCastMember[]>([]);
   const [totalEpisodes, setTotalEpisodes] = useState(0);
-  const [seasonEpisodes, setSeasonEpisodes] = useState<SeasonEpisode[]>([]);
+  // The whole season payload, not just its episodes: the recap needs the season overview too,
+  // and it arrives on the same request.
+  const [season, setSeasonData] = useState<Season>({ overview: '', episodes: [] });
   const [episodesLoading, setEpisodesLoading] = useState(false);
   /**
    * Tagged with the episode it was fetched for. An untagged list is a trap: selecting a new
@@ -150,14 +152,14 @@ export default function ShowScreen() {
    * per-episode credits endpoint, so a 24-episode season costs 1 request rather than 24.
    */
   useEffect(() => {
-    if (!show?.tmdbId) { setSeasonEpisodes([]); setEpisodeCount(24); return; }
+    if (!show?.tmdbId) { setSeasonData({ overview: '', episodes: [] }); setEpisodeCount(24); return; }
     let alive = true;
     setEpisodesLoading(true);
-    getSeasonEpisodes(show.tmdbId, currentSeason)
-      .then((eps) => {
+    getSeason(show.tmdbId, currentSeason)
+      .then((data) => {
         if (!alive) return;
-        setSeasonEpisodes(eps);
-        if (eps.length) setEpisodeCount(eps.length);
+        setSeasonData(data);
+        if (data.episodes.length) setEpisodeCount(data.episodes.length);
       })
       .finally(() => { if (alive) setEpisodesLoading(false); });
     return () => { alive = false; };
@@ -376,7 +378,7 @@ export default function ShowScreen() {
    */
   // Plain consts, not useMemo: this sits after the `if (!show) return null` guard above, so a hook
   // here would change the hook count on a show that's been deleted.
-  const selectedEpisode = seasonEpisodes.find((e) => e.number === bulkEp) || null;
+  const selectedEpisode = season.episodes.find((e) => e.number === bulkEp) || null;
   // Stale-guarded: while a new episode's credits load this is empty rather than the last
   // episode's, so placeholders never advertise the wrong episode.
   const currentEpisodeCast =
@@ -468,7 +470,7 @@ export default function ShowScreen() {
               seasons={orderedSeasons}
               currentSeason={currentSeason}
               onSeasonChange={setSeason}
-              episodes={seasonEpisodes}
+              episodes={season.episodes}
               currentEpisode={bulkEp}
               onEpisodeChange={(n) => setMapEpisode(`Ep ${n}`)}
               episodesLoading={episodesLoading}
@@ -667,7 +669,7 @@ export default function ShowScreen() {
       )}
 
       <RecapSheet
-        episodesForSeason={seasonEpisodes}
+        currentSeasonData={season}
         currentSeason={currentSeason}
         showTmdbId={show.tmdbId ?? null}
       />
