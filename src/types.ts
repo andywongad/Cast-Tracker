@@ -128,6 +128,19 @@ export interface CastMember {
    */
   auto?: true;
   // relationship-map state, keyed by "season_episodeLabel"
+  /**
+   * When this record was last edited, epoch ms. Stamped centrally in `updateData` by diffing the
+   * record against its previous value — never by the code doing the editing, for the same reason
+   * `hasUserContent` is derived rather than flagged: a field that has to be set by hand at every
+   * edit site is a field that will be forgotten at one of them, and here the forgotten one would
+   * mean an edit that never syncs.
+   *
+   * Absent on everything written before sync existed, which reads as 0 — older than any remote
+   * record, so a first sync treats the device's untouched history as the loser in a conflict and
+   * nothing is silently overwritten in the other direction.
+   */
+  editedAt?: number;
+  // relationship-map state, keyed by "season_episodeLabel"
   relByEp?: Record<string, MapRelationship[]>;
   mapCellByEp?: Record<string, MapCell | null>;
   hideFromMap?: boolean;
@@ -156,6 +169,8 @@ export interface Show {
    * a lookup that will never succeed.
    */
   tvmazeId?: number | null;
+  /** Last edit to the show's own fields, epoch ms. Cast records carry their own — see CastMember. */
+  editedAt?: number;
 }
 
 export interface AppData {

@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { AppData, AppSettings, Show, ShareStore, SharePayload, CastMember } from '../types';
 import * as storage from '../lib/storage';
+import { stampEdits } from '../lib/sync';
 import { genId, genShareCode, initials, colorForIndex } from '../lib/utils';
 import { isDisposable, countDisposable, countKept } from '../lib/castValue';
 
@@ -67,6 +68,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setData((prev) => {
       const next: AppData = structuredClone(prev);
       fn(next);
+      /**
+       * The one place edits get timestamped, and the one place deletions become tombstones.
+       *
+       * Done by diffing prev against next rather than asking each edit site to stamp itself. Every
+       * call site that forgot would produce an edit that saves locally and never syncs — invisible
+       * until someone picks up their other phone and finds the work missing. Measured at 0.6ms for
+       * the clone above on a 336-record library, so a second pass over the same data is not the
+       * expensive part of this function.
+       */
+      stampEdits(prev, next);
       /**
        * A failed write used to be indistinguishable from a successful one: the edit stayed in
        * React state, the user saw it, and it was gone on reload. Recording the outcome lets the
