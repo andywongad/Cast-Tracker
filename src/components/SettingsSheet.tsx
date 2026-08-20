@@ -92,22 +92,47 @@ export default function SettingsSheet() {
         {(isSyncConfigured() || isAuthPreviewEnabled()) && (
           <>
             <label className="ct-label-muted">ACCOUNT</label>
-            <button onClick={openAuth} className="ct-btn-ghost" style={{ width: '100%', marginBottom: 6 }}>
-              {session ? `Signed in as ${session.email}` : 'Sign up or sign in'}
-            </button>
-            {/* Says what sync has actually done, rather than implying it silently. A failure has to
-                be visible here: the whole point of an account is that your work is somewhere else,
-                and an error nobody sees is indistinguishable from it having worked. */}
-            {session && sync.state !== 'off' && (
-              <div style={{ fontSize: 12.5, color: sync.state === 'error' ? '#C24B4B' : 'var(--text-muted)', marginBottom: 6, lineHeight: 1.45 }}>
-                {sync.state === 'syncing' && 'Syncing\u2026'}
-                {sync.state === 'error' && (sync.error || 'Sync failed. It will try again shortly.')}
-                {sync.state === 'idle' && (sync.lastSyncedAt ? 'Everything is saved to your account.' : 'Waiting to sync.')}
-              </div>
+            {/* Two shapes, because the two states are different jobs. Signed out this is an offer
+                and gets the weight of one; signed in it is a status readout that happens to be
+                tappable, and a full-strength button would keep asking for attention it no longer
+                needs. Both were the same grey block as Export, Import and Feedback. */}
+            {session ? (
+              <button
+                onClick={openAuth}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                  padding: '12px 14px', marginBottom: 22, border: 'none', borderRadius: 14,
+                  background: 'var(--surface)', cursor: 'pointer',
+                }}
+              >
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 14.5, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {session.email}
+                  </div>
+                  {/* Says what sync has actually done. A failure has to be visible: the point of an
+                      account is that the work is somewhere else, and an error nobody sees is
+                      indistinguishable from success. */}
+                  <div style={{ fontSize: 12.5, marginTop: 2, lineHeight: 1.4, color: sync.state === 'error' ? 'var(--danger)' : 'var(--text-muted)' }}>
+                    {sync.state === 'syncing' && 'Syncing\u2026'}
+                    {sync.state === 'error' && (sync.error || 'Sync failed. It will try again shortly.')}
+                    {sync.state === 'idle' && (sync.lastSyncedAt ? 'Everything is saved to your account.' : 'Waiting to sync.')}
+                    {sync.state === 'off' && 'Signed in.'}
+                  </div>
+                </div>
+                <span aria-hidden="true" style={{ flex: 'none', color: 'var(--icon-muted)', fontSize: 18, lineHeight: 1 }}>&rsaquo;</span>
+              </button>
+            ) : (
+              <>
+                <button onClick={openAuth} className="ct-btn-primary ct-btn-primary-calm" style={{ width: '100%', height: 46, marginBottom: 6 }}>
+                  Sign in to sync
+                </button>
+                <div style={{ fontSize: 13, color: 'var(--text-faint)', lineHeight: 1.45, marginBottom: 22 }}>
+                  {isSyncConfigured()
+                    ? 'Optional. Your library keeps working on this device either way.'
+                    : 'Preview of a future feature — no account is created yet.'}
+                </div>
+              </>
             )}
-            <div style={{ fontSize: 13, color: 'var(--text-faint)', lineHeight: 1.45, marginBottom: 22 }}>
-              Preview of a future feature — no account is created yet.
-            </div>
           </>
         )}
 
@@ -130,7 +155,9 @@ export default function SettingsSheet() {
             people might have twelve worth saving — the rest reload from TMDb — and a file that
             small looks broken unless you're told why it's small. */}
         <div style={{ fontSize: 13.5, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 10 }}>
-          Your data lives only on this device &mdash; no account, no server copy.{' '}
+          {session
+            ? 'Synced to your account, and exportable as a file.'
+            : 'Your data lives only on this device \u2014 no account, no server copy.'}{' '}
           {keptTotal === 0
             ? 'Nothing has been edited yet, so there is nothing a backup would need to carry: auto-loaded cast reloads by itself.'
             : `A backup carries the ${keptTotal} ${keptTotal === 1 ? 'record' : 'records'} you've edited or added by hand; auto-loaded cast is left out because it reloads by itself. ${backupAgeSentence}.`}
@@ -140,11 +167,13 @@ export default function SettingsSheet() {
           <button onClick={() => fileInputRef.current?.click()} className="ct-btn-ghost" style={{ flex: 1, height: 44 }}>⬆ Import</button>
           <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={onImportFile} style={{ display: 'none' }} />
         </div>
-        {importMsg && <div style={{ fontSize: 14, fontWeight: 700, color: importMsg.ok ? 'var(--accent-soft)' : '#C24B4B', marginBottom: 14 }}>{importMsg.text}</div>}
+        {importMsg && <div style={{ fontSize: 14, fontWeight: 700, color: importMsg.ok ? 'var(--accent-soft)' : 'var(--danger)', marginBottom: 14 }}>{importMsg.text}</div>}
 
         <div style={{ borderTop: '1px solid var(--border)', margin: '16px 0' }} />
 
-        <button onClick={openFeedback} className="ct-btn-ghost" style={{ width: '100%', height: 44, marginBottom: 8 }}>💬 Send Feedback</button>
+        {/* Deliberately lighter than Export/Import. It is useful but it is not one of the actions
+            that moves your data, and at equal weight it read as though it were. */}
+        <button onClick={openFeedback} className="ct-btn-ghost" style={{ width: '100%', height: 40, marginBottom: 8, fontSize: 14, color: 'var(--text-muted)' }}>💬 Send Feedback</button>
 
         {resetConfirm ? (
           <>
@@ -161,13 +190,24 @@ export default function SettingsSheet() {
             )}
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <button onClick={() => setResetConfirm(false)} className="ct-btn-ghost" style={{ flex: 1, height: 44 }}>Cancel</button>
-              <button onClick={doReset} style={{ flex: 1, height: 44, borderRadius: 12, border: '1px solid #C24B4B', background: 'transparent', color: '#C24B4B', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={doReset} style={{ flex: 1, height: 44, borderRadius: 12, border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
                 {keptTotal > 0 ? 'Reset without a backup' : 'Reset'}
               </button>
             </div>
           </>
         ) : (
-          <button onClick={() => setResetConfirm(true)} className="ct-btn-ghost" style={{ width: '100%', height: 44, color: '#C24B4B' }}>Reset to blank state</button>
+          /* No longer a filled block the same size as Export. A destructive action should be
+             findable and unmistakable, not prominent — weight here is an invitation to press it. */
+          <button
+            onClick={() => setResetConfirm(true)}
+            style={{
+              display: 'block', margin: '18px auto 0', padding: '8px 12px', minHeight: 32,
+              border: 'none', background: 'none', cursor: 'pointer',
+              fontSize: 13.5, color: 'var(--danger)',
+            }}
+          >
+            Reset to blank state
+          </button>
         )}
 
         <div style={{ borderTop: '1px solid var(--border)', margin: '20px 0 0', paddingTop: 16 }}>

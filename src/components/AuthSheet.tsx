@@ -29,11 +29,10 @@ function PreviewBanner() {
 
 export default function AuthSheet() {
   const { authOpen, closeAuth } = useUI();
-  const { session, pending, error, awaitingEmail, requestLink, confirmSignIn, verifyCode, signOut, reset, simulated } = useAuth();
+  const { session, pending, error, awaitingEmail, requestLink, confirmSignIn, signOut, reset, simulated } = useAuth();
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
 
-  useEffect(() => { if (authOpen) { setEmail(''); setCode(''); reset(); } }, [authOpen, reset]);
+  useEffect(() => { if (authOpen) { setEmail(''); reset(); } }, [authOpen, reset]);
 
   if (!authOpen) return null;
 
@@ -64,49 +63,28 @@ export default function AuthSheet() {
                 </>
               ) : (
                 <>
-                  We&rsquo;ve emailed <strong style={{ color: 'var(--text)' }}>{awaitingEmail}</strong> a sign-in code.
-                  Enter it below. There&rsquo;s a link in that email too, if you&rsquo;d rather tap it.
+                  A sign-in link is on its way to <strong style={{ color: 'var(--text)' }}>{awaitingEmail}</strong>.
+                  {/* Not a nicety. The link carries a code that is exchanged using a secret stored in
+                      the browser that asked for it, so opening the mail in a different browser —
+                      which is what tapping a link inside a mail app usually does on a phone —
+                      lands you back here still signed out, with nothing explaining why. */}
+                  {' '}Open it in <strong style={{ color: 'var(--text)' }}>this browser</strong>; a link opened
+                  somewhere else won&rsquo;t sign you in.
                 </>
               )}
             </div>
-            {simulated ? (
+            {/* There was a code field here.
+                Removed because the email template sends a link only, so it asked for something the
+                message did not contain — a dead end with nothing on screen to explain it. The
+                adapter's `verifyCode` is deliberately left in place: adding `{{ .Token }}` to the
+                Supabase magic-link template is what makes a code exist, and bringing the field back
+                is then a change to this file alone. */}
+            {simulated && (
               <button onClick={confirmSignIn} disabled={pending} className="ct-btn-primary ct-btn-primary-calm" style={{ width: '100%', marginBottom: 10 }}>
                 {pending ? 'Signing in…' : 'Simulate clicking the link'}
               </button>
-            ) : (
-              <>
-                <label className="ct-label" htmlFor="auth-code">Code</label>
-                <input
-                  id="auth-code"
-                  // `text` with a numeric inputMode rather than type="number": a number field on
-                  // mobile brings a spinner and strips leading zeros, and a code can begin with one.
-                  type="text"
-                  inputMode="numeric"
-                  // Lets iOS and Android offer the code straight from the notification.
-                  autoComplete="one-time-code"
-                  autoFocus
-                  // Not fixed at 6. Supabase's OTP length is configurable and this project's
-                  // currently issues 8, so a hardcoded 6 silently truncated a valid code and left
-                  // the button disabled with no way to proceed.
-                  maxLength={10}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && code.length >= 6 && !pending) verifyCode(code); }}
-                  placeholder="12345678"
-                  className="ct-input"
-                  style={{ marginBottom: 14, letterSpacing: '0.35em', fontVariantNumeric: 'tabular-nums' }}
-                />
-                {error && <div style={{ fontSize: 12.5, color: '#C24B4B', marginBottom: 12 }}>{error}</div>}
-                <button
-                  onClick={() => verifyCode(code)}
-                  disabled={code.length < 6 || pending}
-                  className="ct-btn-primary ct-btn-primary-calm"
-                  style={{ width: '100%', marginBottom: 10 }}
-                >
-                  {pending ? 'Signing in…' : 'Sign in'}
-                </button>
-              </>
             )}
+            {error && <div style={{ fontSize: 12.5, color: '#C24B4B', marginBottom: 12 }}>{error}</div>}
             <button onClick={reset} className="ct-btn-ghost" style={{ width: '100%' }}>Use a different email</button>
           </>
         ) : (
@@ -134,7 +112,7 @@ export default function AuthSheet() {
             />
             {/* No password field, by design — a stub can't protect one. */}
             <div style={{ fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.45, marginBottom: 18 }}>
-              {simulated ? 'No password — you\u2019d get a one-time sign-in link by email.' : 'No password. We\u2019ll email you a one-time sign-in link.'}
+              No password &mdash; you&rsquo;ll get a one-time sign-in link by email.
             </div>
 
             {error && <div style={{ fontSize: 12.5, color: '#C24B4B', marginBottom: 12 }}>{error}</div>}
