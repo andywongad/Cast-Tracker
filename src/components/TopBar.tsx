@@ -1,5 +1,66 @@
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
+import { useAuth } from '../hooks/useAuth';
+import { useSync } from '../hooks/useSync';
+import { isSyncConfigured } from '../lib/supabase';
+import { isAuthPreviewEnabled } from '../lib/auth';
+
+/**
+ * Who you are, in the chrome rather than two taps into Settings.
+ *
+ * Sign-in state was only legible inside the Settings sheet, which meant the app looked identical
+ * signed in and signed out — and a failed sign-in looked exactly like a successful one. That is
+ * not a hypothetical: a magic link that verified server-side but never established a session
+ * produced an app that appeared normal, while nothing synced, for as long as nobody thought to
+ * open Settings and check.
+ *
+ * Home screen only. On a show screen the title is the thing that needs the width, and a phone
+ * cannot carry a back button, a title, an overflow menu, a gear and an address.
+ */
+function AccountButton() {
+  const { session } = useAuth();
+  const { state } = useSync();
+  const { openAuth } = useUI();
+
+  // Same condition the Settings sheet uses: a build with no backend shouldn't offer an account.
+  if (!isSyncConfigured() && !isAuthPreviewEnabled()) return null;
+
+  // The local part, because 38px of bar cannot hold an email and the domain is the part nobody
+  // needs — the full address is one tap away, and stays in the label for screen readers.
+  const name = session ? session.email.split('@')[0] : null;
+
+  return (
+    <button
+      onClick={openAuth}
+      aria-label={session ? `Signed in as ${session.email}` : 'Sign in'}
+      style={{
+        flex: 'none', height: 38, maxWidth: 132, padding: '0 12px', border: 'none', borderRadius: 12,
+        background: 'var(--card)', boxShadow: 'var(--shadow-card)', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 6,
+        fontSize: 12.5, fontWeight: 700, color: 'var(--text-secondary)',
+      }}
+    >
+      {/* Shown only when there is something to say. A permanent green dot reporting "fine" trains
+          people to stop reading it, and then it cannot report anything else.
+
+          Slate while syncing, red only when it failed. Both were warm at first, and `cta` against
+          `danger` at 6px is two shades of the same red — the difference between "working" and
+          "broken" cannot be a hue nobody can resolve at that size. */}
+      {session && state !== 'idle' && state !== 'off' && (
+        <span
+          aria-hidden="true"
+          style={{
+            width: 6, height: 6, borderRadius: 999, flex: 'none',
+            background: state === 'error' ? 'var(--danger)' : 'var(--accent)',
+          }}
+        />
+      )}
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {name ?? 'Sign in'}
+      </span>
+    </button>
+  );
+}
 
 export default function TopBar() {
   const { showById } = useStore();
@@ -33,6 +94,7 @@ export default function TopBar() {
           </svg>
         </button>
       )}
+      {!showBack && <AccountButton />}
       <button className="ct-iconbtn bordered" onClick={openSettings} aria-label="Settings">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
           <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="var(--text-secondary)" strokeWidth="1.6" />
