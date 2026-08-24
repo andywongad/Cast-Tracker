@@ -72,13 +72,21 @@ export function getSupabase(): Promise<SupabaseClient> | null {
  * either. Someone following a magic link would land on the app and stay signed out, and someone
  * already signed in would appear signed out until they happened to touch a sync feature.
  *
- * Both cases are detectable without the library — a `code` in the query string, or a token
- * already in storage under GoTrue's key — so the deferral holds for everyone else.
+ * Three cases are detectable without the library — a `code` in the query string, an `access_token`
+ * in the fragment, or a token already in storage under GoTrue's key — so the deferral holds for
+ * everyone else.
+ *
+ * The fragment case is not hypothetical and not only about admin-minted links. Any return that
+ * carries tokens directly rather than a PKCE code lands there, and it was silently dropped: the
+ * client never loaded, so nothing read the fragment, and the app opened signed out with the
+ * session sitting unused in the address bar. It is also the one return that works across browsers,
+ * because tokens in the URL need no verifier stored anywhere.
  */
 export function needsClientOnLoad(): boolean {
   if (!isSyncConfigured()) return false;
   try {
     if (new URLSearchParams(window.location.search).has('code')) return true;
+    if (new URLSearchParams(window.location.hash.replace(/^#/, '')).has('access_token')) return true;
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       // GoTrue's default storage key is `sb-<project-ref>-auth-token`.
