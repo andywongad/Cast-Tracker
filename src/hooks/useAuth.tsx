@@ -16,6 +16,13 @@ interface AuthValue {
   error: string;
   /** Email the link was "sent" to, driving the check-your-inbox step. */
   awaitingEmail: string | null;
+  /**
+   * Whether the initial "is there a session?" question has been answered.
+   *
+   * Absent this, `session === null` means both "still looking" and "there is none", and anything
+   * reacting to a failed sign-in would fire during startup on every ordinary visit.
+   */
+  ready: boolean;
   requestLink: (email: string) => Promise<void>;
   confirmSignIn: () => Promise<void>;
   /** Finish sign-in with the code from the email. */
@@ -51,6 +58,7 @@ export function AuthProvider({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [awaitingEmail, setAwaitingEmail] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
 
   const requestLink = useCallback(async (email: string) => {
     setPending(true);
@@ -115,11 +123,15 @@ export function AuthProvider({
    * what moves the sheet off "check your inbox" for someone who left it open in this tab.
    */
   useEffect(() => {
-    if (!bootstrap) return;
+    if (!bootstrap) { setReady(true); return; }
     let alive = true;
     bootstrap()
       .then((s) => { if (alive && s) { setSession(s); setAwaitingEmail(null); } })
-      .catch(() => { /* No session is the ordinary case, not an error worth showing. */ });
+      .catch(() => { /* No session is the ordinary case, not an error worth showing. */ })
+      // Settled, not successful. The caller needs to know the question has been answered so it can
+      // tell "no session yet" apart from "no session, and none is coming" — which is the difference
+      // between an app still starting up and a sign-in that failed.
+      .finally(() => { if (alive) setReady(true); });
     return () => { alive = false; };
   }, [bootstrap]);
 
@@ -134,8 +146,8 @@ export function AuthProvider({
   const reset = useCallback(() => { setAwaitingEmail(null); setError(''); }, []);
 
   const value = useMemo(
-    () => ({ session, pending, error, awaitingEmail, requestLink, confirmSignIn, verifyCode, signOut, reset, simulated: !bootstrap }),
-    [session, pending, error, awaitingEmail, requestLink, confirmSignIn, verifyCode, signOut, reset, bootstrap],
+    () => ({ session, pending, error, awaitingEmail, ready, requestLink, confirmSignIn, verifyCode, signOut, reset, simulated: !bootstrap }),
+    [session, pending, error, awaitingEmail, ready, requestLink, confirmSignIn, verifyCode, signOut, reset, bootstrap],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

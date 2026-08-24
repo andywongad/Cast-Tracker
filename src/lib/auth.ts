@@ -130,6 +130,32 @@ export function consumeSignInLinkError(): string | null {
   return message;
 }
 
+/**
+ * Whether this page load is the return leg of a sign-in link.
+ *
+ * Must be read before the auth client loads, because the client strips `code` from the URL as it
+ * processes it — successfully or not. Holding on to the answer is what lets the app notice the
+ * quiet failure: a code arrived, and no session came of it.
+ *
+ * That failure has a specific and common cause. The code is exchanged using a verifier stored in
+ * the browser that asked for the link, so opening the mail somewhere else — a mail app's built-in
+ * browser, a different browser, a fresh window without the same storage — leaves nothing to
+ * exchange against. GoTrue reports no error, because from its side nothing went wrong: the link
+ * was valid and it redirected. The app simply stays signed out, looking entirely normal.
+ */
+export function arrivedWithSignInCode(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return new URLSearchParams(window.location.search).has('code');
+  } catch {
+    return false;
+  }
+}
+
+/** Said when a code came back but no session did. */
+export const SIGN_IN_EXCHANGE_FAILED =
+  'That sign-in link opened in a different browser from the one that asked for it, so it couldn’t finish. Sign in again here, and open the link in this window.';
+
 function delay(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }

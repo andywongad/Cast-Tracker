@@ -1,11 +1,11 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { StoreProvider, useStore } from './hooks/useStore';
 import { UIProvider, useUI } from './hooks/useUI';
-import { AuthProvider } from './hooks/useAuth';
+import { AuthProvider, useAuth } from './hooks/useAuth';
 import { SyncProvider } from './hooks/useSync';
 import { isSyncConfigured } from './lib/supabase';
 import { supabaseAuth, sessionFromUrl, onSessionChange } from './lib/authSupabase';
-import { consumeSignInLinkError } from './lib/auth';
+import { consumeSignInLinkError, arrivedWithSignInCode, SIGN_IN_EXCHANGE_FAILED } from './lib/auth';
 import { THEMES, themeVars } from './lib/theme';
 import { registerServiceWorker } from './lib/notifications';
 import TopBar from './components/TopBar';
@@ -68,6 +68,8 @@ function StorageFailedBar({ onOpenSettings }: { onOpenSettings: () => void }) {
  * Module scope runs exactly once per page load, which is the same lifetime as the URL itself.
  */
 const INITIAL_SIGN_IN_ERROR = consumeSignInLinkError();
+/** Also read at import time, and for the same reason: the auth client removes `code` as it runs. */
+const ARRIVED_WITH_CODE = arrivedWithSignInCode();
 
 /**
  * Shown when someone arrives from a sign-in link that didn't work.
@@ -114,7 +116,20 @@ function Shell() {
   const { settings, storageFailed } = useStore();
   const { screen, activeShowId, openSettings, openAuth } = useUI();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const [signInError, setSignInError] = useState<string | null>(INITIAL_SIGN_IN_ERROR);
+  const { session, ready: authReady } = useAuth();
+  const [dismissedSignInError, setDismissedSignInError] = useState(false);
+  /**
+   * Two ways a sign-in link fails, one message channel.
+   *
+   * The loud one arrives as `error` in the URL — a link already spent. The quiet one arrives as a
+   * perfectly good `code` that no session comes of, which is what happens when the mail is opened
+   * somewhere other than the browser that asked. Only the second needs the wait: it can only be
+   * recognised once the auth client has finished looking, and before that "no session" is just
+   * "not yet".
+   */
+  const signInError = dismissedSignInError
+    ? null
+    : INITIAL_SIGN_IN_ERROR ?? (ARRIVED_WITH_CODE && authReady && !session ? SIGN_IN_EXCHANGE_FAILED : null);
 
   useEffect(() => {
     registerServiceWorker();
@@ -172,8 +187,8 @@ function Shell() {
       {signInError && (
         <SignInFailedBar
           message={signInError}
-          onRetry={() => { setSignInError(null); openAuth(); }}
-          onDismiss={() => setSignInError(null)}
+          onRetry={() => { setDismissedSignInError(true); openAuth(); }}
+          onDismiss={() => setDismissedSignInError(true)}
         />
       )}
       <main id="ct-scroll" className="ct-scroll" tabIndex={-1}>
