@@ -79,6 +79,57 @@ export function isAuthPreviewEnabled(): boolean {
   return String(import.meta.env.VITE_ENABLE_AUTH_PREVIEW ?? '').trim() === 'true';
 }
 
+/**
+ * The failure a sign-in link reports when it comes back, in words worth reading.
+ *
+ * A link that cannot be used redirects to the app carrying `error`, `error_code` and
+ * `error_description` — in the query string, the fragment, or both. Nothing read them, so the app
+ * opened looking ordinary and signed out, and the person who had just clicked a link had no way to
+ * tell whether they had done something wrong, whether it had worked, or whether the app was broken.
+ * Silence is the worst of the three.
+ *
+ * `otp_expired` is not usually about time. The token is single-use, and a mail scanner or link
+ * previewer that fetches the message before the recipient spends it — verified on this project:
+ * one GET consumed a fresh link and the next returned exactly this code. So the copy names the
+ * likely cause rather than repeating "expired" at someone who clicked it ten seconds after it
+ * arrived and knows perfectly well it isn't old.
+ *
+ * Consuming: the parameters are stripped from the URL as they are read, so a refresh doesn't
+ * resurrect a message about something that already happened, and the address bar goes back to
+ * being clean.
+ */
+export function consumeSignInLinkError(): string | null {
+  if (typeof window === 'undefined') return null;
+  let params: URLSearchParams;
+  try {
+    const query = new URLSearchParams(window.location.search);
+    const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    params = query.has('error') || query.has('error_code') ? query : fragment;
+    if (!params.has('error') && !params.has('error_code')) return null;
+  } catch {
+    return null;
+  }
+
+  const code = params.get('error_code') || params.get('error') || '';
+  const message =
+    code === 'otp_expired'
+      ? 'That sign-in link had already been used. Links only work once, and mail apps sometimes open them before you do — request a new one.'
+      : code === 'access_denied'
+        ? 'That sign-in link was rejected. Request a new one and open it in this browser.'
+        : params.get('error_description')?.replace(/\+/g, ' ') || 'That sign-in link didn’t work. Request a new one.';
+
+  try {
+    const url = new URL(window.location.href);
+    for (const k of ['error', 'error_code', 'error_description']) url.searchParams.delete(k);
+    if (/error/.test(url.hash)) url.hash = '';
+    window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+  } catch {
+    // A URL we cannot rewrite is still a message worth showing.
+  }
+
+  return message;
+}
+
 function delay(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }

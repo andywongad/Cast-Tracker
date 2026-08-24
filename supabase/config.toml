@@ -280,6 +280,26 @@ otp_expiry = 3600
 # admin_email = "noreply@anotherandywong.com"
 # sender_name = "Cast Tracker"
 
+# Both sign-in templates carry `{{ .Token }}` — a six-digit code — above the link, because the
+# link alone is not reliable: it is single-use, and anything that fetches the message first spends
+# it. Verified against this project: one GET consumed the link, the next returned `otp_expired`,
+# which is exactly the error seen on every attempt so far.
+#
+# `confirmation` is what a brand-new address receives; `magic_link` is every sign-in after that.
+# COMMENTED OUT ONLY BECAUSE THE PLATFORM REFUSES IT TODAY, not because it is optional. Pushing
+# these returns: "Email template modification is not available for free tier projects using the
+# default email provider. Please upgrade your plan or configure a custom SMTP provider." So the
+# code-based sign-in this project needs is gated behind [auth.email.smtp] above. Uncomment both
+# blocks in the same change as the SMTP one; the templates themselves are written and waiting in
+# supabase/templates/.
+# [auth.email.template.confirmation]
+# subject = "Your Cast Tracker code"
+# content_path = "./supabase/templates/confirmation.html"
+
+# [auth.email.template.magic_link]
+# subject = "Your Cast Tracker sign-in code"
+# content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

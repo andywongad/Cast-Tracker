@@ -1,0 +1,29 @@
+<!--
+  Sign-in mail for a returning address.
+
+  The code comes first and the link second, which is the opposite of Supabase's default template
+  and is deliberate. A link in an email is fetched by things that are not the recipient — mail
+  scanners, link previewers, prefetchers — and the token is single-use, so whichever of them gets
+  there first spends it and the person clicking gets "Email link is invalid or has expired".
+  Measured on this project: one GET consumed the link and the second returned otp_expired.
+
+  A typed code cannot be consumed by a machine that merely fetches the message. It also survives
+  the other common failure, which is a phone opening the link in the mail app's own browser rather
+  than the one that asked for it — the code has no such attachment to a browser.
+
+  Kept to plain markup with inline styles: email clients strip <style> blocks, and a table layout
+  would be a lot of machinery for six digits and a sentence.
+-->
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.55; color: #15293B; max-width: 480px;">
+  <p style="margin: 0 0 18px;">Here is your sign-in code for <strong>Cast Tracker</strong>:</p>
+
+  <p style="margin: 0 0 8px; font-size: 34px; font-weight: 700; letter-spacing: 0.14em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #15293B;">{{ .Token }}</p>
+
+  <p style="margin: 0 0 24px; font-size: 13.5; color: #4F6480;">Type it into the app on the device you are signing in on. It expires in an hour.</p>
+
+  <p style="margin: 0 0 6px; font-size: 13.5px; color: #4F6480;">
+    Or <a href="{{ .ConfirmationURL }}" style="color: #C1462E;">open this link</a> — but only in the same browser you started from, and only once. If it says the link has expired, use the code above instead.
+  </p>
+
+  <p style="margin: 24px 0 0; font-size: 12.5px; color: #7C848D;">If you didn&rsquo;t ask to sign in, ignore this message. Nothing happens until the code is used.</p>
+</div>

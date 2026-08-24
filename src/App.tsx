@@ -5,6 +5,7 @@ import { AuthProvider } from './hooks/useAuth';
 import { SyncProvider } from './hooks/useSync';
 import { isSyncConfigured } from './lib/supabase';
 import { supabaseAuth, sessionFromUrl, onSessionChange } from './lib/authSupabase';
+import { consumeSignInLinkError } from './lib/auth';
 import { THEMES, themeVars } from './lib/theme';
 import { registerServiceWorker } from './lib/notifications';
 import TopBar from './components/TopBar';
@@ -57,10 +58,63 @@ function StorageFailedBar({ onOpenSettings }: { onOpenSettings: () => void }) {
   );
 }
 
+/**
+ * Read at import time, not inside the component.
+ *
+ * `consumeSignInLinkError` strips the parameters as it reads them, so it answers only once — and a
+ * `useState` initialiser is not once. StrictMode double-invokes it in development and React
+ * remounts the tree, so the second call saw a URL this module had already cleaned and returned
+ * null, which is how the first version of this managed to erase the message it existed to show.
+ * Module scope runs exactly once per page load, which is the same lifetime as the URL itself.
+ */
+const INITIAL_SIGN_IN_ERROR = consumeSignInLinkError();
+
+/**
+ * Shown when someone arrives from a sign-in link that didn't work.
+ *
+ * Read once at first paint, before anything can rewrite the URL — see `consumeSignInLinkError`.
+ * It offers the way out rather than only naming the problem, because the fix is always the same:
+ * ask for another link.
+ */
+function SignInFailedBar({ message, onRetry, onDismiss }: { message: string; onRetry: () => void; onDismiss: () => void }) {
+  return (
+    <div
+      role="alert"
+      style={{
+        flex: 'none', padding: '10px 16px', background: 'var(--danger)', color: 'var(--danger-text)',
+        fontSize: 12.5, lineHeight: 1.45, display: 'flex', alignItems: 'center', gap: 10,
+      }}
+    >
+      <span style={{ flex: 1 }}>{message}</span>
+      <button
+        onClick={onRetry}
+        style={{
+          flex: 'none', border: '1px solid color-mix(in oklch, var(--danger-text) 60%, transparent)', borderRadius: 9,
+          background: 'transparent', color: 'var(--danger-text)', fontSize: 12, fontWeight: 700,
+          padding: '7px 10px', cursor: 'pointer',
+        }}
+      >
+        Try again
+      </button>
+      <button
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        style={{
+          flex: 'none', border: 'none', background: 'transparent', color: 'var(--danger-text)',
+          fontSize: 15, lineHeight: 1, padding: '6px 2px', cursor: 'pointer',
+        }}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 function Shell() {
   const { settings, storageFailed } = useStore();
-  const { screen, activeShowId, openSettings } = useUI();
+  const { screen, activeShowId, openSettings, openAuth } = useUI();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [signInError, setSignInError] = useState<string | null>(INITIAL_SIGN_IN_ERROR);
 
   useEffect(() => {
     registerServiceWorker();
@@ -115,6 +169,13 @@ function Shell() {
       <a className="ct-skip-link" href="#ct-scroll">Skip to content</a>
       <TopBar />
       {storageFailed && <StorageFailedBar onOpenSettings={openSettings} />}
+      {signInError && (
+        <SignInFailedBar
+          message={signInError}
+          onRetry={() => { setSignInError(null); openAuth(); }}
+          onDismiss={() => setSignInError(null)}
+        />
+      )}
       <main id="ct-scroll" className="ct-scroll" tabIndex={-1}>
         {screen === 'home' ? <HomeScreen /> : <ShowScreen key={activeShowId} />}
       </main>
