@@ -169,7 +169,7 @@ a { color: inherit; }
 }
 .ct-btn-danger {
   height: 52px; border: none; border-radius: 16px; background: var(--surface);
-  color: #C24B4B; font-size: 15px; font-weight: 500; cursor: pointer;
+  color: var(--danger); font-size: 15px; font-weight: 500; cursor: pointer;
 }
 
 .ct-scrim {

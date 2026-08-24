@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { bgStyle, initials, SHOW_TYPE_LABELS } from '../lib/utils';
 import NotificationToggle from './NotificationToggle';
+import { PUSH_CONFIGURED } from '../lib/notifications';
 import Sheet from './Sheet';
 
 /**
@@ -22,7 +23,7 @@ function Row({ label, hint, onClick, danger }: { label: string; hint?: string; o
         borderBottom: '1px solid var(--border)',
       }}
     >
-      <span style={{ fontSize: 15, color: danger ? '#C24B4B' : 'var(--text)' }}>{label}</span>
+      <span style={{ fontSize: 15, color: danger ? 'var(--danger)' : 'var(--text)' }}>{label}</span>
       {hint && <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{hint}</span>}
     </button>
   );
@@ -76,9 +77,13 @@ export default function ShowMenuSheet() {
           </div>
         </div>
 
-        <div style={{ marginBottom: 18 }}>
-          <NotificationToggle showTmdbId={show.tmdbId} />
-        </div>
+        {/* The spacer is conditional too, or a hidden toggle leaves 18px of nothing above the
+            first row. */}
+        {PUSH_CONFIGURED && !!show.tmdbId && (
+          <div style={{ marginBottom: 18 }}>
+            <NotificationToggle showTmdbId={show.tmdbId} />
+          </div>
+        )}
 
         <div>
           {/* The undo for episode auto-loading. Only offered when there is something to clear,

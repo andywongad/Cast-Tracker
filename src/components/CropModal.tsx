@@ -271,7 +271,7 @@ function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: Cro
         )}
 
         {failed && (
-          <div style={{ fontSize: 13.5, color: '#C24B4B', lineHeight: 1.45, marginBottom: 12, textAlign: 'center' }}>
+          <div style={{ fontSize: 13.5, color: 'var(--danger)', lineHeight: 1.45, marginBottom: 12, textAlign: 'center' }}>
             {tooLarge
               ? `That photo is ${Math.round((file?.size ?? 0) / 1024 / 1024)}MB, which is too large to open here. Resize it below 20MB and try again.`
               : 'This image can\u2019t be reframed here. Upload your own copy instead.'}

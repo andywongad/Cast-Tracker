@@ -138,7 +138,10 @@ async function pool<T>(items: T[], width: number, work: (item: T) => Promise<voi
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+  // The emptiness check is the point: with CRON_SECRET unset this compared against the string
+  // "Bearer undefined", which anyone could send. Closed rather than open when unconfigured.
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   if (!TMDB_API_KEY) {

@@ -1,3 +1,14 @@
+/**
+ * Whether this deployment can deliver a push at all.
+ *
+ * Without a VAPID key the browser cannot even be asked to subscribe, so every attempt ends at
+ * `ensureSubscription`'s "not configured" throw — and the nightly job has no keys to sign with
+ * either. The UI reads this to hide the notification control rather than offer one that can only
+ * fail. Nothing is disabled or deleted: set `VITE_VAPID_PUBLIC_KEY` (plus the server's
+ * `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `CRON_SECRET`) and redeploy, and it comes back.
+ */
+export const PUSH_CONFIGURED = !!import.meta.env.VITE_VAPID_PUBLIC_KEY;
+
 export async function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     try {

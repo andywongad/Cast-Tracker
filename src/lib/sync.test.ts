@@ -1,9 +1,13 @@
 /**
- * Merge-rule tests. No framework — there is no test runner in this project, and adding one to
- * cover eleven assertions would be a bigger change than the code under test. Run with:
+ * Merge-rule tests. No framework — adding one to cover fifteen assertions would be a bigger change
+ * than the code under test. Run with:
  *
- *   npx esbuild src/lib/sync.test.ts --bundle --platform=node --format=esm \
- *     --define:import.meta.env='{}' --outfile=/tmp/t.mjs && node /tmp/t.mjs
+ *   npm test
+ *
+ * which bundles this file through esbuild (already present as vite's own dependency) and runs it
+ * on node. `--define:import.meta.env={}` is what keeps the bundle from crashing on the Vite env
+ * access in the supabase module this pulls in transitively. Exit code is non-zero on any failure,
+ * so it drops straight into CI or a pre-push hook.
  *
  * These are here because this is the file where a mistake costs someone their work rather than
  * their afternoon. The cases that matter are the ones asserting what must NOT happen: an older

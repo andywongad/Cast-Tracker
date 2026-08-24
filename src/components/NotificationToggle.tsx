@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { followShowNotifications, unfollowShowNotifications, followsShowNotifications } from '../lib/notifications';
+import { followShowNotifications, unfollowShowNotifications, followsShowNotifications, PUSH_CONFIGURED } from '../lib/notifications';
 
 /**
  * Takes the show's TMDb id, not its local id.
@@ -18,7 +18,9 @@ export default function NotificationToggle({ showTmdbId }: { showTmdbId: number 
 
   useEffect(() => {
     let alive = true;
-    if (!showTmdbId) { setSubscribed(false); return; }
+    // Gated here as well as at the return: hooks run before the null render, so without this the
+    // hidden toggle would still put a request to /api/subscribe on every show-menu open.
+    if (!showTmdbId || !PUSH_CONFIGURED) { setSubscribed(false); return; }
     followsShowNotifications(showTmdbId)
       .then((v) => { if (alive) setSubscribed(v); })
       .catch(() => { if (alive) setSubscribed(false); });
@@ -46,7 +48,7 @@ export default function NotificationToggle({ showTmdbId }: { showTmdbId: number 
     }
   };
 
-  if (!showTmdbId) return null;
+  if (!showTmdbId || !PUSH_CONFIGURED) return null;
 
   return (
     <>
@@ -74,7 +76,7 @@ export default function NotificationToggle({ showTmdbId }: { showTmdbId: number 
       {subscribed ? '🔔' : '🔕'} {subscribed ? 'Notifications On' : 'Enable Notifications'}
     </button>
     {error && (
-      <div style={{ fontSize: 12.5, color: '#C24B4B', lineHeight: 1.45, marginTop: 8 }}>{error}</div>
+      <div style={{ fontSize: 12.5, color: 'var(--danger)', lineHeight: 1.45, marginTop: 8 }}>{error}</div>
     )}
     </>
   );

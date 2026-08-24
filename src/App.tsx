@@ -35,7 +35,7 @@ function StorageFailedBar({ onOpenSettings }: { onOpenSettings: () => void }) {
     <div
       role="alert"
       style={{
-        flex: 'none', padding: '10px 16px', background: '#C24B4B', color: '#fff',
+        flex: 'none', padding: '10px 16px', background: 'var(--danger)', color: 'var(--danger-text)',
         fontSize: 12.5, lineHeight: 1.45, display: 'flex', alignItems: 'center', gap: 10,
       }}
     >
@@ -46,8 +46,8 @@ function StorageFailedBar({ onOpenSettings }: { onOpenSettings: () => void }) {
       <button
         onClick={onOpenSettings}
         style={{
-          flex: 'none', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 9,
-          background: 'transparent', color: '#fff', fontSize: 12, fontWeight: 700,
+          flex: 'none', border: '1px solid color-mix(in oklch, var(--danger-text) 60%, transparent)', borderRadius: 9,
+          background: 'transparent', color: 'var(--danger-text)', fontSize: 12, fontWeight: 700,
           padding: '7px 10px', cursor: 'pointer',
         }}
       >
