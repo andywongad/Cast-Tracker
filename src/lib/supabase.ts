@@ -105,10 +105,38 @@ export function getSupabase(): Promise<SupabaseClient> | null {
  * session sitting unused in the address bar. It is also the one return that works across browsers,
  * because tokens in the URL need no verifier stored anywhere.
  */
+/**
+ * The sign-in parameters, read once at import and never from the live URL again.
+ *
+ * This is the whole bug. `useUI` normalises the address bar on mount — `history.replaceState` to a
+ * URL built from the layer stack, which for the home screen is just the pathname — and that runs
+ * milliseconds after load, while the auth client is still being dynamically imported. By the time
+ * anything could exchange the code, the app had deleted it. No error reached the URL because
+ * nothing had gone wrong yet; the code was valid, and simply erased.
+ *
+ * Every failed sign-in on this project, on both Supabase projects, in every browser, was this.
+ *
+ * Capturing at module scope makes the read immune to whoever rewrites the URL afterwards, which is
+ * the right shape regardless: these are values delivered *to this page load*, not state that
+ * should live in the address bar. `sb_flow_id` is captured for the same reason — auth-js reads it
+ * off `window.location` itself, so it must be handed over explicitly instead.
+ */
+const arriving = (() => {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    return { code: q.get('code'), flowId: q.get('sb_flow_id') };
+  } catch {
+    return { code: null, flowId: null };
+  }
+})();
+
+export const arrivingCode = (): string | null => arriving.code;
+export const arrivingFlowId = (): string | null => arriving.flowId;
+
 export function needsClientOnLoad(): boolean {
   if (!isSyncConfigured()) return false;
   try {
-    if (new URLSearchParams(window.location.search).has('code')) return true;
+    if (arriving.code) return true;
     if (new URLSearchParams(window.location.hash.replace(/^#/, '')).has('access_token')) return true;
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);

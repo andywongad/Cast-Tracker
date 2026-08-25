@@ -1,4 +1,4 @@
-import { getSupabase, needsClientOnLoad } from './supabase';
+import { getSupabase, needsClientOnLoad, arrivingCode, arrivingFlowId } from './supabase';
 import { isValidEmail, type AuthAdapter, type AuthSession } from './auth';
 
 /**
@@ -126,7 +126,22 @@ export function lastExchangeError(): string | null {
   return exchangeError;
 }
 
-export async function sessionFromUrl(): Promise<AuthSession | null> {
+let bootstrapOnce: Promise<AuthSession | null> | null = null;
+
+/**
+ * One exchange per page load, however many callers ask.
+ *
+ * The auth code is single-use, and React invokes the bootstrap effect twice under StrictMode. Two
+ * concurrent exchanges mean the second one redeems a code the first has already spent, so a
+ * successful sign-in can report a failure alongside itself. Sharing the promise keeps the redeem
+ * to one and hands every caller the same answer.
+ */
+export function sessionFromUrl(): Promise<AuthSession | null> {
+  bootstrapOnce ??= runSessionFromUrl();
+  return bootstrapOnce;
+}
+
+async function runSessionFromUrl(): Promise<AuthSession | null> {
   // The gate that keeps the deferral meaningful. Without it this runs on every cold load and pulls
   // the client down for everyone, including the majority who have never signed in — which is the
   // whole cost the dynamic import was there to avoid.
@@ -142,10 +157,49 @@ export async function sessionFromUrl(): Promise<AuthSession | null> {
    * is read off `window.location` by the library, so this has to run before the URL is tidied —
    * hence the cleanup below rather than at the top.
    */
-  const code = new URLSearchParams(window.location.search).get('code');
+  const code = arrivingCode();
   if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    exchangeError = error ? `${error.name}: ${error.message}` : null;
+    /**
+     * Both failure shapes, because this method uses both.
+     *
+     * It returns `{ error }` for some failures and throws for others — a missing verifier throws —
+     * and the first version of this only recorded the returned kind. The thrown kind sailed past
+     * the assignment, up through the caller's catch, and produced the same silence this function
+     * exists to end: a bar that said something went wrong without saying what.
+     */
+    let data: Awaited<ReturnType<typeof supabase.auth.exchangeCodeForSession>>['data'] | null = null;
+    try {
+      // The flow id is passed explicitly because auth-js would otherwise look for it on
+      // `window.location`, which `useUI` has already normalised away. Without it the lookup falls
+      // back to a key shared by every pending flow — see the note in lib/supabase.ts.
+      const flowId = arrivingFlowId();
+      const res = await supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
+      data = res.data;
+      exchangeError = res.error ? `${res.error.name}: ${res.error.message}` : null;
+    } catch (e) {
+      exchangeError = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    }
+
+    /**
+     * A breadcrumb, deliberately in storage rather than the console.
+     *
+     * Console output dies with the tab, and the tab in question is usually one a tester opened
+     * from their mail app on a device that isn't here. This survives, and answers the question
+     * that mattered every time: was there a code, was there a flow id, and what did the exchange
+     * say. Bounded to the last three attempts.
+     */
+    try {
+      const trace = JSON.parse(localStorage.getItem('ct.signin.trace.v1') || '[]');
+      trace.push({
+        at: new Date().toISOString(),
+        hadFlowId: !!arrivingFlowId(),
+        error: exchangeError,
+        gotSession: !!data?.session,
+      });
+      localStorage.setItem('ct.signin.trace.v1', JSON.stringify(trace.slice(-3)));
+    } catch {
+      /* Diagnostics must never be the reason a sign-in fails. */
+    }
 
     // Cleared either way. A code left in the address bar is spent, and a reload would only
     // reproduce the same failure with staler inputs.
