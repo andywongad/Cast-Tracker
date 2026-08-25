@@ -148,6 +148,42 @@ export default function HomeScreen() {
         </>
       )}
 
+      {/**
+        * What an account is and isn't, said before anyone wonders.
+        *
+        * Above the empty state rather than inside it, and in a card rather than a footnote: someone
+        * opening the app for the first time has no way to know whether the "Sign in" in the corner
+        * is required, what it would do with their data, or what happens if they ignore it. That
+        * question arrives before "which show shall I add", so it is answered first — and the honest
+        * answer is reassuring, which makes burying it the wrong call.
+        *
+        * The card is the same shape as the backup nudge below, which is the established way this
+        * screen speaks in its own voice rather than showing content. The two never appear together:
+        * this needs an empty library, that one needs eight records.
+        *
+        * Three tiers inside it, because a flat paragraph makes the reader work out what matters.
+        * The heading is the answer, the first line is what staying signed out means, the last is
+        * what changes if you don't — visibly quieter, because it is an option and not a warning.
+        *
+        * Every clause is checkable: the app runs on localStorage without an account, sign-in is a
+        * magic link with no password field anywhere, and what syncs is the records you write.
+        */}
+      {!isSearching && data.shows.length === 0 && !session && isSyncConfigured() && (
+        <div style={{ background: 'var(--card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, padding: 16, marginBottom: 14 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 5 }}>No account needed</div>
+          <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            Everything works signed out. Your library is stored in this browser rather than on a
+            server, so clearing your browser data would erase it — you can export a backup file from
+            Settings at any time.
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--divider)' }}>
+            <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>If you do sign in,</strong>{' '}
+            your shows and the characters you write are saved to your account and appear on your
+            other devices. It&rsquo;s an email link — no password.
+          </div>
+        </div>
+      )}
+
       {!isSearching && (
         <>
           {data.shows.length === 0 && (
@@ -156,33 +192,6 @@ export default function HomeScreen() {
               <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18, lineHeight: 1.4 }}>Add a show to start tracking cast, episodes, and relationships.</div>
               <button onClick={() => openAddShow()} style={{ height: 44, padding: '0 20px', border: 'none', borderRadius: 12, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>Add a show</button>
 
-              {/**
-                * What an account is and isn't, said before anyone wonders.
-                *
-                * Only here, and only signed out. Someone opening the app for the first time has no
-                * way to know whether the "Sign in" in the corner is required, what it would do with
-                * their data, or what happens if they ignore it — and the honest answer is genuinely
-                * reassuring, so there is no reason to make them find out by trying it.
-                *
-                * Every clause is checkable: the app runs entirely on localStorage without an
-                * account, sign-in is a magic link with no password field anywhere, and what syncs
-                * is the records you write. The device-loss caveat earns its place because it is the
-                * one real cost of staying signed out, and the backup nudge already says it later —
-                * better to say it now than to spring it on someone with a full library.
-                */}
-              {!session && isSyncConfigured() && (
-                <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.55, textAlign: 'left' }}>
-                  <strong style={{ color: 'var(--text-secondary)' }}>You don&rsquo;t need an account.</strong>{' '}
-                  Everything works signed out, and your library is stored in this browser rather
-                  than on a server. Clearing your browser data would erase it, so you can export a
-                  backup file from Settings at any time.
-                  <div style={{ marginTop: 8 }}>
-                    <strong style={{ color: 'var(--text-secondary)' }}>Signing in adds two things:</strong>{' '}
-                    your shows and the characters you write are saved to your account, and they
-                    appear on your other devices. It&rsquo;s an email link — no password.
-                  </div>
-                </div>
-              )}
             </div>
           )}
           {data.shows.length > 0 && (
