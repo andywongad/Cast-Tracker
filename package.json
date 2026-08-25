@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "esbuild src/lib/sync.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/sync.test.mjs && node .vite/sync.test.mjs"
+    "test": "npm run test:sync && npm run test:dupes",
+    "test:sync": "esbuild src/lib/sync.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/sync.test.mjs && node .vite/sync.test.mjs",
+    "test:dupes": "esbuild src/lib/duplicateShows.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/dupes.test.mjs && node .vite/dupes.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

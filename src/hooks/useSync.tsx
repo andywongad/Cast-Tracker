@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { useAuth } from './useAuth';
 import { useStore } from './useStore';
 import { applyRemote, pull, push, saveCursor } from '../lib/sync';
+import { applyResolutions, findDuplicateGroups } from '../lib/duplicateShows';
 
 /**
  * When sync runs.
@@ -72,6 +73,22 @@ function useSyncEngine() {
       // Saved only after the merge is applied. Saving on receipt would mean a failure in between
       // lost those rows for good — the cursor would have moved past them.
       if (newest) saveCursor(userId, newest);
+
+      /**
+       * Same show, two ids: resolved here, right after a pull and before the push below.
+       *
+       * A show added on two devices before they ever synced arrives as two unrelated records, so
+       * this is the moment the duplicate first exists. Redundant copies are dropped in a *stamped*
+       * update on purpose — that is what writes the tombstone, and without it the other device
+       * would simply send the copy back on its next sync.
+       *
+       * Guarded by a read-only check because `updateData` clones and re-persists whether or not
+       * the callback changes anything, and a new `data` identity restarts the debounce timer that
+       * triggers this sync: calling it unconditionally would sync forever.
+       */
+      if (findDuplicateGroups(dataRef.current).length) {
+        updateData((d) => { applyResolutions(d); });
+      }
 
       // Advance past our own writes too, or the next pull hands them straight back.
       const written = await push(dataRef.current, userId);

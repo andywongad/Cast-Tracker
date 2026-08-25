@@ -40,6 +40,7 @@ type Layer =
   | { k: 'addCast'; editingId: string | null }
   | { k: 'settings' }
   | { k: 'auth' }
+  | { k: 'duplicates' }
   | { k: 'showMenu' }
   | { k: 'feedback' }
   | { k: 'converter' }
@@ -104,6 +105,9 @@ interface UIValue {
   authOpen: boolean;
   openAuth: () => void;
   closeAuth: () => void;
+  duplicatesOpen: boolean;
+  openDuplicates: () => void;
+  closeDuplicates: () => void;
   showMenuOpen: boolean;
   openShowMenu: () => void;
   closeShowMenu: () => void;
@@ -262,6 +266,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   // Signing in replaces Settings rather than stacking on it, matching how it always behaved.
   const openAuth = useCallback(() => { pop(); push({ k: 'auth' }); }, [pop, push]);
   const closeAuth = useCallback(() => pop(), [pop]);
+  const openDuplicates = useCallback(() => { pop(); push({ k: 'duplicates' }); }, [pop, push]);
+  const closeDuplicates = useCallback(() => pop(), [pop]);
 
   const openShowMenu = useCallback(() => push({ k: 'showMenu' }), [push]);
   const closeShowMenu = useCallback(() => pop(), [pop]);
@@ -308,6 +314,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       castDetailId: castDetail?.id ?? null,
       settingsOpen: stack.some((l) => l.k === 'settings'),
       authOpen: stack.some((l) => l.k === 'auth'),
+      duplicatesOpen: stack.some((l) => l.k === 'duplicates'),
       showMenuOpen: stack.some((l) => l.k === 'showMenu'),
       feedbackOpen: stack.some((l) => l.k === 'feedback'),
       converterOpen: stack.some((l) => l.k === 'converter'),
@@ -329,6 +336,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     castDetailId: derived.castDetailId, openCastDetail, closeCastDetail,
     settingsOpen: derived.settingsOpen, openSettings, closeSettings,
     authOpen: derived.authOpen, openAuth, closeAuth,
+    duplicatesOpen: derived.duplicatesOpen, openDuplicates, closeDuplicates,
     showMenuOpen: derived.showMenuOpen, openShowMenu, closeShowMenu,
     feedbackOpen: derived.feedbackOpen, openFeedback, closeFeedback,
     converterOpen: derived.converterOpen, converterPrefill, openConverter, closeConverter,
@@ -340,7 +348,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   }), [derived, query, addShowPrefill, converterPrefill, shareData,
       openShow, goHome, resetToHome, openAddShow, openEditShow, closeAddShow,
       openAddCast, openEditCast, closeAddCast, openCastDetail, closeCastDetail,
-      openSettings, closeSettings, openAuth, closeAuth, openShowMenu, closeShowMenu,
+      openSettings, closeSettings, openAuth, closeAuth, openDuplicates, closeDuplicates, openShowMenu, closeShowMenu,
       openFeedback, closeFeedback, openConverter, closeConverter, openTranslator, closeTranslator,
       openShareSheet, closeShareSheet, openRedeem, closeRedeem, openWebView, closeWebView,
       openRecap, closeRecap]);

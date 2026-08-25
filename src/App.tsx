@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { StoreProvider, useStore } from './hooks/useStore';
 import { UIProvider, useUI } from './hooks/useUI';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -6,6 +6,7 @@ import { SyncProvider } from './hooks/useSync';
 import { isSyncConfigured } from './lib/supabase';
 import { supabaseAuth, sessionFromUrl, onSessionChange, lastExchangeError } from './lib/authSupabase';
 import { consumeSignInLinkError, arrivedWithSignInCode, SIGN_IN_EXCHANGE_FAILED } from './lib/auth';
+import { findDuplicateGroups, planResolution, applyResolutions } from './lib/duplicateShows';
 import { THEMES, themeVars } from './lib/theme';
 import { registerServiceWorker } from './lib/notifications';
 import TopBar from './components/TopBar';
@@ -22,6 +23,7 @@ import WebViewOverlay from './components/WebViewOverlay';
 import CastDetailSheet from './components/CastDetailSheet';
 import AuthSheet from './components/AuthSheet';
 import ShowMenuSheet from './components/ShowMenuSheet';
+import DuplicateShowsSheet from './components/DuplicateShowsSheet';
 
 /**
  * Shown when a save to localStorage fails, which in practice means the quota is full.
@@ -112,9 +114,44 @@ function SignInFailedBar({ message, onRetry, onDismiss }: { message: string; onR
   );
 }
 
+/**
+ * Says a decision is waiting, without making it the first thing you deal with.
+ *
+ * Calm rather than red: nothing is broken and nothing is at risk — both copies are intact and stay
+ * that way until asked. The bar exists because the alternative is a library quietly holding two of
+ * the same show, which is how someone ends up writing notes into the copy that later loses.
+ */
+function DuplicateNoticeBar({ count, title, onResolve }: { count: number; title: string; onResolve: () => void }) {
+  return (
+    <div
+      role="status"
+      style={{
+        flex: 'none', padding: '10px 16px', background: 'var(--accent-tint)', color: 'var(--text)',
+        fontSize: 12.5, lineHeight: 1.45, display: 'flex', alignItems: 'center', gap: 10,
+      }}
+    >
+      <span style={{ flex: 1 }}>
+        {count === 1
+          ? <>You have two copies of <strong>{title}</strong>, both with characters you wrote.</>
+          : <>{count} shows have two copies each, both with characters you wrote.</>}
+      </span>
+      <button
+        onClick={onResolve}
+        style={{
+          flex: 'none', border: '1px solid var(--input-border)', borderRadius: 9,
+          background: 'var(--card)', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700,
+          padding: '7px 10px', cursor: 'pointer',
+        }}
+      >
+        Sort out
+      </button>
+    </div>
+  );
+}
+
 function Shell() {
-  const { settings, storageFailed } = useStore();
-  const { screen, activeShowId, openSettings, openAuth } = useUI();
+  const { settings, storageFailed, data, updateData } = useStore();
+  const { screen, activeShowId, openSettings, openAuth, openDuplicates } = useUI();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const { session, ready: authReady } = useAuth();
   const [dismissedSignInError, setDismissedSignInError] = useState(false);
@@ -136,6 +173,35 @@ function Shell() {
         // came from. It is also a string a tester can read back over a call.
         ? [SIGN_IN_EXCHANGE_FAILED, lastExchangeError()].filter(Boolean).join(' — ')
         : null);
+
+  /**
+   * Only the groups the app refuses to resolve on its own — two copies of a show, both holding
+   * records the user wrote. Everything else is deleted during sync without a word, because a copy
+   * with nothing of yours in it is not a decision.
+   */
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
+  const contestedDuplicates = useMemo(
+    () => findDuplicateGroups(data).filter((g) => planResolution(g) === null),
+    [data],
+  );
+
+  /**
+   * The same tidy-up as the one in the sync engine, for the duplicates sync never sees: a show
+   * added twice on one device, or a backup imported over a library that already had it.
+   *
+   * Once on mount, and only when there is something to do — `updateData` re-persists whether or
+   * not the callback changes anything, and doing that on every render would be a write per frame.
+   * Deleting only ever takes copies holding nothing of the user's; anything contested is left for
+   * the bar above.
+   */
+  useEffect(() => {
+    if (findDuplicateGroups(dataRef.current).some((g) => planResolution(g) !== null)) {
+      updateData((d) => { applyResolutions(d); });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     registerServiceWorker();
@@ -190,6 +256,9 @@ function Shell() {
       <a className="ct-skip-link" href="#ct-scroll">Skip to content</a>
       <TopBar />
       {storageFailed && <StorageFailedBar onOpenSettings={openSettings} />}
+      {contestedDuplicates.length > 0 && (
+        <DuplicateNoticeBar count={contestedDuplicates.length} title={contestedDuplicates[0].title} onResolve={openDuplicates} />
+      )}
       {signInError && (
         <SignInFailedBar
           message={signInError}
@@ -208,6 +277,7 @@ function Shell() {
       <SettingsSheet />
       <AuthSheet />
       <ShowMenuSheet />
+      <DuplicateShowsSheet />
       <FeedbackSheet />
       <ValueConverterSheet />
       <TranslatorSheet />
