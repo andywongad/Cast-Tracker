@@ -58,6 +58,22 @@ export function getSupabase(): Promise<SupabaseClient> | null {
         detectSessionInUrl: true,
         persistSession: true,
         autoRefreshToken: true,
+        /**
+         * Without this, every sign-in on this project failed silently.
+         *
+         * auth-js 2.112.3 stores each flow's PKCE verifier in its own slot and also dual-writes a
+         * legacy fixed key which, in its own words, "mirrors the most recently started flow". The
+         * callback only carries the flow id when this flag is on, so by default the exchange falls
+         * back to that fixed key — and the moment a second link is requested before the first is
+         * clicked, the key holds the newer flow's verifier. The older code then fails against it,
+         * the token endpoint rejects the exchange, and nothing reaches the URL to say so: the app
+         * opens looking ordinary and signed out. Retrying makes it *more* likely, not less.
+         *
+         * Turning it on puts `sb_flow_id` on the return URL so the exact slot is used. That means
+         * the redirect now carries a query string, which the allow-list in supabase/config.toml
+         * has to admit — hence the `/**` entries there.
+         */
+        experimental: { appendPkceFlowIdToRedirects: true },
       },
     }),
   );

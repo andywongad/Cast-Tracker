@@ -152,9 +152,19 @@ export function arrivedWithSignInCode(): boolean {
   }
 }
 
-/** Said when a code came back but no session did. */
+/**
+ * Said when a code came back but no session did.
+ *
+ * Deliberately does not name a single cause. The first version blamed the browser, which was one
+ * possibility stated as though it were the diagnosis — and it was wrong: the real failure was the
+ * PKCE verifier lookup falling back to a shared key that mirrors whichever flow started last, so
+ * requesting a second link before using the first broke the first. That is now fixed at the source
+ * (`experimental.appendPkceFlowIdToRedirects` in lib/supabase.ts), but this message still has to
+ * cover whatever else can go wrong here, and the honest version of it names the remedy rather than
+ * guessing at the reason.
+ */
 export const SIGN_IN_EXCHANGE_FAILED =
-  'That sign-in link opened in a different browser from the one that asked for it, so it couldn’t finish. Sign in again here, and open the link in this window.';
+  'That sign-in link couldn’t be completed. Use the most recent email if you requested more than one, and open it in this browser — or just sign in again from here.';
 
 function delay(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
