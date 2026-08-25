@@ -4,7 +4,7 @@ import { UIProvider, useUI } from './hooks/useUI';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { SyncProvider } from './hooks/useSync';
 import { isSyncConfigured } from './lib/supabase';
-import { supabaseAuth, sessionFromUrl, onSessionChange } from './lib/authSupabase';
+import { supabaseAuth, sessionFromUrl, onSessionChange, lastExchangeError } from './lib/authSupabase';
 import { consumeSignInLinkError, arrivedWithSignInCode, SIGN_IN_EXCHANGE_FAILED } from './lib/auth';
 import { THEMES, themeVars } from './lib/theme';
 import { registerServiceWorker } from './lib/notifications';
@@ -129,7 +129,13 @@ function Shell() {
    */
   const signInError = dismissedSignInError
     ? null
-    : INITIAL_SIGN_IN_ERROR ?? (ARRIVED_WITH_CODE && authReady && !session ? SIGN_IN_EXCHANGE_FAILED : null);
+    : INITIAL_SIGN_IN_ERROR ??
+      (ARRIVED_WITH_CODE && authReady && !session
+        // The library's own reason, appended. Ugly in a product sense, and worth it: without it
+        // this bar can only say that something failed, which is where the last three wrong guesses
+        // came from. It is also a string a tester can read back over a call.
+        ? [SIGN_IN_EXCHANGE_FAILED, lastExchangeError()].filter(Boolean).join(' — ')
+        : null);
 
   useEffect(() => {
     registerServiceWorker();

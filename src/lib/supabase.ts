@@ -55,7 +55,14 @@ export function getSupabase(): Promise<SupabaseClient> | null {
          * no router to hang one on.
          */
         flowType: 'pkce',
-        detectSessionInUrl: true,
+        /**
+         * Off, and the exchange is run by hand in `sessionFromUrl`.
+         *
+         * Automatic detection did the same work but kept its error to itself — a failed exchange
+         * was indistinguishable from never having signed in, which is what made this bug take a
+         * day to corner. Doing it explicitly costs a few lines and returns the reason.
+         */
+        detectSessionInUrl: false,
         persistSession: true,
         autoRefreshToken: true,
         /**

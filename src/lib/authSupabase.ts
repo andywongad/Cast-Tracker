@@ -110,6 +110,22 @@ export const supabaseAuth: AuthAdapter = {
  * Called on load. Returns null for the ordinary case — someone opening the app normally, signed in
  * or not — so the caller can treat it as "did we just arrive from an email link".
  */
+let exchangeError: string | null = null;
+
+/**
+ * Why the last code exchange failed, in the library's own words, or null.
+ *
+ * This exists because the failure had no voice. With `detectSessionInUrl` on, the exchange happened
+ * inside the client's `initialize()`, and its error never surfaced: `getSession()` simply answered
+ * "no session", indistinguishable from never having signed in. Three separate wrong diagnoses came
+ * out of that silence — a mail scanner, a second browser, an allow-list — each plausible, each
+ * costing an attempt to disprove. The library knows exactly what went wrong; it was only ever a
+ * question of asking it.
+ */
+export function lastExchangeError(): string | null {
+  return exchangeError;
+}
+
 export async function sessionFromUrl(): Promise<AuthSession | null> {
   // The gate that keeps the deferral meaningful. Without it this runs on every cold load and pulls
   // the client down for everyone, including the majority who have never signed in — which is the
@@ -118,6 +134,33 @@ export async function sessionFromUrl(): Promise<AuthSession | null> {
   const c = getSupabase();
   if (!c) return null;
   const supabase = await c;
+
+  /**
+   * The exchange is done here rather than left to `detectSessionInUrl`, which is now off.
+   *
+   * Same work, one difference: the error is returned to us instead of disappearing. `sb_flow_id`
+   * is read off `window.location` by the library, so this has to run before the URL is tidied —
+   * hence the cleanup below rather than at the top.
+   */
+  const code = new URLSearchParams(window.location.search).get('code');
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    exchangeError = error ? `${error.name}: ${error.message}` : null;
+
+    // Cleared either way. A code left in the address bar is spent, and a reload would only
+    // reproduce the same failure with staler inputs.
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('code');
+      url.searchParams.delete('sb_flow_id');
+      window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+    } catch {
+      /* An address bar we cannot tidy is not worth failing a sign-in over. */
+    }
+
+    if (data?.session) return toSession(data.session.user);
+  }
+
   const { data } = await supabase.auth.getSession();
   return toSession(data.session?.user);
 }
