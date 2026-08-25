@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
+import { useAuth } from '../hooks/useAuth';
+import { isSyncConfigured } from '../lib/supabase';
 import { ShowTile, RecentShowTile } from './ShowTile';
 import { searchShows, hasTmdbKey, img, inferShowType, type TmdbShowResult } from '../lib/tmdb';
 import { bgStyle } from '../lib/utils';
@@ -9,6 +11,7 @@ import DensityToggle from './DensityToggle';
 export default function HomeScreen() {
   const { data, settings, recentShows, showById, backupState, dismissBackupNudge, setShowColumns, keptTotal } = useStore();
   const { query, setQuery, openAddShow, openRedeem, openSettings } = useUI();
+  const { session } = useAuth();
   const [tmdbResults, setTmdbResults] = useState<TmdbShowResult[]>([]);
   const [tmdbSearching, setTmdbSearching] = useState(false);
 
@@ -30,7 +33,9 @@ export default function HomeScreen() {
   const acked = backupState.ackedAtCount ?? 0;
   const neverActioned = !backupState.lastExportAt && !backupState.dismissedAt;
   const grownSince = trackedCast >= acked + 15;
-  const showBackupNudge = trackedCast >= 8 && (neverActioned || grownSince);
+  // Signed in, the device is not the only copy, so the nudge's whole premise is false. A file
+  // export is still offered in Settings for anyone who wants one.
+  const showBackupNudge = !session && trackedCast >= 8 && (neverActioned || grownSince);
 
   useEffect(() => {
     if (!isSearching || !hasTmdbKey()) { setTmdbResults([]); setTmdbSearching(false); return; }
@@ -73,12 +78,17 @@ export default function HomeScreen() {
 
       {showBackupNudge && !isSearching && (
         <div style={{ background: 'var(--card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, padding: 16, marginBottom: 22 }}>
+          {/* "There's no account or sync" was true when this was written and became a lie the day
+              sync shipped — on the same screen that now tells first-time users an account exists.
+              Suppressed entirely when signed in: the premise is the device being the only copy,
+              and it isn't. */}
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Your cast lives only on this device</div>
           <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>
-            There&rsquo;s no account or sync. Resetting the app or clearing your browser data would
-            erase the {trackedCast} {trackedCast === 1 ? 'character' : 'characters'} you&rsquo;ve
+            You&rsquo;re not signed in, so nothing is backed up. Resetting the app or clearing your
+            browser data would erase the {trackedCast} {trackedCast === 1 ? 'character' : 'characters'} you&rsquo;ve
             edited or added yourself, across {data.shows.length} {data.shows.length === 1 ? 'show' : 'shows'},
-            with no way to get them back. Export a file to keep a copy.
+            with no way to get them back. Export a file to keep a copy, or sign in to save them to
+            an account.
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={openSettings} style={{ flex: 1, height: 40, border: 'none', borderRadius: 12, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Export a backup</button>
@@ -145,6 +155,34 @@ export default function HomeScreen() {
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Track your first show</div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 18, lineHeight: 1.4 }}>Add a show to start tracking cast, episodes, and relationships.</div>
               <button onClick={() => openAddShow()} style={{ height: 44, padding: '0 20px', border: 'none', borderRadius: 12, background: 'var(--accent)', color: 'var(--accent-text)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>Add a show</button>
+
+              {/**
+                * What an account is and isn't, said before anyone wonders.
+                *
+                * Only here, and only signed out. Someone opening the app for the first time has no
+                * way to know whether the "Sign in" in the corner is required, what it would do with
+                * their data, or what happens if they ignore it — and the honest answer is genuinely
+                * reassuring, so there is no reason to make them find out by trying it.
+                *
+                * Every clause is checkable: the app runs entirely on localStorage without an
+                * account, sign-in is a magic link with no password field anywhere, and what syncs
+                * is the records you write. The device-loss caveat earns its place because it is the
+                * one real cost of staying signed out, and the backup nudge already says it later —
+                * better to say it now than to spring it on someone with a full library.
+                */}
+              {!session && isSyncConfigured() && (
+                <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.55, textAlign: 'left' }}>
+                  <strong style={{ color: 'var(--text-secondary)' }}>You don&rsquo;t need an account.</strong>{' '}
+                  Everything works signed out, and your library is stored in this browser rather
+                  than on a server. Clearing your browser data would erase it, so you can export a
+                  backup file from Settings at any time.
+                  <div style={{ marginTop: 8 }}>
+                    <strong style={{ color: 'var(--text-secondary)' }}>Signing in adds two things:</strong>{' '}
+                    your shows and the characters you write are saved to your account, and they
+                    appear on your other devices. It&rsquo;s an email link — no password.
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {data.shows.length > 0 && (
