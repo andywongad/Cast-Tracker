@@ -51,6 +51,8 @@ interface StoreValue {
   dismissBackupNudge: () => void;
   importBackup: (raw: string) => { ok: true } | { ok: false; error: string };
   resetAll: () => void;
+  /** Empties the library as an edit, so other devices lose it too. See the note on the implementation. */
+  clearEverywhere: () => void;
   pushRecent: (id: string) => void;
   showById: (id: string | null) => Show | undefined;
   shareShow: (id: string) => ShareSheetState;
@@ -193,6 +195,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setRecentShows([]);
   }, []);
 
+  /**
+   * Empties the library as an *edit*, so the deletion travels.
+   *
+   * `resetAll` writes nothing through `updateData`, which is why it has always been local-only:
+   * no tombstones, nothing to push, and the next pull hands the whole library straight back. That
+   * is the right behaviour for "clear this device" and the wrong one for "delete my data", and the
+   * app previously offered only one control for both.
+   *
+   * Two passes, because tombstones are produced by diffing: emptying the cast lists first records
+   * every authored record as deleted, and removing the shows then records those. One pass would
+   * tombstone the shows only, leaving the cast rows orphaned on the server — invisible, but still
+   * that user's data sitting in a table after they asked for it to be gone.
+   *
+   * The caller syncs afterwards. Offline, the tombstones wait in their own key, which `clearAllData`
+   * deliberately does not touch, and go out on the next sync.
+   */
+  const clearEverywhere = useCallback(() => {
+    updateData((d) => { for (const s of d.shows) s.cast = []; });
+    updateData((d) => { d.shows = []; });
+  }, [updateData]);
+
   const pushRecent = useCallback((id: string) => {
     setRecentShows((prev) => {
       const next = [id, ...prev.filter((x) => x !== id)].slice(0, 6);
@@ -262,9 +285,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<StoreValue>(() => ({
     data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave,
-    exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem,
+    exportBackup, importBackup, resetAll, clearEverywhere, pushRecent, showById, shareShow, shareCast, claimRedeem,
     backupState, dismissBackupNudge, disposableCount, clearDisposable, keptTotal, storageFailed,
-  }), [keptTotal, storageFailed, data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
+  }), [keptTotal, storageFailed, data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, clearEverywhere, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

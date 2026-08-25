@@ -8,11 +8,12 @@ import { useSync } from '../hooks/useSync';
 import Sheet from './Sheet';
 
 export default function SettingsSheet() {
-  const { settings, setTheme, setAutoSave, exportBackup, importBackup, resetAll, backupState, keptTotal } = useStore();
-  const { session } = useAuth();
+  const { settings, setTheme, setAutoSave, exportBackup, importBackup, resetAll, clearEverywhere, backupState, keptTotal } = useStore();
+  const { session, signOut } = useAuth();
   const sync = useSync();
   const { settingsOpen, closeSettings, resetToHome, openFeedback, openAuth } = useUI();
   const [resetConfirm, setResetConfirm] = useState(false);
+  const [wiping, setWiping] = useState(false);
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -23,6 +24,35 @@ export default function SettingsSheet() {
   // behind them refer to. One step straight to the root rather than two traversals through
   // history that would each land on a show that no longer exists.
   const doReset = () => { resetAll(); setResetConfirm(false); resetToHome(); };
+
+  /**
+   * Sign out first, then clear. Order is the whole point: clearing while still signed in leaves the
+   * sync engine running, and its next pull restores everything within seconds — which is exactly
+   * what made the old single control feel broken.
+   */
+  const doSignOutAndClear = async () => {
+    await signOut();
+    doReset();
+  };
+
+  /**
+   * Delete, then push, then clear the local remnants.
+   *
+   * The push matters: `clearEverywhere` only writes tombstones, and a device closed before the next
+   * sync would leave the other devices holding a library its owner asked to be rid of. `syncNow`
+   * sends them now. If it fails — offline, most likely — the tombstones stay queued in their own
+   * key, which `resetAll` does not clear, and go out whenever the app next reaches the server.
+   */
+  const doDeleteEverywhere = async () => {
+    setWiping(true);
+    try {
+      clearEverywhere();
+      await sync.syncNow();
+    } finally {
+      setWiping(false);
+      doReset();
+    }
+  };
 
   const doExport = () => {
     const backup = exportBackup();
@@ -47,7 +77,14 @@ export default function SettingsSheet() {
    * the destructive one is always the shorter route, and the moment somebody is reaching for reset
    * is exactly when they are least inclined to detour. So the primary action does both, in order.
    */
-  const doExportThenReset = () => { doExport(); doReset(); };
+  const doExportThenReset = () => {
+    doExport();
+    // Signed in, clearing without signing out is not a reset: the engine is still running and its
+    // next pull puts the library straight back. The safe path has to be the one that actually ends
+    // in a blank device, or the reassuring button is the one that does nothing.
+    if (session) void doSignOutAndClear();
+    else doReset();
+  };
 
   const lastBackup = backupState.lastExportAt;
   const daysSinceBackup = lastBackup ? Math.floor((Date.now() - lastBackup) / 86400000) : null;
@@ -178,22 +215,62 @@ export default function SettingsSheet() {
         {resetConfirm ? (
           <>
             <div style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 10 }}>
-              This clears all shows, cast, shares and recents. There is no undo and no copy on a
-              server &mdash; {keptTotal === 0
-                ? 'nothing here has been edited, so a backup would be empty.'
-                : `you have ${keptTotal} ${keptTotal === 1 ? 'record' : 'records'} a backup would carry (${backupAge}).`}
+              {/* The old copy said "no undo and no copy on a server". True before sync existed, and
+                  a lie the moment someone signs in — at which point there is a copy on a server,
+                  and it is what refills the device seconds after a reset. */}
+              This clears all shows, cast, shares and recents from this device.{' '}
+              {keptTotal === 0
+                ? 'Nothing here has been edited, so a backup would be empty.'
+                : `You have ${keptTotal} ${keptTotal === 1 ? 'record' : 'records'} a backup would carry (${backupAge}).`}
             </div>
             {keptTotal > 0 && (
               <button onClick={doExportThenReset} className="ct-btn-primary" style={{ width: '100%', height: 44, marginBottom: 8 }}>
-                Export a backup, then reset
+                Export a backup, then {session ? 'clear this device' : 'reset'}
               </button>
             )}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <button onClick={() => setResetConfirm(false)} className="ct-btn-ghost" style={{ flex: 1, height: 44 }}>Cancel</button>
-              <button onClick={doReset} style={{ flex: 1, height: 44, borderRadius: 12, border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
-                {keptTotal > 0 ? 'Reset without a backup' : 'Reset'}
-              </button>
-            </div>
+
+            {/**
+              * Signed in, "reset" is two different acts and the app used to offer only one of them.
+              * Clearing the device leaves the account intact — sign back in and everything returns.
+              * Deleting everywhere is the only thing here that destroys data, and it says so.
+              * Signed out there is no distinction to draw, so the single control comes back.
+              */}
+            {session ? (
+              <>
+                <button
+                  onClick={doSignOutAndClear}
+                  className="ct-btn-ghost"
+                  style={{ width: '100%', height: 44, marginBottom: 8 }}
+                >
+                  Sign out and clear this device
+                </button>
+                <div style={{ fontSize: 12, color: 'var(--text-faint)', lineHeight: 1.45, marginBottom: 12 }}>
+                  Your library stays in your account. Signing back in brings it all back — on this
+                  device or any other.
+                </div>
+
+                <button
+                  onClick={doDeleteEverywhere}
+                  disabled={wiping}
+                  style={{ width: '100%', height: 44, marginBottom: 8, borderRadius: 12, border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', fontSize: 13.5, fontWeight: 700, cursor: wiping ? 'not-allowed' : 'pointer', opacity: wiping ? 0.7 : 1 }}
+                >
+                  {wiping ? 'Deleting…' : 'Delete my library everywhere'}
+                </button>
+                <div style={{ fontSize: 12, color: 'var(--text-faint)', lineHeight: 1.45, marginBottom: 12 }}>
+                  Removes {keptTotal === 1 ? 'your 1 record' : `all ${keptTotal} of your records`} from
+                  every device and from the server. Your account stays; the data does not. There is no undo.
+                </div>
+
+                <button onClick={() => setResetConfirm(false)} className="ct-btn-ghost" style={{ width: '100%', height: 44, marginBottom: 8 }}>Cancel</button>
+              </>
+            ) : (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <button onClick={() => setResetConfirm(false)} className="ct-btn-ghost" style={{ flex: 1, height: 44 }}>Cancel</button>
+                <button onClick={doReset} style={{ flex: 1, height: 44, borderRadius: 12, border: '1px solid var(--danger)', background: 'transparent', color: 'var(--danger)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
+                  {keptTotal > 0 ? 'Reset without a backup' : 'Reset'}
+                </button>
+              </div>
+            )}
           </>
         ) : (
           /* No longer a filled block the same size as Export. A destructive action should be

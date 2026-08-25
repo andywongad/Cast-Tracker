@@ -76,6 +76,15 @@ console.log('stampEdits');
   check('deleting a hand-added, name-only record tombstones it', readTombstones().length === 1);
 }
 
+{ // React may run a state updater twice for one update; the queue must not grow a second grave
+  store['ct.sync.tombstones.v1'] = '[]';
+  const prev = data([member('a', { nickname: 'Carm' }), member('b')]);
+  const next = data([member('b')]);
+  stampEdits(prev, next, 1000);
+  stampEdits(prev, next, 1000);
+  check('a repeated stamp does not duplicate the tombstone', readTombstones().length === 1, JSON.stringify(readTombstones()));
+}
+
 console.log('applyRemote — the conflict rule');
 { // remote newer wins
   const local = data([member('a', { nickname: 'old', editedAt: 100 })]);

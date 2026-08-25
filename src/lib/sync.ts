@@ -78,7 +78,22 @@ export function readTombstones(): Tombstone[] {
 
 function writeTombstones(list: Tombstone[]) {
   try {
-    localStorage.setItem(TOMBSTONE_KEY, JSON.stringify(list));
+    /**
+     * One grave per record, newest wins.
+     *
+     * These are produced by `stampEdits`, which runs inside a `setData` updater — and React is
+     * free to invoke an updater more than once for a single update; StrictMode does it on every
+     * update in development. Without this, one deletion could queue several identical graves, each
+     * pushed as its own request. Deduping on write costs nothing and makes the queue a set, which
+     * is what it always meant to be: a record is either deleted or it isn't.
+     */
+    const newest = new Map<string, Tombstone>();
+    for (const t of list) {
+      const key = `${t.showId}:${t.recordId ?? ''}`;
+      const seen = newest.get(key);
+      if (!seen || t.deletedAt > seen.deletedAt) newest.set(key, t);
+    }
+    localStorage.setItem(TOMBSTONE_KEY, JSON.stringify([...newest.values()]));
   } catch {
     /* see saveCursor */
   }
