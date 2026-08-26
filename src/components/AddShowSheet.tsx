@@ -124,7 +124,6 @@ export default function AddShowSheet() {
             ))}
           </div>
         )}
-        {!hasTmdbKey() && <div style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 16 }}>Add a TMDb API key (VITE_TMDB_API_KEY) to search real shows — you can still add one manually.</div>}
         {searching && <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 12 }}>Searching TMDb&hellip;</div>}
 
         {/* Asked only when there's nothing to infer from, or when you've deliberately opened a

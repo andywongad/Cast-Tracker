@@ -8,19 +8,18 @@ Local-first: everything works on one device with no account. Signing in is optio
 
 ```bash
 npm install
-cp .env.example .env.local   # then paste in your TMDb key (optional but recommended)
 npm run dev
 ```
 
 Open the printed local URL on your phone (same wifi) or shrink your browser window to ~400px wide to preview the mobile layout.
 
-### TMDb API key (optional)
+### API keys (none needed locally)
 
-Show/cast search, photo autofill, name predictions, and "add all cast from this episode" all require a free personal TMDb API key: https://www.themoviedb.org/settings/api
+No key has to exist on your machine. Every TMDb call goes through `/api/tmdb`, which holds the key server-side, and `npm run dev` proxies `/api` to the deployed origin (`vite.config.ts`; set `API_PROXY_TARGET` to point it at a preview deployment instead). Show/cast search, photo autofill, name predictions and "add all cast from this episode" therefore work locally with no `.env.local` at all.
 
-Put it in `.env.local` as `VITE_TMDB_API_KEY=...`. Without a key, everything still works — you just enter shows/cast manually instead of searching.
+The keys live in the Vercel dashboard: `TMDB_API_KEY` — unprefixed, so Vite can never inline it into the client bundle — plus the Supabase, web-push and Anthropic values from `.env.example` behind sync, notifications and character bios. Missing values degrade the app to the no-account experience rather than breaking it.
 
-The account-backed features (sync, notifications, character bios) additionally need the Supabase, web-push and Anthropic values from `.env.example` set in the Vercel dashboard. Without them the app degrades to the no-account experience rather than breaking.
+Copy `.env.example` to `.env.local` only when you need to point local development at your own Supabase project or your own TMDb key: https://www.themoviedb.org/settings/api
 
 ### Build
 
@@ -47,7 +46,7 @@ The prototype (`project/Cast Tracker.dc.html`) ran inside Claude Design's sandbo
 - **Translate** now calls the free [MyMemory](https://mymemory.translated.net/) translation API (no key needed, ~5k words/day). The prototype used the design sandbox's built-in AI; MyMemory's quality/rate limits are lower — swap in DeepL/Google Translate if you outgrow it.
 - **AI features** were originally left out with the sandbox's built-in AI. They came back server-side: character bios are generated through `api/enrichment.ts` and cached in Vercel KV, once per character when its detail sheet opens. The recap is TMDb-sourced rather than AI-written — it shows what happened *before* the episode you're on, with the season summary underneath when an overview is too thin to be useful.
 - **Currency conversion** uses live rates from the free [open.er-api.com](https://www.open.er-api.com) (no key), falling back to the prototype's static rate table if that's unreachable. Inflation math reuses the prototype's historical US CPI table.
-- **Free/Paid plan gating** from the prototype (a mocked-up monetization experiment) isn't in this build — autofill-by-episode is just available whenever a TMDb key is set, since there's no real billing system here.
+- **Free/Paid plan gating** from the prototype (a mocked-up monetization experiment) isn't in this build — autofill-by-episode is simply always available, since there's no real billing system here.
 - **Sharing** started as the prototype's six-character code, which only ever worked in the browser that generated it. It is now a link that carries its own payload, so it works for anyone — only authored fields travel, since auto-loaded cast regenerates from TMDb on the recipient's device.
 - The relationship map's node-placement math (grid capacity, gender-split default layout, drag/snap behavior) is a faithful re-implementation of the described behavior rather than a line-for-line port of the prototype's tuned constants — some spacing may look/feel slightly different at extreme cast sizes.
 - The app renders as a normal responsive mobile web page rather than inside a simulated iOS device frame (status bar, home indicator) — that frame was a prototype-viewing aid, not part of the product.

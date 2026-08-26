@@ -35,10 +35,12 @@ device to stay empty.
 
 ## Manual test script
 
-Runs in about 15 minutes. Do it on the deployed site — **https://casttracker.app** — not a local
-dev server, unless you are
-specifically testing a change. `npm run dev` proxies `/api/*` to production, so TMDb search does
-work locally, but nothing else about local matches what a tester sees.
+Runs in about 25 minutes. Do it on the deployed site — **https://casttracker.app** — not a local
+dev server, unless you are specifically testing a change. `npm run dev` proxies `/api/*` to
+production, so TMDb search, bios and recaps work locally, but the service worker, sign-in and
+notifications do not match what a tester sees. A preview deployment is no substitute either: the
+Supabase and VAPID variables are set on Production only, so a preview URL has no sign-in and no
+notification control.
 
 **Before each session:** reset to blank, import the seed, and confirm the home screen shows two
 shows under Currently watching and one under Completed.
@@ -56,50 +58,105 @@ shows under Currently watching and one under Completed.
 7. Reframe a photo: tap the image, drag and zoom, save. Reopen the cropper — it resumes where you
    left it rather than resetting.
 
-### 3. The relationship map
-8. Open Single's Inferno → the map. Eight people, laid out women on one side and men on the other
-   (that split comes from the `gender` field being set on every seeded record).
-9. Drag from one person to another to create a link. Drag a person to move them.
-10. Switch to the next episode. The previous episode's links carry forward as a starting point;
+### 3. Bios and recaps
+8. Still in Carmy's sheet, find the bio paragraph with **"AI summary of its Wikipedia page"** under
+   it. The first open takes a few seconds — it is written server-side from the character's
+   Wikipedia page — and every open after that is instant, because the result is cached. "Show
+   more" appears only when the text is actually clipped.
+9. Tap that source line. Wikipedia opens in the in-app browser rather than throwing you out of the
+   app. *(If the bio says "Couldn't generate a bio right now", tap Try again once; a persistent
+   failure is worth reporting with the character's name — it means the endpoint, the cache or the
+   daily cap, and the three look identical from here.)*
+10. Back on the show, pick season 2, episode 3 from the episode strip, then tap **Previously** on
+    the "Everyone credited on Ep 3" heading. The recap covers what happened *before* that episode,
+    not the episode itself. Double-tapping an episode chip opens the same sheet.
+    *(The button is absent on the very first episode of a show — there is nothing previous.)*
+
+### 4. The relationship map
+11. Open Single's Inferno → the map. Eight people, laid out women on one side and men on the other
+    (that split comes from the `gender` field being set on every seeded record).
+12. Drag from one person to another to create a link. Drag a person to move them.
+13. Switch to the next episode. The previous episode's links carry forward as a starting point;
     changing them there does not change the earlier episode.
-11. Hide someone from the map, then bring them back from the bottom of the sheet.
+14. Hide someone from the map, then bring them back from the bottom of the sheet.
 
-### 4. Episodes and auto-loading
-12. On The Bear, pick a season and episode from the strip. Cast credited on that episode load in.
-13. Show menu (⋯) → "Clear N auto-loaded characters". The seeded six stay; the loaded ones go.
-14. Reopen the same episode — they come back. Nothing was lost.
+### 5. Episodes and auto-loading
+15. On The Bear, pick a season and episode from the strip. Cast credited on that episode load in.
+16. Show menu (⋯) → "Clear N auto-loaded characters". The seeded six stay; the loaded ones go.
+17. Reopen the same episode — they come back. Nothing was lost.
 
-### 5. Status and sharing
-15. Show menu → "Mark as completed". The show moves to Completed on the home screen.
-16. From Completed, "Move back to Currently watching". It returns.
-17. Show menu → "Share this show" generates a code. Redeeming it on another device or browser
-    should reproduce the show and its cast.
+### 6. Status
+18. Show menu → "Mark as completed". The show moves to Completed on the home screen.
+19. From Completed, "Move back to Currently watching". It returns.
 
-### 6. Offline
-21. Open the app, then turn on airplane mode.
-22. Reload. It should open normally, with your library and cast photos intact — everything is on
+### 7. Sharing
+Sharing is a **link**, not a code. The payload rides in the URL fragment, which browsers never
+send to a server, so the notes travel only to the person you sent them to — and no messaging app
+can render a preview of one. Test it across two browsers (or a phone and a laptop); a link opened
+in the browser that made it still works, but proves less.
+
+20. Show menu → **"Share this show"**. The sheet shows the link itself, a **Copy** button, and on a
+    phone **"Send link…"**, which hands it to the operating system's own share sheet.
+21. Open that link somewhere else. A preview sheet names the show and how many characters it
+    carries, and **nothing is written until you accept** — dismissing it leaves the library
+    untouched. Accept, and the show lands with the characters someone wrote. Cast that came from
+    TMDb is not in the link; it reloads from TMDb on the new device.
+22. Open Carmy and tap the share icon in the top-right corner of the sheet. That link carries one
+    character.
+23. Open the character link on the other device. Because a character needs a show to live in, the
+    sheet **asks where it should go**: it offers The Bear if that show is already in the library,
+    offers to create it if not, and lists everything else underneath. Each destination says whether
+    it already holds this character. Pick one and the character lands there.
+24. Try sharing a show you have written a great deal into. Past the link limit the sheet refuses
+    outright and points at Settings → Export instead, rather than producing a link that messaging
+    apps silently truncate.
+
+### 8. Duplicate shows
+25. With The Bear already in the library, add it again from the home screen search. Write a note on
+    a character inside the *new* copy, so both copies hold something you typed.
+26. A bar appears on the home screen: "You have two copies of The Bear, both with characters you
+    wrote", with **Resolve**. The sheet — "Two copies of the same show" — offers to merge them or
+    keep one, and says what each side holds. *(A duplicate with nothing of yours in it never
+    reaches this screen; it is removed silently, which is the intended behaviour, not a miss.)*
+
+### 9. Notifications
+27. Show menu (⋯) → **"Enable Notifications"** (🔕). The browser asks for permission; granting it
+    turns the control into **"Notifications On"** (🔔). Reopen the menu — it still reads as on, and
+    following one show does not turn the others on.
+28. Tap it again to unfollow. It returns to 🔕.
+    *(Delivery cannot be tested on demand — see the known gaps below.)*
+
+### 10. Footer tools
+29. **Translate** in the footer: type a phrase, pick a language, get a translation back. It calls a
+    free public API, so expect modest quality and an occasional failure rather than an error page.
+30. **Convert**: type an amount and switch currencies. Rates are live, with a static table as a
+    fallback, so a number always appears.
+
+### 11. Offline
+31. Open the app, then turn on airplane mode.
+32. Reload. It should open normally, with your library and cast photos intact — everything is on
     the device and the app shell is cached.
-23. Search for a new show. It should fail: TMDb is a live call and the app doesn't pretend
+33. Search for a new show. It should fail: TMDb is a live call and the app doesn't pretend
     otherwise. Everything already in your library keeps working.
-24. Turn airplane mode off. Nothing to do — the next reload picks up any new deploy.
+34. Turn airplane mode off. Nothing to do — the next reload picks up any new deploy.
 
-### 7. Backup
-25. Settings → Export. A `cast-tracker-backup-<date>.json` file downloads.
-26. Settings → Reset to blank state. The library empties.
-27. Import the file you just exported. Everything returns, including the notes and relationships.
+### 12. Backup
+35. Settings → Export. A `cast-tracker-backup-<date>.json` file downloads.
+36. Settings → Reset to blank state. The library empties.
+37. Import the file you just exported. Everything returns, including the notes and relationships.
 
-### 8. Sync across two devices
+### 13. Sync across two devices
 Working as of 2026-08-25. Sign-in goes through Resend from `noreply@casttracker.app`, at 30 emails
 an hour rather than the built-in mailer's two, and the email carries a six-digit code above the
 link. **Use the code, not the link** — a link is single-use, so a mail scanner that fetches the
 message first spends it, and it only works in the browser that asked for it. The code has neither
 constraint, which is what makes this work on a phone.
 
-28. Sign in on device A. The library uploads.
-29. Sign in as the same account on device B. The library arrives.
-30. Edit the same character's notes differently on each device, B last. Both converge on B's text.
-31. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
-32. Delete a character on A. It disappears on B rather than coming back.
+38. Sign in on device A. The library uploads.
+39. Sign in as the same account on device B. The library arrives.
+40. Edit the same character's notes differently on each device, B last. Both converge on B's text.
+41. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
+42. Delete a character on A. It disappears on B rather than coming back.
 
 ### Known gaps to mention to a tester before they find them
 - **Notifications work, with one catch on iPhone.** The follow control is in a show's ⋯ menu. On
@@ -107,9 +164,18 @@ constraint, which is what makes this work on a phone.
   normal Safari tab fails no matter what the server is doing. Add Cast Tracker to the Home Screen
   first, open it from that icon, then follow a show. Android and desktop have no such rule.
   The nightly job runs at 06:00 UTC and only sends for episodes that aired in the previous two
-  days, so a follow won't produce anything until a show you follow actually airs.
+  days, so a follow won't produce anything until a show you follow actually airs. That means step
+  27 tests the subscription, never the delivery — the only way to exercise delivery on demand is
+  `curl -H "Authorization: Bearer $CRON_SECRET" https://casttracker.app/api/check-episodes`, which
+  answers with a tally rather than a notification.
+- **The follow control is missing on preview deployments.** `VITE_VAPID_PUBLIC_KEY` is read at
+  build time and set on Production only, so its absence on a preview URL is configuration, not a
+  bug. Sign-in is absent there for the same reason.
 - **Sign-in is a code, not just a link.** Tell testers to type the six digits rather than tapping
   the link: a link only works in the browser that requested it, and only once.
+- **A share link cannot be previewed by the app that carries it.** No thumbnail, no title — that
+  is the fragment doing its job, since a preview would mean uploading the sender's notes to render
+  one.
 
 ## Regenerating the seed
 
