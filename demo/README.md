@@ -154,9 +154,17 @@ constraint, which is what makes this work on a phone.
 
 38. Sign in on device A. The library uploads.
 39. Sign in as the same account on device B. The library arrives.
-40. Edit the same character's notes differently on each device, B last. Both converge on B's text.
-41. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
-42. Delete a character on A. It disappears on B rather than coming back.
+40. On device A, edit a character's notes and **leave immediately** — switch apps, or lock the
+    screen — without waiting. Bring device B to the front. The edit is there. *(A push waits three
+    seconds after your last edit, so leaving faster than that used to strand the edit on device A
+    until it was next opened. Leaving now sends it. Closing the tab outright is the weaker case —
+    the request goes out, but a browser may cancel it mid-flight, so a change that fails to arrive
+    after a hard tab close is a known limit rather than a bug worth chasing.)*
+41. Nothing arrives on a device that is sitting open and untouched. Bring it to the front — or
+    reload — and it syncs. There is no polling and no live connection, by design.
+42. Edit the same character's notes differently on each device, B last. Both converge on B's text.
+43. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
+44. Delete a character on A. It disappears on B rather than coming back.
 
 ### Known gaps to mention to a tester before they find them
 - **Notifications work, with one catch on iPhone.** The follow control is in a show's ⋯ menu. On
