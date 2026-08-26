@@ -121,18 +121,29 @@ self.addEventListener('push', (event) => {
   }
 });
 
+/**
+ * Focus the app if it is already open, otherwise open it.
+ *
+ * The comparison is on origin, resolved through `new URL`. `client.url` is absolute
+ * (`https://host/`), so the previous `client.url === '/'` could never be true — every tap opened
+ * a new window on top of the tab the person already had, which is the one outcome this handler
+ * exists to prevent. Origin rather than pathname because the app is a single route: a share link
+ * or a redeem URL is the same window, and should be focused rather than duplicated.
+ *
+ * `includeUncontrolled` because a tab loaded before this worker took control is still the app,
+ * and is still the window someone means when they tap.
+ */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const target = new URL(event.notification.data?.url || '/', self.location.origin);
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url === '/' && 'focus' in client) {
+        if (new URL(client.url).origin === target.origin && 'focus' in client) {
           return client.focus();
         }
       }
-      if (clients.openWindow) {
-        return clients.openWindow(event.notification.data.url);
-      }
+      return clients.openWindow ? clients.openWindow(target.href) : undefined;
     })
   );
 });
