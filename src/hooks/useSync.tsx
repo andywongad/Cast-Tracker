@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { useAuth } from './useAuth';
 import { useStore } from './useStore';
 import { applyRemote, pull, push, saveCursor } from '../lib/sync';
+import type { AppData } from '../types';
 import { applyResolutions, findDuplicateGroups } from '../lib/duplicateShows';
 
 /**
@@ -15,6 +16,15 @@ import { applyResolutions, findDuplicateGroups } from '../lib/duplicateShows';
  *   - signing in, or opening the app already signed in
  *   - coming back to the tab, which is exactly when the other device may have written something
  *   - a few seconds after you stop editing
+ *   - leaving the page with an edit still waiting on that timer
+ *
+ * The last one is not a fourth schedule so much as a rescue of the third. A three-second debounce
+ * and a tab that closes in two seconds means the timer dies with the page, and the edit stays on
+ * that device until it is next opened — which is discovered on the other device, as work that
+ * never arrived. Hiding is the signal that matters: switching apps, switching tabs and locking a
+ * laptop all fire it while the page is still alive and able to finish the request. `pagehide` is
+ * listened for as well, but it is the weaker of the two — on a real unload the browser may cancel
+ * the request in flight, so it improves the odds rather than guaranteeing anything.
  *
  * Order is always pull, then push. Pulling first means a conflict is resolved against what the
  * server already has rather than being overwritten by this device and discovered later; the merge
@@ -44,6 +54,16 @@ function useSyncEngine() {
    */
   const dataRef = useRef(data);
   dataRef.current = data;
+
+  /**
+   * The exact object last handed to `push`, so "is anything waiting to be sent?" is a pointer
+   * comparison. `updateData` clones on every edit, so a different identity is precisely the
+   * question being asked, and asking it costs nothing on a path that runs as the page is closing.
+   *
+   * Null until the first push of this session: before that, anything on screen is unsent by
+   * definition.
+   */
+  const pushed = useRef<AppData | null>(null);
 
   const running = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,8 +111,12 @@ function useSyncEngine() {
       }
 
       // Advance past our own writes too, or the next pull hands them straight back.
-      const written = await push(dataRef.current, userId);
+      const snapshot = dataRef.current;
+      const written = await push(snapshot, userId);
       if (written.newest) saveCursor(userId, written.newest);
+      // What was sent, not when it was sent: the flush below compares identities, and a timestamp
+      // could not tell an edit made during the request from one made before it.
+      pushed.current = snapshot;
       setState('idle');
       setLastSyncedAt(Date.now());
     } catch (e) {
@@ -111,13 +135,46 @@ function useSyncEngine() {
     void run();
   }, [userId, run]);
 
-  // Returning to the tab. The one moment the other device is most likely to have written.
+  /**
+   * Send now, rather than in however much of the three seconds is left.
+   *
+   * Guarded on there being something to send: hiding a tab is common, and a device that has
+   * changed nothing since its last push would otherwise spend a request every time the user
+   * switched apps. The debounce timer is cleared as well, so an edit is never sent twice for the
+   * same page visit.
+   *
+   * This runs the ordinary pull-then-push cycle rather than pushing straight out. A push on its
+   * own is an unconditional upsert — the conflict rule lives in `applyRemote`, on the pull — so
+   * skipping the pull to save a round trip would let a stale record overwrite a newer one from the
+   * other device. Losing an edit is worse than missing this flush.
+   */
+  const flush = useCallback(() => {
+    if (!userId) return;
+    if (dataRef.current === pushed.current) return;
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    void run();
+  }, [userId, run]);
+
+  // Arriving at the tab, and leaving it. Returning is the moment the other device is most likely
+  // to have written; leaving is the last moment this one can say what it did.
   useEffect(() => {
     if (!userId) return;
-    const onVisible = () => { if (document.visibilityState === 'visible') void run(); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [userId, run]);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void run();
+      else flush();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    // Both, because neither covers the other. `visibilitychange` is what fires when an app is
+    // switched away from or a laptop is closed, and leaves the page alive to finish the request;
+    // `pagehide` is what fires on a navigation or a tab being closed, where `visibilitychange`
+    // may not come at all. Firing twice costs nothing — the second call finds the first already
+    // running, or nothing left to send.
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, [userId, run, flush]);
 
   // A few seconds after the last edit.
   useEffect(() => {
