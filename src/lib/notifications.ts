@@ -79,14 +79,23 @@ async function ensureSubscription(): Promise<PushSubscription | null> {
   });
 }
 
-export async function followShowNotifications(showTmdbId: number): Promise<boolean> {
+/**
+ * `leadMinutes` is how long before the episode the person asked to be told, and it is sent on
+ * every call rather than only the first: this is the same request that changes an existing
+ * choice, so a follow and a re-follow have to look identical to the server.
+ *
+ * The server records it. It cannot act on it yet — the nightly job reads TMDb's `air_date`, which
+ * is a date, for an episode that has already gone out — so today the number is stored and
+ * delivery is unchanged. See the header of src/lib/episodeAlerts.ts.
+ */
+export async function followShowNotifications(showTmdbId: number, leadMinutes = 0): Promise<boolean> {
   const subscription = await ensureSubscription();
   if (!subscription) return false;
 
   const res = await fetch('/api/subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subscription, showTmdbId }),
+    body: JSON.stringify({ subscription, showTmdbId, leadMinutes }),
   });
   if (!res.ok) throw new Error('Could not save that notification setting');
   return true;

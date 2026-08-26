@@ -9,7 +9,7 @@ import { follow, followsShow, isValidSubscription } from './_lib/subscriptions.j
  * per-show in appearance and per-browser in fact.
  *
  * GET  ?showId=&endpoint=   -> { following: boolean }
- * POST { subscription, showTmdbId }
+ * POST { subscription, showTmdbId, leadMinutes? }
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
@@ -32,7 +32,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { subscription, showTmdbId } = (req.body || {}) as { subscription?: unknown; showTmdbId?: unknown };
+    const { subscription, showTmdbId, leadMinutes } = (req.body || {}) as {
+      subscription?: unknown;
+      showTmdbId?: unknown;
+      leadMinutes?: unknown;
+    };
 
     // Validated properly rather than checking that `endpoint` is truthy: this writes to shared
     // storage from an unauthenticated route, so a malformed body should bounce here and not
@@ -45,7 +49,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'A numeric showTmdbId is required' });
     }
 
-    await follow(subscription, tmdbId);
+    /**
+     * Clamped rather than rejected. This is an unauthenticated route, and a lead time is a
+     * preference, not an instruction — a nonsensical one should land on a sane number instead of
+     * failing a subscription the person did ask for. 0 to four weeks, matching the client's own
+     * bounds in src/lib/episodeAlerts.ts.
+     */
+    const lead = Number(leadMinutes);
+    const safeLead = Number.isFinite(lead) ? Math.min(40_320, Math.max(0, Math.round(lead))) : 0;
+
+    await follow(subscription, tmdbId, safeLead);
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('Subscribe error:', error);

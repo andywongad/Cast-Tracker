@@ -14,6 +14,7 @@ import { kv } from '@vercel/kv';
  *
  *   sub:{endpoint}          the PushSubscription, as JSON
  *   sub:{endpoint}:shows    SET of TMDb ids this browser follows
+ *   lead:{endpoint}:{id}    minutes before the episode this browser wants telling
  *   show:{tmdbId}:subs      SET of endpoints following this show
  *   shows:watched           SET of TMDb ids anyone follows — what the cron iterates
  *   sent:{tmdbId}:{epId}    SET of endpoints already told about this episode
@@ -70,9 +71,23 @@ function safeJson(s: string): unknown {
   }
 }
 
-export async function follow(sub: PushSubscriptionJSON, tmdbId: number): Promise<void> {
+/**
+ * `leadMinutes` is how long before the episode this browser asked to be told about this show.
+ *
+ * Stored per (endpoint, show) rather than per browser, because the useful lead time for a weekly
+ * drama and a live final are different numbers and the same person follows both. Written on every
+ * follow, so changing the choice is the same request as making it.
+ *
+ * NOTHING READS THIS YET. `check-episodes.ts` runs daily and works from TMDb's `air_date`, a date
+ * with no time, for an episode that has already aired — so it can only report the past and cannot
+ * honour a lead time. Recording it now means the preference is not lost while that is true, and
+ * the job has something to read on the day it can schedule. Anything that starts using it needs
+ * an air *timestamp* — TVmaze's `airstamp` — and a cron frequent enough to land in the window.
+ */
+export async function follow(sub: PushSubscriptionJSON, tmdbId: number, leadMinutes = 0): Promise<void> {
   await Promise.all([
     kv.set(`sub:${sub.endpoint}`, JSON.stringify(sub), { ex: SUB_TTL_SECONDS }),
+    kv.set(`lead:${sub.endpoint}:${tmdbId}`, leadMinutes, { ex: SUB_TTL_SECONDS }),
     kv.sadd(`sub:${sub.endpoint}:shows`, String(tmdbId)),
     kv.sadd(`show:${tmdbId}:subs`, sub.endpoint),
     kv.sadd('shows:watched', String(tmdbId)),
@@ -80,10 +95,19 @@ export async function follow(sub: PushSubscriptionJSON, tmdbId: number): Promise
   await kv.expire(`sub:${sub.endpoint}:shows`, SUB_TTL_SECONDS);
 }
 
+/** How long before an episode this browser wants telling about this show. 0 when never set. */
+export async function getLead(endpoint: string, tmdbId: number): Promise<number> {
+  const raw = await kv.get(`lead:${endpoint}:${tmdbId}`);
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : 0;
+}
+
 export async function unfollow(endpoint: string, tmdbId: number): Promise<void> {
   await Promise.all([
     kv.srem(`sub:${endpoint}:shows`, String(tmdbId)),
     kv.srem(`show:${tmdbId}:subs`, endpoint),
+    // Dropped with the follow it belongs to. Left behind, it would silently reapply an old choice
+    // if the same browser followed the show again months later.
+    kv.del(`lead:${endpoint}:${tmdbId}`),
   ]);
   await pruneShowIfEmpty(tmdbId);
 }
@@ -92,6 +116,7 @@ export async function unfollow(endpoint: string, tmdbId: number): Promise<void> 
 export async function forget(endpoint: string): Promise<void> {
   const shows = await kv.smembers(`sub:${endpoint}:shows`);
   await Promise.all((shows || []).map((id) => kv.srem(`show:${id}:subs`, endpoint)));
+  await Promise.all((shows || []).map((id) => kv.del(`lead:${endpoint}:${id}`)));
   await Promise.all([kv.del(`sub:${endpoint}`), kv.del(`sub:${endpoint}:shows`)]);
   await Promise.all((shows || []).map((id) => pruneShowIfEmpty(Number(id))));
 }

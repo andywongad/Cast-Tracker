@@ -2,8 +2,6 @@ import { useMemo } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { bgStyle, initials, SHOW_TYPE_LABELS } from '../lib/utils';
-import NotificationToggle from './NotificationToggle';
-import { PUSH_CONFIGURED } from '../lib/notifications';
 import Sheet from './Sheet';
 
 /**
@@ -76,14 +74,6 @@ export default function ShowMenuSheet() {
             <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{typeLabel} &middot; {show.cast.length} cast</div>
           </div>
         </div>
-
-        {/* The spacer is conditional too, or a hidden toggle leaves 18px of nothing above the
-            first row. */}
-        {PUSH_CONFIGURED && !!show.tmdbId && (
-          <div style={{ marginBottom: 18 }}>
-            <NotificationToggle showTmdbId={show.tmdbId} />
-          </div>
-        )}
 
         <div>
           {/* The undo for episode auto-loading. Only offered when there is something to clear,

@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useSync } from '../hooks/useSync';
 import { isSyncConfigured } from '../lib/supabase';
 import { isAuthPreviewEnabled } from '../lib/auth';
+import EpisodeAlertButton from './EpisodeAlertButton';
 
 /**
  * Who you are, in the chrome rather than two taps into Settings.
@@ -79,10 +80,17 @@ export default function TopBar() {
         {/* One h1 per screen, naming where you are. The app had no headings at all, so a screen
             reader's heading navigation found nothing to jump to. */}
         {!showBack && <h1 className="ct-heading" style={{ fontSize: 24, margin: 0, fontWeight: 500 }}>Cast Tracker</h1>}
+        {/* The bell hugs the title rather than joining the icons on the right, because it is about
+            this show and the right-hand cluster is about the app. The heading takes the remaining
+            width and ellipsises into it, so a long title shortens instead of pushing the bell off
+            the bar. */}
         {showBack && (
-          <h1 className="ct-heading" style={{ fontSize: 20, margin: 0, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {show?.title || ''}
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
+            <h1 className="ct-heading" style={{ fontSize: 20, margin: 0, fontWeight: 500, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {show?.title || ''}
+            </h1>
+            <EpisodeAlertButton showTitle={show?.title || 'this show'} showTmdbId={show?.tmdbId ?? null} />
+          </div>
         )}
       </div>
       {showBack && (
