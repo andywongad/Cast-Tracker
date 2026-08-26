@@ -10,7 +10,7 @@ import DensityToggle from './DensityToggle';
 
 export default function HomeScreen() {
   const { data, settings, recentShows, showById, backupState, dismissBackupNudge, setShowColumns, keptTotal } = useStore();
-  const { query, setQuery, openAddShow, openRedeem, openSettings } = useUI();
+  const { query, setQuery, openAddShow, openSettings } = useUI();
   const { session } = useAuth();
   const [tmdbResults, setTmdbResults] = useState<TmdbShowResult[]>([]);
   const [tmdbSearching, setTmdbSearching] = useState(false);
@@ -73,8 +73,6 @@ export default function HomeScreen() {
         {isSearching && <button onClick={() => setQuery('')} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', padding: 0 }}>&times;</button>}
       </div>
 
-      {/* Hidden while searching — it's unrelated to the query and pushes results toward the keyboard. */}
-      {!isSearching && <button onClick={() => openRedeem('show')} style={{ background: 'none', border: 'none', padding: '6px 0', margin: '-14px 0 14px', minHeight: 24, fontSize: 12.5, fontWeight: 700, color: 'var(--accent-soft)', cursor: 'pointer' }}>Have a show code? Redeem it &rarr;</button>}
 
       {showBackupNudge && !isSearching && (
         <div style={{ background: 'var(--card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, padding: 16, marginBottom: 22 }}>

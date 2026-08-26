@@ -31,7 +31,7 @@ function Row({ label, hint, onClick, danger }: { label: string; hint?: string; o
 
 export default function ShowMenuSheet() {
   const { showById, shareShow, disposableCount, clearDisposable, updateData } = useStore();
-  const { activeShowId, showMenuOpen, closeShowMenu, openWebView, openShareSheet, openRedeem } = useUI();
+  const { activeShowId, showMenuOpen, closeShowMenu, openWebView, openShareSheet } = useUI();
   const show = showById(activeShowId);
 
   const typeLabel = useMemo(() => {
@@ -104,8 +104,7 @@ export default function ShowMenuSheet() {
             hint={done ? 'Returns this show to your in-progress list' : 'Moves it to Completed on the home screen'}
             onClick={toggleStatus}
           />
-          <Row label="Share this show" hint="Generate a code others can redeem" onClick={act(() => openShareSheet(shareShow(show.id)))} />
-          <Row label="Redeem a character code" onClick={act(() => openRedeem('cast'))} />
+          <Row label="Share this show" hint="Sends a link with the characters you've written" onClick={act(() => openShareSheet(shareShow(show.id)))} />
           {show.wikiUrl && <Row label="Wikipedia" onClick={act(() => openWebView(show.wikiUrl, 'Wikipedia'))} />}
           {show.imdbUrl && <Row label="IMDb" onClick={act(() => openWebView(show.imdbUrl, 'IMDb'))} />}
         </div>

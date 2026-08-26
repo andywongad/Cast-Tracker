@@ -1,12 +1,17 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import type { AppData, AppSettings, Show, ShareStore, SharePayload, CastMember } from '../types';
+import type { AppData, AppSettings, Show, ShareStore, CastMember } from '../types';
 import * as storage from '../lib/storage';
 import { stampEdits } from '../lib/sync';
-import { genId, genShareCode, initials, colorForIndex } from '../lib/utils';
+import { genId, initials, colorForIndex } from '../lib/utils';
+import { packShow, packCast, type SharePacket } from '../lib/shareLink';
 import { isDisposable, countDisposable, countKept } from '../lib/castValue';
 
 interface ShareSheetState {
-  code: string;
+  /**
+   * What the link will contain. Built here and encoded in the sheet, because encoding is async —
+   * it compresses — and a store getter that returns a promise would spread through every caller.
+   */
+  packet: SharePacket;
   title: string;
   subtitle: string;
   photo: string | null;
@@ -27,7 +32,6 @@ export interface Backup {
 interface StoreValue {
   data: AppData;
   settings: AppSettings;
-  shareStore: ShareStore;
   recentShows: string[];
   /**
    * `stamp: false` applies a change without marking it as this device's work. Only sync uses it —
@@ -57,7 +61,6 @@ interface StoreValue {
   showById: (id: string | null) => Show | undefined;
   shareShow: (id: string) => ShareSheetState;
   shareCast: (showId: string, castId: string) => ShareSheetState;
-  claimRedeem: (code: string, mode: 'show' | 'cast', activeShowId: string | null) => { ok: true; newShowId?: string } | { ok: false; error: string };
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -65,7 +68,6 @@ const StoreContext = createContext<StoreValue | null>(null);
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData>(() => storage.loadData());
   const [settings, setSettings] = useState<AppSettings>(() => storage.loadSettings());
-  const [shareStore, setShareStore] = useState<ShareStore>(() => storage.loadShares());
   const [recentShows, setRecentShows] = useState<string[]>(() => storage.loadRecent());
 
   const [storageFailed, setStorageFailed] = useState(false);
@@ -140,8 +142,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
      * the episode is opened again. A backup should be the part that can't be re-fetched.
      */
     const slim: AppData = { shows: data.shows.map((s) => ({ ...s, cast: s.cast.filter((c) => !isDisposable(c)) })) };
-    return { app: 'cast-tracker', version: 1, exportedAt: Date.now(), data: slim, settings, shares: shareStore, recent: recentShows };
-  }, [data, settings, shareStore, recentShows, patchBackupState]);
+    /**
+     * `shares` is always empty now and stays in the format for compatibility. The share codes it
+     * used to carry only ever resolved on the device that created them, so a backup full of them
+     * restored nothing anywhere — there is no data here to preserve, only a field shape.
+     */
+    return { app: 'cast-tracker', version: 1, exportedAt: Date.now(), data: slim, settings, shares: {} as ShareStore, recent: recentShows };
+  }, [data, settings, recentShows, patchBackupState]);
 
   // Read inside callbacks that must not re-create themselves every time the count moves.
   const keptTotalRef = useRef(0);
@@ -182,7 +189,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const nextData: AppData = { shows: b.data.shows };
     storage.persistData(nextData);
     setData(nextData);
-    if (b.shares && typeof b.shares === 'object') { storage.persistShares(b.shares); setShareStore(b.shares); }
     if (Array.isArray(b.recent)) { storage.persistRecent(b.recent); setRecentShows(b.recent); }
     if (b.settings && typeof b.settings === 'object') { persistSettingsPatch(b.settings); }
     return { ok: true as const };
@@ -191,7 +197,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const resetAll = useCallback(() => {
     storage.clearAllData();
     setData({ shows: [] });
-    setShareStore({});
     setRecentShows([]);
   }, []);
 
@@ -228,66 +233,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const shareShow = useCallback((id: string): ShareSheetState => {
     const sh = data.shows.find((x) => x.id === id)!;
-    const code = genShareCode();
-    const payload: SharePayload = {
-      kind: 'show', title: sh.title, type: sh.type, poster: sh.poster, tmdbId: sh.tmdbId,
-      originCountry: sh.originCountry, wikiUrl: sh.wikiUrl, imdbUrl: sh.imdbUrl, cast: structuredClone(sh.cast),
+    const packet = packShow(sh);
+    const n = packet.c.length;
+    return {
+      packet,
+      title: sh.title,
+      // Counts what will actually travel, not what is on screen. Auto-loaded cast stays behind and
+      // reappears from TMDb on the other side, so promising 61 characters and sending 6 would be
+      // the same kind of lie the codes were.
+      subtitle: n === 0 ? 'Just the show — no characters added yet' : `${n} ${n === 1 ? 'character' : 'characters'} you've written`,
+      photo: sh.poster,
+      initials: initials(sh.title),
+      color: sh.color,
     };
-    setShareStore((prev) => {
-      const next = { ...prev, [code]: { payload, createdAt: Date.now() } };
-      storage.persistShares(next);
-      return next;
-    });
-    return { code, title: sh.title, subtitle: `${sh.cast.length} cast members included`, photo: sh.poster, initials: initials(sh.title), color: sh.color };
   }, [data]);
 
   const shareCast = useCallback((showId: string, castId: string): ShareSheetState => {
     const sh = data.shows.find((x) => x.id === showId)!;
     const c = sh.cast.find((x) => x.id === castId)!;
-    const code = genShareCode();
-    const payload: SharePayload = { kind: 'cast', showTitle: sh.title, char: structuredClone(c) };
-    setShareStore((prev) => {
-      const next = { ...prev, [code]: { payload, createdAt: Date.now() } };
-      storage.persistShares(next);
-      return next;
-    });
-    return { code, title: c.name, subtitle: `From ${sh.title}`, photo: c.photo, initials: initials(c.name), color: c.color };
+    return { packet: packCast(sh, c), title: c.name, subtitle: `From ${sh.title}`, photo: c.photo, initials: initials(c.name), color: c.color };
   }, [data]);
 
-  const claimRedeem = useCallback((code: string, mode: 'show' | 'cast', activeShowId: string | null) => {
-    const entry = shareStore[code.toUpperCase()];
-    if (!entry) return { ok: false as const, error: 'No shared card found with that code.' };
-    const payload = entry.payload;
-    if (payload.kind !== mode) return { ok: false as const, error: `This code is for a ${payload.kind === 'show' ? 'show' : 'character'} card.` };
-    if (payload.kind === 'show') {
-      const newId = genId('s');
-      updateData((d) => {
-        const color = colorForIndex(d.shows.length);
-        d.shows.push({
-          id: newId, title: payload.title, type: payload.type, color, status: 'watching',
-          cast: payload.cast.map((c) => ({ ...c, id: genId('p') })),
-          poster: payload.poster, tmdbId: payload.tmdbId, originCountry: payload.originCountry,
-          wikiUrl: payload.wikiUrl, imdbUrl: payload.imdbUrl,
-        });
-      });
-      return { ok: true as const, newShowId: newId };
-    } else {
-      if (!activeShowId) return { ok: false as const, error: 'Open a show first, then redeem the character card into it.' };
-      updateData((d) => {
-        const s = d.shows.find((x) => x.id === activeShowId);
-        if (!s) return;
-        const color = colorForIndex(s.cast.length);
-        s.cast.push({ ...structuredClone(payload.char), id: genId('p'), color } as CastMember);
-      });
-      return { ok: true as const };
-    }
-  }, [shareStore, updateData]);
-
   const value = useMemo<StoreValue>(() => ({
-    data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave,
-    exportBackup, importBackup, resetAll, clearEverywhere, pushRecent, showById, shareShow, shareCast, claimRedeem,
+    data, settings, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave,
+    exportBackup, importBackup, resetAll, clearEverywhere, pushRecent, showById, shareShow, shareCast,
     backupState, dismissBackupNudge, disposableCount, clearDisposable, keptTotal, storageFailed,
-  }), [keptTotal, storageFailed, data, settings, shareStore, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, clearEverywhere, pushRecent, showById, shareShow, shareCast, claimRedeem, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
+  }), [keptTotal, storageFailed, data, settings, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, clearEverywhere, pushRecent, showById, shareShow, shareCast, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

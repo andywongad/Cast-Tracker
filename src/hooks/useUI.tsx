@@ -10,7 +10,8 @@ export interface ShowFormPrefill {
 }
 
 export interface ShareSheetData {
-  code: string;
+  /** The payload the link carries. Encoding happens in the sheet, because it is async. */
+  packet: import('../lib/shareLink').SharePacket;
   title: string;
   subtitle: string;
   photo: string | null;
@@ -46,7 +47,6 @@ type Layer =
   | { k: 'converter' }
   | { k: 'translator' }
   | { k: 'share' }
-  | { k: 'redeem'; mode: 'show' | 'cast' }
   | { k: 'webView'; url: string; label: string }
   /** The previous episode's recap. Carries which episode it is *about*, not the one you're on. */
   | { k: 'recap'; season: number; episode: number };
@@ -129,9 +129,6 @@ interface UIValue {
   openShareSheet: (data: ShareSheetData) => void;
   closeShareSheet: () => void;
 
-  redeem: { open: boolean; mode: 'show' | 'cast' };
-  openRedeem: (mode: 'show' | 'cast') => void;
-  closeRedeem: () => void;
 
   webView: { open: boolean; url: string; label: string };
   openWebView: (url: string, label: string) => void;
@@ -287,8 +284,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const openShareSheet = useCallback((d: ShareSheetData) => { setShareData(d); push({ k: 'share' }); }, [push]);
   const closeShareSheet = useCallback(() => pop(), [pop]);
 
-  const openRedeem = useCallback((mode: 'show' | 'cast') => push({ k: 'redeem', mode }), [push]);
-  const closeRedeem = useCallback(() => pop(), [pop]);
 
   const openWebView = useCallback((url: string, label: string) => push({ k: 'webView', url, label }), [push]);
   const closeWebView = useCallback(() => pop(), [pop]);
@@ -303,7 +298,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     const addShow = lastOf(stack, 'addShow');
     const addCast = lastOf(stack, 'addCast');
     const castDetail = lastOf(stack, 'castDetail');
-    const redeemLayer = lastOf(stack, 'redeem');
     const webViewLayer = lastOf(stack, 'webView');
     const recapLayer = lastOf(stack, 'recap');
     return {
@@ -320,8 +314,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       converterOpen: stack.some((l) => l.k === 'converter'),
       translatorOpen: stack.some((l) => l.k === 'translator'),
       shareOpen: stack.some((l) => l.k === 'share'),
-      redeem: { open: !!redeemLayer, mode: redeemLayer?.mode ?? ('show' as const) },
-      webView: { open: !!webViewLayer, url: webViewLayer?.url ?? '', label: webViewLayer?.label ?? '' },
+          webView: { open: !!webViewLayer, url: webViewLayer?.url ?? '', label: webViewLayer?.label ?? '' },
       recap: { open: !!recapLayer, season: recapLayer?.season ?? 0, episode: recapLayer?.episode ?? 0 },
     };
   }, [stack]);
@@ -342,7 +335,6 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     converterOpen: derived.converterOpen, converterPrefill, openConverter, closeConverter,
     translatorOpen: derived.translatorOpen, openTranslator, closeTranslator,
     shareSheet: derived.shareOpen ? shareData : null, openShareSheet, closeShareSheet,
-    redeem: derived.redeem, openRedeem, closeRedeem,
     webView: derived.webView, openWebView, closeWebView,
     recap: derived.recap, openRecap, closeRecap,
   }), [derived, query, addShowPrefill, converterPrefill, shareData,
@@ -350,7 +342,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       openAddCast, openEditCast, closeAddCast, openCastDetail, closeCastDetail,
       openSettings, closeSettings, openAuth, closeAuth, openDuplicates, closeDuplicates, openShowMenu, closeShowMenu,
       openFeedback, closeFeedback, openConverter, closeConverter, openTranslator, closeTranslator,
-      openShareSheet, closeShareSheet, openRedeem, closeRedeem, openWebView, closeWebView,
+      openShareSheet, closeShareSheet, openWebView, closeWebView,
       openRecap, closeRecap]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;

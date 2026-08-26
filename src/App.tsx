@@ -7,6 +7,7 @@ import { isSyncConfigured } from './lib/supabase';
 import { supabaseAuth, sessionFromUrl, onSessionChange, lastExchangeError } from './lib/authSupabase';
 import { consumeSignInLinkError, arrivedWithSignInCode, SIGN_IN_EXCHANGE_FAILED } from './lib/auth';
 import { findDuplicateGroups, planResolution, applyResolutions } from './lib/duplicateShows';
+import { takeShareFromUrl, decodeShare, type SharePacket } from './lib/shareLink';
 import { THEMES, themeVars } from './lib/theme';
 import { registerServiceWorker } from './lib/notifications';
 import TopBar from './components/TopBar';
@@ -18,7 +19,8 @@ import AddCastSheet from './components/AddCastSheet';
 import SettingsSheet from './components/SettingsSheet';
 import FeedbackSheet from './components/FeedbackSheet';
 import { ValueConverterSheet, TranslatorSheet } from './components/ConverterSheets';
-import { ShareSheet, RedeemSheet } from './components/ShareRedeem';
+import { ShareSheet } from './components/ShareRedeem';
+import ShareImportSheet from './components/ShareImportSheet';
 import WebViewOverlay from './components/WebViewOverlay';
 import CastDetailSheet from './components/CastDetailSheet';
 import AuthSheet from './components/AuthSheet';
@@ -72,6 +74,12 @@ function StorageFailedBar({ onOpenSettings }: { onOpenSettings: () => void }) {
 const INITIAL_SIGN_IN_ERROR = consumeSignInLinkError();
 /** Also read at import time, and for the same reason: the auth client removes `code` as it runs. */
 const ARRIVED_WITH_CODE = arrivedWithSignInCode();
+/**
+ * The share fragment, taken at import for the same reason as the sign-in code: `useUI` normalises
+ * the URL on mount and would erase it before anything could read it. That bug cost a day once
+ * already.
+ */
+const ARRIVING_SHARE = takeShareFromUrl();
 
 /**
  * Shown when someone arrives from a sign-in link that didn't work.
@@ -155,6 +163,16 @@ function Shell() {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const { session, ready: authReady } = useAuth();
   const [dismissedSignInError, setDismissedSignInError] = useState(false);
+  const [incomingShare, setIncomingShare] = useState<SharePacket | null>(null);
+
+  // Decoding inflates, so it cannot happen during render. A link that fails to decode is silently
+  // ignored: it is almost always one a messaging app truncated, and there is nothing to act on.
+  useEffect(() => {
+    if (!ARRIVING_SHARE) return;
+    let alive = true;
+    void decodeShare(ARRIVING_SHARE).then((packet) => { if (alive && packet) setIncomingShare(packet); });
+    return () => { alive = false; };
+  }, []);
   /**
    * Two ways a sign-in link fails, one message channel.
    *
@@ -272,7 +290,7 @@ function Shell() {
       <WebViewOverlay />
       <CastDetailSheet />
       <ShareSheet />
-      <RedeemSheet />
+      <ShareImportSheet packet={incomingShare} onDone={() => setIncomingShare(null)} />
       <Footer />
       <SettingsSheet />
       <AuthSheet />
