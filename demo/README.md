@@ -35,7 +35,8 @@ device to stay empty.
 
 ## Manual test script
 
-Runs in about 15 minutes. Do it on the deployed site, not a local dev server, unless you are
+Runs in about 15 minutes. Do it on the deployed site — **https://casttracker.app** — not a local
+dev server, unless you are
 specifically testing a change. `npm run dev` proxies `/api/*` to production, so TMDb search does
 work locally, but nothing else about local matches what a tester sees.
 

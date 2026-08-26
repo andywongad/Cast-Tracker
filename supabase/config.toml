@@ -160,7 +160,7 @@ enabled = true
 # Production. This is the field that was still `localhost:3000` on the old project, which is the
 # single reason every sign-in attempt so far ended on an expired-looking link: the mail was built
 # against a URL that only exists on the developer's machine.
-site_url = "https://cast-tracker-m8g3.vercel.app"
+site_url = "https://casttracker.app"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
@@ -174,6 +174,12 @@ site_url = "https://cast-tracker-m8g3.vercel.app"
 # whichever flow started last. auth-js's own note on that flag warns that the extra parameter can
 # stop exact, non-wildcard entries from matching — so these are load-bearing, not decoration.
 additional_redirect_urls = [
+  "https://casttracker.app",
+  "https://casttracker.app/",
+  "https://casttracker.app/**",
+  # The deploy URL stays allow-listed. It still resolves, older share links and any bookmark a
+  # tester already made point at it, and cutting it off would break sign-in for them with nothing
+  # gained.
   "https://cast-tracker-m8g3.vercel.app",
   "https://cast-tracker-m8g3.vercel.app/",
   "https://cast-tracker-m8g3.vercel.app/**",
