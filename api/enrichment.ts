@@ -5,6 +5,7 @@ import { generateEnrichment } from './_lib/generate.js';
 import {
   kvEnrichmentStore,
   underGenerationLimit,
+  underGlobalGenerationLimit,
   NO_SOURCE_TTL_SECONDS,
   REFUSAL_TTL_SECONDS,
 } from './_lib/store-kv.js';
@@ -28,6 +29,15 @@ import {
 
 /** Generations per IP per day. Cache hits don't count — only calls that reach the model. */
 const MAX_GENERATIONS_PER_DAY = 60;
+/**
+ * The whole deployment's ceiling for one day.
+ *
+ * Sized against real use rather than fear: a person working through a large cast might generate a
+ * few dozen, so this leaves room for several such days at once while capping what an abuser can
+ * spend to a knowable number. Raise it when real traffic says so — the log line in
+ * `underGlobalGenerationLimit` is what tells you.
+ */
+const MAX_GENERATIONS_PER_DAY_GLOBAL = 400;
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_NAME_LENGTH = 120;
@@ -81,7 +91,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // ---- Generate ------------------------------------------------------------
   if (!(await underGenerationLimit(clientIp(req), MAX_GENERATIONS_PER_DAY))) {
-    return res.status(429).json({ error: 'Too many requests today' });
+    // An hour is a guess — the window is a calendar day — but a Retry-After of "tomorrow" reads as
+    // a refusal, and clients that honour the header back off politely either way.
+    res.setHeader('Retry-After', '3600');
+    return res.status(429).json({ error: 'rate_limited', scope: 'client', reason: 'Too many bios generated from here today.' });
+  }
+  if (!(await underGlobalGenerationLimit(MAX_GENERATIONS_PER_DAY_GLOBAL))) {
+    res.setHeader('Retry-After', '3600');
+    return res.status(429).json({ error: 'rate_limited', scope: 'global', reason: 'Cast Tracker has generated as many bios as it can today.' });
   }
 
   const source = await fetchSourceText(showTitle, characterName);

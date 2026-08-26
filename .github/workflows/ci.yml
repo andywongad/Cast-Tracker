@@ -1,0 +1,41 @@
+# Runs the checks that already existed but only ran when someone remembered.
+#
+# Both steps are ones a broken change actually trips: `npm run build` typechecks the app with
+# `tsc -b` before Vite touches it, and `npm test` covers the merge rules, the duplicate-show rules,
+# share-link round trips and the sign-in copy — the four places where a mistake costs a user their
+# work rather than their afternoon.
+#
+# The API directory has its own tsconfig because it targets Node rather than the browser, and
+# nothing else would typecheck it, so it gets its own step.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the Node version Vercel builds this project with, so a syntax or API difference
+          # surfaces here rather than in a deploy.
+          node-version: 24
+          cache: npm
+
+      # `ci` rather than `install`: it installs exactly the lockfile and fails if the two have
+      # drifted, which is the difference between testing what ships and testing something adjacent.
+      - run: npm ci
+
+      - name: Typecheck and build
+        run: npm run build
+
+      - name: Typecheck the serverless functions
+        run: npx tsc -p tsconfig.api.json --noEmit
+
+      - name: Tests
+        run: npm test

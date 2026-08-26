@@ -98,6 +98,35 @@ export const kvEnrichmentStore: EnrichmentStore = {
  * over random show ids would bill every miss to you. This is a floor, not a fortress — it's keyed
  * on a spoofable header — but it turns "unbounded" into "annoying", which at this scale is enough.
  */
+/**
+ * A ceiling on generations for the whole deployment, not just one caller.
+ *
+ * The per-IP limit below stops one person burning the budget; it does not bound the bill, because
+ * rotating source addresses is trivial and costs an attacker nothing. This does: whatever else
+ * happens, the model is called at most `maxPerDay` times in a day, and the worst case is a bounded
+ * number rather than an open tap on someone else's API key.
+ *
+ * Deliberately counted at the same moment as the per-IP check — after the cache has been consulted
+ * — so repeat views of a character already generated cost nothing and never approach either limit.
+ *
+ * Fails open, like its neighbour. A Redis outage should degrade this feature to "slow", not take
+ * the app down; the honest trade is that cost protection is unavailable for exactly as long as KV
+ * is, which is visible in the logs below.
+ */
+export async function underGlobalGenerationLimit(maxPerDay: number): Promise<boolean> {
+  const day = new Date().toISOString().slice(0, 10);
+  const key = `rl:enrich:global:${day}`;
+  try {
+    const count = await kv.incr(key);
+    if (count === 1) await kv.expire(key, 60 * 60 * 24);
+    if (count > maxPerDay) console.warn(`enrichment: global daily cap reached (${count}/${maxPerDay})`);
+    return count <= maxPerDay;
+  } catch (err) {
+    console.error('global rate limit check failed', err);
+    return true;
+  }
+}
+
 export async function underGenerationLimit(ip: string, maxPerDay: number): Promise<boolean> {
   const day = new Date().toISOString().slice(0, 10);
   const key = `rl:enrich:${day}:${ip}`;
