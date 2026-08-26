@@ -80,11 +80,12 @@ shows under Currently watching and one under Completed.
 19. Settings → Reset to blank state. The library empties.
 20. Import the file you just exported. Everything returns, including the notes and relationships.
 
-### 7. Sync across two devices — the untested claim
-**Prerequisites, and none of them are in place yet:** the Supabase Site URL must point at the
-production origin (not `localhost:3000`), both origins must be in the redirect allowlist, and
-custom SMTP must be configured — the built-in Supabase mailer sends two messages an hour and only
-to the project owner's own address, so a tester will never receive a link.
+### 7. Sync across two devices
+Working as of 2026-08-25. Sign-in goes through Resend from `noreply@casttracker.app`, at 30 emails
+an hour rather than the built-in mailer's two, and the email carries a six-digit code above the
+link. **Use the code, not the link** — a link is single-use, so a mail scanner that fetches the
+message first spends it, and it only works in the browser that asked for it. The code has neither
+constraint, which is what makes this work on a phone.
 
 21. Sign in on device A. The library uploads.
 22. Sign in as the same account on device B. The library arrives.
