@@ -119,31 +119,40 @@ in the browser that made it still works, but proves less.
     keep one, and says what each side holds. *(A duplicate with nothing of yours in it never
     reaches this screen; it is removed silently, which is the intended behaviour, not a miss.)*
 
-### 9. Notifications
-27. Show menu (⋯) → **"Enable Notifications"** (🔕). The browser asks for permission; granting it
-    turns the control into **"Notifications On"** (🔔). Reopen the menu — it still reads as on, and
-    following one show does not turn the others on.
-28. Tap it again to unfollow. It returns to 🔕.
-    *(Delivery cannot be tested on demand — see the known gaps below.)*
+### 9. New episode alerts
+27. Open a show that is still running — Reacher, not The Bear. An orange **bell** sits next to the
+    title. On a finished show there is no bell at all: nothing more is coming, so there is nothing
+    to be told about. A struck-through bell means alerts are off, a filled one ringing means on.
+28. Tap it. The card says which show it is about and offers **At time of episode / 30 minutes /
+    1 hour / 1 day before / Custom**. Pick one and **Turn on**; the browser asks permission, and
+    the bell fills.
+29. Reopen the card. It comes back on the lead time you chose, and following one show does not
+    turn the others on. **Turn off notifications** at the bottom clears it and the bell goes back
+    to struck-through.
+30. In the same card, **WHERE TO WATCH** names the services carrying the show in your country. A
+    show JustWatch has no listing for falls back to the channel it airs on, credited to TVmaze
+    rather than JustWatch — the line changes to "Streams on…" or "Airs on…", which is a claim
+    about the show rather than about your country.
+    *(Delivery itself is hard to test to order — see the known gaps.)*
 
 ### 10. Footer tools
-29. **Translate** in the footer: type a phrase, pick a language, get a translation back. It calls a
+31. **Translate** in the footer: type a phrase, pick a language, get a translation back. It calls a
     free public API, so expect modest quality and an occasional failure rather than an error page.
-30. **Convert**: type an amount and switch currencies. Rates are live, with a static table as a
+32. **Convert**: type an amount and switch currencies. Rates are live, with a static table as a
     fallback, so a number always appears.
 
 ### 11. Offline
-31. Open the app, then turn on airplane mode.
-32. Reload. It should open normally, with your library and cast photos intact — everything is on
+33. Open the app, then turn on airplane mode.
+34. Reload. It should open normally, with your library and cast photos intact — everything is on
     the device and the app shell is cached.
-33. Search for a new show. It should fail: TMDb is a live call and the app doesn't pretend
+35. Search for a new show. It should fail: TMDb is a live call and the app doesn't pretend
     otherwise. Everything already in your library keeps working.
-34. Turn airplane mode off. Nothing to do — the next reload picks up any new deploy.
+36. Turn airplane mode off. Nothing to do — the next reload picks up any new deploy.
 
 ### 12. Backup
-35. Settings → Export. A `cast-tracker-backup-<date>.json` file downloads.
-36. Settings → Reset to blank state. The library empties.
-37. Import the file you just exported. Everything returns, including the notes and relationships.
+37. Settings → Export. A `cast-tracker-backup-<date>.json` file downloads.
+38. Settings → Reset to blank state. The library empties.
+39. Import the file you just exported. Everything returns, including the notes and relationships.
 
 ### 13. Sync across two devices
 Working as of 2026-08-25. Sign-in goes through Resend from `noreply@casttracker.app`, at 30 emails
@@ -152,30 +161,36 @@ link. **Use the code, not the link** — a link is single-use, so a mail scanner
 message first spends it, and it only works in the browser that asked for it. The code has neither
 constraint, which is what makes this work on a phone.
 
-38. Sign in on device A. The library uploads.
-39. Sign in as the same account on device B. The library arrives.
-40. On device A, edit a character's notes and **leave immediately** — switch apps, or lock the
+40. Sign in on device A. The library uploads.
+41. Sign in as the same account on device B. The library arrives.
+42. On device A, edit a character's notes and **leave immediately** — switch apps, or lock the
     screen — without waiting. Bring device B to the front. The edit is there. *(A push waits three
     seconds after your last edit, so leaving faster than that used to strand the edit on device A
     until it was next opened. Leaving now sends it. Closing the tab outright is the weaker case —
     the request goes out, but a browser may cancel it mid-flight, so a change that fails to arrive
     after a hard tab close is a known limit rather than a bug worth chasing.)*
-41. Nothing arrives on a device that is sitting open and untouched. Bring it to the front — or
+43. Nothing arrives on a device that is sitting open and untouched. Bring it to the front — or
     reload — and it syncs. There is no polling and no live connection, by design.
-42. Edit the same character's notes differently on each device, B last. Both converge on B's text.
-43. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
-44. Delete a character on A. It disappears on B rather than coming back.
+44. Edit the same character's notes differently on each device, B last. Both converge on B's text.
+45. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
+46. Delete a character on A. It disappears on B rather than coming back.
 
 ### Known gaps to mention to a tester before they find them
-- **Notifications work, with one catch on iPhone.** The follow control is in a show's ⋯ menu. On
-  iOS, Safari only permits web push for apps added to the Home Screen — tapping the toggle in a
-  normal Safari tab fails no matter what the server is doing. Add Cast Tracker to the Home Screen
-  first, open it from that icon, then follow a show. Android and desktop have no such rule.
-  The nightly job runs at 06:00 UTC and only sends for episodes that aired in the previous two
-  days, so a follow won't produce anything until a show you follow actually airs. That means step
-  27 tests the subscription, never the delivery — the only way to exercise delivery on demand is
-  `curl -H "Authorization: Bearer $CRON_SECRET" https://casttracker.app/api/check-episodes`, which
-  answers with a tally rather than a notification.
+- **Notifications work, with one catch on iPhone.** The bell is beside the show title. On iOS,
+  Safari only permits web push for apps added to the Home Screen — tapping it in a normal Safari
+  tab fails no matter what the server is doing. Add Cast Tracker to the Home Screen first, open it
+  from that icon, then follow a show. Android and desktop have no such rule.
+- **A lead time cannot be tested to order.** The job runs every fifteen minutes and sends when the
+  moment you chose arrives, so nothing happens until an episode of a show you follow is genuinely
+  that close. Setting the alert and waiting is the only honest end-to-end test. To check the
+  machinery rather than the timing, hit the endpoint directly:
+  `curl -H "Authorization: Bearer $CRON_SECRET" https://casttracker.app/api/check-episodes` —
+  it answers with a tally (`shows`, `withNewEpisode`, `sent`, `skipped`, `gone`, `failed`) rather
+  than a notification.
+- **Lead times are only as precise as the schedule.** Air times come from TVmaze; a show TVmaze
+  doesn't carry falls back to TMDb's air *date*, read as midnight UTC, and those get day-level
+  wording ("airs today") instead of a countdown. Vercel's Hobby plan also fires cron once a day
+  whatever `vercel.json` says, which makes alerts late rather than wrong.
 - **The follow control is missing on preview deployments.** `VITE_VAPID_PUBLIC_KEY` is read at
   build time and set on Production only, so its absence on a preview URL is configuration, not a
   bug. Sign-in is absent there for the same reason.

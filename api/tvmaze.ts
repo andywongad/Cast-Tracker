@@ -52,6 +52,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { show, reason } = await resolveTvmazeShow(tmdbId, TMDB_API_KEY);
   if (!show?.id) return miss(reason || 'no-tvmaze-match');
 
+  /**
+   * `fields=channel` answers "who carries this show" without the cast.
+   *
+   * Same route and the same hard cache, because it is the same resolution — but the cast call is
+   * a second upstream request and a payload of dozens of people, and the card asking this question
+   * wants one string. It also must not fail for the reason the cast path fails: a show whose cast
+   * TVmaze cannot return still has a perfectly good network.
+   *
+   * `kind` is the honest part. TVmaze records where a show *originates* — `webChannel` for a
+   * streaming original, `network` for broadcast — which is not the same question as "where can I
+   * watch this, here". The caller words it accordingly rather than passing it off as availability.
+   */
+  if (req.query.fields === 'channel') {
+    const web = show.webChannel?.name || null;
+    const broadcast = show.network?.name || null;
+    res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800');
+    return res.status(200).json({
+      tvmazeId: show.id,
+      showUrl: show.url || null,
+      channel: web || broadcast,
+      kind: web ? 'web' : broadcast ? 'network' : null,
+      country: (show.webChannel?.country || show.network?.country)?.code || null,
+    });
+  }
+
   // One call returns the entire cast. Never fetch per character.
   const cast = await json<any[]>(`${TVMAZE}/shows/${show.id}/cast`);
   if (!Array.isArray(cast)) return miss('cast-fetch-failed');

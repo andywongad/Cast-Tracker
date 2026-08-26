@@ -22,6 +22,7 @@ import {
 } from '../lib/episodeAlerts';
 import { useDismissible, useModalFocus } from './Sheet';
 import { getShowDetails, getWatchProviders, watchRegion, type WatchOptions } from '../lib/tmdb';
+import { fetchTvmazeChannel, type TvmazeChannel } from '../lib/tvmaze';
 
 /**
  * The bell beside a show's title, and the card behind it.
@@ -489,16 +490,43 @@ const Option = ({
  * be is worse than a card that simply doesn't mention it.
  */
 function WhereToWatch({ showTmdbId }: { showTmdbId: number }) {
-  const [state, setState] = useState<{ status: 'loading' | 'done'; data: WatchOptions | null }>({
-    status: 'loading',
-    data: null,
-  });
+  const [state, setState] = useState<{
+    status: 'loading' | 'done';
+    data: WatchOptions | null;
+    channel: TvmazeChannel | null;
+  }>({ status: 'loading', data: null, channel: null });
 
+  /**
+   * JustWatch first, TVmaze as the backstop, and only ever one of them shown.
+   *
+   * TMDb's providers answer the better question — what a person in this country can actually open
+   * tonight, with the buy-and-rent case separated out — so nothing else is fetched when they come
+   * back. They are also frequently empty: no data for the region, or none for the show at all, and
+   * "No streaming service listed" is a poor answer when the show is an Amazon original and every
+   * other source knows it.
+   *
+   * The fallback is deliberately sequential rather than parallel. Two requests on every card open
+   * to use one of them is a cost paid on the common path for the uncommon one.
+   */
   useEffect(() => {
     let alive = true;
-    getWatchProviders(showTmdbId)
-      .then((d) => { if (alive) setState({ status: 'done', data: d }); })
-      .catch(() => { if (alive) setState({ status: 'done', data: null }); });
+    (async () => {
+      let providers: WatchOptions | null = null;
+      try {
+        providers = await getWatchProviders(showTmdbId);
+      } catch {
+        providers = null;
+      }
+      if (!alive) return;
+
+      if (providers && (providers.stream.length || providers.free.length || providers.buyOnly)) {
+        setState({ status: 'done', data: providers, channel: null });
+        return;
+      }
+
+      const channel = await fetchTvmazeChannel(showTmdbId);
+      if (alive) setState({ status: 'done', data: providers, channel });
+    })();
     return () => { alive = false; };
   }, [showTmdbId]);
 
@@ -514,6 +542,7 @@ function WhereToWatch({ showTmdbId }: { showTmdbId: number }) {
   const d = state.data;
   const services = d ? [...d.stream, ...d.free] : [];
   const region = d?.region ?? watchRegion();
+  const fallback = state.channel;
 
   return (
     <div style={{ marginTop: 16 }}>
@@ -549,6 +578,16 @@ function WhereToWatch({ showTmdbId }: { showTmdbId: number }) {
             </span>
           ))}
         </div>
+      ) : fallback?.channel ? (
+        /* Worded for what TVmaze actually knows. "Streams on Prime Video" is true wherever you
+           are; "available in your country" would not be, and this data cannot tell the difference.
+           The buy-or-rent case still wins when JustWatch reported it, because that IS an answer
+           about availability here. */
+        <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.45, marginTop: 2 }}>
+          {fallback.kind === 'web' ? 'Streams on ' : 'Airs on '}
+          <strong style={{ color: 'var(--text)' }}>{fallback.channel}</strong>
+          {d?.buyOnly ? `. Also available to buy or rent in ${region}.` : ''}
+        </div>
       ) : (
         <div style={{ fontSize: 13, color: 'var(--text-faint)', lineHeight: 1.45, marginTop: 2 }}>
           {d?.buyOnly
@@ -560,7 +599,9 @@ function WhereToWatch({ showTmdbId }: { showTmdbId: number }) {
       {/* JustWatch attribution is a condition of TMDb serving this data, not a nicety. The link
           also earns its place: which services carry a show changes on licensing deals, and this
           is the page that is right today. */}
-      {d?.link ? (
+      {services.length === 0 && fallback?.channel ? (
+        <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text-faint)' }}>Channel via TVmaze</div>
+      ) : d?.link ? (
         <a
           href={d.link}
           target="_blank"

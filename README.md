@@ -31,13 +31,13 @@ npm test                                 # merge rules, duplicate shows, share l
 
 CI runs all three on every push and PR (`.github/workflows/ci.yml`).
 
-The client in `dist/` is static, but `api/` holds Vercel serverless functions and `vercel.json` declares a daily cron, so a full deploy needs Vercel (or an equivalent that can run both). A static-only host gets the app minus sync, notifications and character bios.
+The client in `dist/` is static, but `api/` holds Vercel serverless functions and `vercel.json` declares a cron, so a full deploy needs Vercel (or an equivalent that can run both). A static-only host gets the app minus sync, notifications and character bios.
 
 ## What's here
 
-Home (show library, search, TMDb add), per-show cast grid (2–3 columns) and detail sheets, add/edit cast with photo upload+crop, character "versions" (young/teen alternates with their own actor/photo), relationships between cast members, a reality-show relationship map (drag to connect, tap-and-hold to reposition, mutual connections merge into a heart), "Previously" episode/season recaps, AI-written character bios, shareable links, footer currency converter + translator, and light/dark theme with adjustable grid density.
+Home (show library, search, TMDb add), per-show cast grid (2–3 columns) and detail sheets, add/edit cast with photo upload+crop, character "versions" (young/teen alternates with their own actor/photo), relationships between cast members, a reality-show relationship map (drag to connect, tap-and-hold to reposition, mutual connections merge into a heart), "Previously" episode/season recaps, AI-written character bios, new-episode alerts with a chosen lead time and where-to-watch listings, shareable links, footer currency converter + translator, and light/dark theme with adjustable grid density.
 
-Your library lives in `localStorage` on your device and stays there unless you sign in. With an account (magic link, no passwords) it also syncs across devices, last-write-wins per record, and you can opt into a daily push notification when a show you follow airs a new episode.
+Your library lives in `localStorage` on your device and stays there unless you sign in. With an account (magic link, no passwords) it also syncs across devices, last-write-wins per record, and you can ask to be told before a new episode of a show you follow airs — at the time of the episode, or up to four weeks ahead.
 
 ## Differences from the design prototype
 
@@ -66,8 +66,9 @@ src/
   components/          one file per screen/sheet
 api/
   tmdb.ts, tvmaze.ts   server-side proxies that keep API keys off the client
+  _lib/schedule.ts     episode air times, from TVmaze with a TMDb fallback
   enrichment.ts        AI character bios, cached in Vercel KV
-  check-episodes.ts    daily cron; sends push for new episodes
+  check-episodes.ts    cron; sends push at each follower's chosen lead time
   subscribe.ts,
   unsubscribe.ts       push notification subscriptions
 supabase/

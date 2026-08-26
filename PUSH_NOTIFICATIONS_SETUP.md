@@ -8,18 +8,46 @@ and whatever push service the visitor's browser already uses. Nothing to sign up
 
 ## How it works
 
-1. In a show's menu, "Notify me about new episodes" asks the browser for permission and
-   registers `public/service-worker.js`.
-2. `POST /api/subscribe` records the `PushSubscription` against that show's TMDb id, in Vercel KV
-   (`api/_lib/subscriptions.ts`). Both directions are stored — subscriber→shows and show→subscribers —
-   because unsubscribing walks one way and the cron walks the other.
-3. `GET /api/check-episodes` runs daily at 06:00 UTC (`vercel.json`). For each followed show it
-   makes one TMDb request and looks at `last_episode_to_air`.
-4. An episode counts if it aired in the **last two days**, not "today" — TMDb's `air_date` is the
-   broadcaster's local date, so a UTC "today" would miss last night in LA and this evening in Seoul.
-   Widening the window is safe because delivery is recorded per recipient, so nobody gets told twice.
-5. `web-push` sends the notification. The service worker shows it, tagged by show id so a second
-   notification for the same show replaces the first rather than stacking.
+1. Beside a show's title, an orange bell — struck through when off, ringing when on. It appears
+   only for shows that can still deliver an episode: TMDb must have a `next_episode_to_air` or a
+   production status of `Returning Series` / `In Production` / `Planned`. A finished show gets no
+   bell, because the control could only ever do nothing.
+2. Tapping it opens a card that asks how far ahead to be told — at the time of the episode, 30
+   minutes, an hour, a day, or a custom number of minutes/hours/days up to four weeks. Turning it
+   on asks the browser for permission and registers `public/service-worker.js`.
+3. `POST /api/subscribe` records the `PushSubscription` against that show's TMDb id **and the
+   chosen lead time**, in Vercel KV (`api/_lib/subscriptions.ts`). Both directions are stored —
+   subscriber→shows and show→subscribers — because unsubscribing walks one way and the cron walks
+   the other. The lead lives at `lead:{endpoint}:{tmdbId}`, per person per show: the useful warning
+   for a weekly drama and a live final are different numbers.
+4. `GET /api/check-episodes` runs **every fifteen minutes** (`vercel.json`). For each followed show
+   it resolves the air times of the next and previous episodes through TVmaze, whose `airstamp` is
+   a real timestamp with an offset (`api/_lib/schedule.ts`).
+5. The send decision is **per recipient**, not per show: an episode is due for someone when
+   `now >= airsAt - lead` and `now <= airsAt + 2 days`. Two people following the same show at
+   different lead times get told at different moments, from the same pair of episodes.
+6. `web-push` sends it. The wording follows the clock — "Reacher airs in 30 minutes" before,
+   "New episode of Reacher" after. The service worker tags by show id so a second notification for
+   the same show replaces the first rather than stacking.
+
+### Where the times come from
+
+TVmaze is the source, and the id chain to reach it is TMDb external ids → TVmaze lookup
+(`api/_lib/tvmaze-id.ts`, shared with the cast route so the fallback's guard can't drift). The
+resolved id is cached in KV for 30 days; a show TVmaze doesn't have is remembered as a miss for a
+day rather than re-resolved every run.
+
+Shows TVmaze doesn't carry fall back to TMDb's `air_date` — a date, read as midnight UTC, marked
+inexact so nothing claims a precision it doesn't have. Those get day-level wording ("airs today")
+instead of a countdown.
+
+### On cron frequency
+
+Nothing in the job assumes fifteen minutes. A run sends everything whose moment has passed and has
+not been sent, so a coarser schedule makes notifications **late rather than wrong**. That matters
+because **Vercel's Hobby plan fires cron once a day** whatever the expression says — on Hobby this
+degrades to roughly the behaviour it replaced. Accuracy is bounded by the interval; correctness is
+not.
 
 ## Setup
 
@@ -95,10 +123,17 @@ expire them. The subscriber just re-enables the toggle.
 
 ## Customizing
 
-- **Schedule** — `vercel.json`. Currently `0 6 * * *`, with `maxDuration: 300`.
-- **What counts as recent** — `RECENT_DAYS` in `api/check-episodes.ts`.
-- **How many shows are checked at once** — `CONCURRENCY`, same file.
-- **Notification text** — `notifyOne()` in `api/check-episodes.ts`. The payload is deliberately
-  flat: `title`, `body`, `showId`, `url`, which is the shape `public/service-worker.js` reads.
-  Nesting it under `data` leaves `tag` undefined and notifications stop replacing each other.
+- **Schedule** — `vercel.json`. Currently `*/15 * * * *`, with `maxDuration: 300`. See the note on
+  cron frequency above before changing it.
+- **How long after airing an episode is still worth mentioning** — `GRACE_MS` in
+  `api/check-episodes.ts`. Two days. It has to be wider than the gap between runs, or a missed
+  moment is missed forever; being generous is safe because delivery is recorded per recipient.
+- **The lead-time presets** — `LEAD_PRESETS` in `src/lib/episodeAlerts.ts`, with `MAX_LEAD_MINUTES`
+  bounding the custom field. The server clamps to the same range in `api/subscribe.ts`.
+- **How many shows are checked at once** — `CONCURRENCY` in `api/check-episodes.ts`. TVmaze's
+  ~20 calls / 10s is the binding limit, not TMDb's.
+- **Notification text** — `notifyOne()` and `whenWords()` in `api/check-episodes.ts`. The payload is
+  deliberately flat: `title`, `body`, `showId`, `url`, which is the shape
+  `public/service-worker.js` reads. Nesting it under `data` leaves `tag` undefined and
+  notifications stop replacing each other.
 - **Icon and badge** — `/cast-tracker-icon.png` and `/cast-tracker-badge.png` in `public/`.

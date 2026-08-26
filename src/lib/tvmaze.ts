@@ -151,3 +151,31 @@ export async function fetchTvmazeCast(tmdbId: number): Promise<TvmazeResult | nu
     return null;
   }
 }
+
+/**
+ * Who carries a show, according to TVmaze.
+ *
+ * The backstop for TMDb's watch providers, which are per country and sourced from JustWatch, and
+ * come back empty for plenty of shows and most regions. This never does — TVmaze has a channel for
+ * essentially everything — but it answers a narrower question: where the show *originates*, not
+ * where the person reading it can watch. `kind` carries that distinction so the UI can say "streams
+ * on" or "airs on" rather than implying availability it hasn't checked.
+ */
+export interface TvmazeChannel {
+  channel: string | null;
+  kind: 'web' | 'network' | null;
+  country: string | null;
+  showUrl: string | null;
+}
+
+export async function fetchTvmazeChannel(tmdbId: number): Promise<TvmazeChannel | null> {
+  try {
+    const res = await fetch(`/api/tvmaze?tmdbId=${encodeURIComponent(String(tmdbId))}&fields=channel`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as TvmazeChannel;
+    return data.channel ? data : null;
+  } catch {
+    // Additive feature: a failure here must leave today's behaviour untouched and silent.
+    return null;
+  }
+}
