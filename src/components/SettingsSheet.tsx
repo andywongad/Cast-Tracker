@@ -11,7 +11,7 @@ export default function SettingsSheet() {
   const { settings, setTheme, setAutoSave, exportBackup, importBackup, resetAll, clearEverywhere, backupState, keptTotal } = useStore();
   const { session, signOut } = useAuth();
   const sync = useSync();
-  const { settingsOpen, closeSettings, resetToHome, openFeedback, openAuth } = useUI();
+  const { settingsOpen, closeSettings, resetToHome, openFeedback, openAuth, openPrivacy } = useUI();
   const [resetConfirm, setResetConfirm] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -286,6 +286,16 @@ export default function SettingsSheet() {
             Reset to blank state
           </button>
         )}
+
+        {/* Below the destructive controls and above the attribution: it is reference material, not
+            something anyone came here to do — but it has to be findable now that the app keeps
+            addresses on a server. */}
+        <button
+          onClick={openPrivacy}
+          style={{ display: 'block', margin: '18px auto 0', padding: '8px 12px', minHeight: 32, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)' }}
+        >
+          What this app stores
+        </button>
 
         <div style={{ borderTop: '1px solid var(--border)', margin: '20px 0 0', paddingTop: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>

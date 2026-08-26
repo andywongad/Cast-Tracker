@@ -26,6 +26,7 @@ import CastDetailSheet from './components/CastDetailSheet';
 import AuthSheet from './components/AuthSheet';
 import ShowMenuSheet from './components/ShowMenuSheet';
 import DuplicateShowsSheet from './components/DuplicateShowsSheet';
+import PrivacySheet from './components/PrivacySheet';
 
 /**
  * Shown when a save to localStorage fails, which in practice means the quota is full.
@@ -296,6 +297,7 @@ function Shell() {
       <AuthSheet />
       <ShowMenuSheet />
       <DuplicateShowsSheet />
+      <PrivacySheet />
       <FeedbackSheet />
       <ValueConverterSheet />
       <TranslatorSheet />

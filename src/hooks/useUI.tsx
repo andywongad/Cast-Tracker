@@ -42,6 +42,7 @@ type Layer =
   | { k: 'settings' }
   | { k: 'auth' }
   | { k: 'duplicates' }
+  | { k: 'privacy' }
   | { k: 'showMenu' }
   | { k: 'feedback' }
   | { k: 'converter' }
@@ -106,6 +107,9 @@ interface UIValue {
   openAuth: () => void;
   closeAuth: () => void;
   duplicatesOpen: boolean;
+  privacyOpen: boolean;
+  openPrivacy: () => void;
+  closePrivacy: () => void;
   openDuplicates: () => void;
   closeDuplicates: () => void;
   showMenuOpen: boolean;
@@ -263,6 +267,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   // Signing in replaces Settings rather than stacking on it, matching how it always behaved.
   const openAuth = useCallback(() => { pop(); push({ k: 'auth' }); }, [pop, push]);
   const closeAuth = useCallback(() => pop(), [pop]);
+  const openPrivacy = useCallback(() => push({ k: 'privacy' }), [push]);
+  const closePrivacy = useCallback(() => pop(), [pop]);
   const openDuplicates = useCallback(() => { pop(); push({ k: 'duplicates' }); }, [pop, push]);
   const closeDuplicates = useCallback(() => pop(), [pop]);
 
@@ -309,6 +315,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       settingsOpen: stack.some((l) => l.k === 'settings'),
       authOpen: stack.some((l) => l.k === 'auth'),
       duplicatesOpen: stack.some((l) => l.k === 'duplicates'),
+      privacyOpen: stack.some((l) => l.k === 'privacy'),
       showMenuOpen: stack.some((l) => l.k === 'showMenu'),
       feedbackOpen: stack.some((l) => l.k === 'feedback'),
       converterOpen: stack.some((l) => l.k === 'converter'),
@@ -330,6 +337,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     settingsOpen: derived.settingsOpen, openSettings, closeSettings,
     authOpen: derived.authOpen, openAuth, closeAuth,
     duplicatesOpen: derived.duplicatesOpen, openDuplicates, closeDuplicates,
+    privacyOpen: derived.privacyOpen, openPrivacy, closePrivacy,
     showMenuOpen: derived.showMenuOpen, openShowMenu, closeShowMenu,
     feedbackOpen: derived.feedbackOpen, openFeedback, closeFeedback,
     converterOpen: derived.converterOpen, converterPrefill, openConverter, closeConverter,
@@ -340,7 +348,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   }), [derived, query, addShowPrefill, converterPrefill, shareData,
       openShow, goHome, resetToHome, openAddShow, openEditShow, closeAddShow,
       openAddCast, openEditCast, closeAddCast, openCastDetail, closeCastDetail,
-      openSettings, closeSettings, openAuth, closeAuth, openDuplicates, closeDuplicates, openShowMenu, closeShowMenu,
+      openSettings, closeSettings, openAuth, closeAuth, openDuplicates, closeDuplicates, openPrivacy, closePrivacy, openShowMenu, closeShowMenu,
       openFeedback, closeFeedback, openConverter, closeConverter, openTranslator, closeTranslator,
       openShareSheet, closeShareSheet, openWebView, closeWebView,
       openRecap, closeRecap]);
