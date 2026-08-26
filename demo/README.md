@@ -75,23 +75,31 @@ shows under Currently watching and one under Completed.
 17. Show menu → "Share this show" generates a code. Redeeming it on another device or browser
     should reproduce the show and its cast.
 
-### 6. Backup
-18. Settings → Export. A `cast-tracker-backup-<date>.json` file downloads.
-19. Settings → Reset to blank state. The library empties.
-20. Import the file you just exported. Everything returns, including the notes and relationships.
+### 6. Offline
+21. Open the app, then turn on airplane mode.
+22. Reload. It should open normally, with your library and cast photos intact — everything is on
+    the device and the app shell is cached.
+23. Search for a new show. It should fail: TMDb is a live call and the app doesn't pretend
+    otherwise. Everything already in your library keeps working.
+24. Turn airplane mode off. Nothing to do — the next reload picks up any new deploy.
 
-### 7. Sync across two devices
+### 7. Backup
+25. Settings → Export. A `cast-tracker-backup-<date>.json` file downloads.
+26. Settings → Reset to blank state. The library empties.
+27. Import the file you just exported. Everything returns, including the notes and relationships.
+
+### 8. Sync across two devices
 Working as of 2026-08-25. Sign-in goes through Resend from `noreply@casttracker.app`, at 30 emails
 an hour rather than the built-in mailer's two, and the email carries a six-digit code above the
 link. **Use the code, not the link** — a link is single-use, so a mail scanner that fetches the
 message first spends it, and it only works in the browser that asked for it. The code has neither
 constraint, which is what makes this work on a phone.
 
-21. Sign in on device A. The library uploads.
-22. Sign in as the same account on device B. The library arrives.
-23. Edit the same character's notes differently on each device, B last. Both converge on B's text.
-24. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
-25. Delete a character on A. It disappears on B rather than coming back.
+28. Sign in on device A. The library uploads.
+29. Sign in as the same account on device B. The library arrives.
+30. Edit the same character's notes differently on each device, B last. Both converge on B's text.
+31. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
+32. Delete a character on A. It disappears on B rather than coming back.
 
 ### Known gaps to mention to a tester before they find them
 - **Notifications work, with one catch on iPhone.** The follow control is in a show's ⋯ menu. On
