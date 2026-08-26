@@ -79,9 +79,13 @@ export function ShareSheet() {
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             </div>
+            {/* Hands the link to the operating system's own share sheet — Messages, Mail, AirDrop.
+                Worth its place on a phone, where it removes the fiddliest step; on a laptop most
+                people will reach for Copy and paste into whatever they were already typing in.
+                Named for what it sends, because "Send…" alone says neither what nor where. */}
             {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
               <button onClick={sendNative} disabled={!url} className="ct-btn-ghost" style={{ width: '100%', height: 44, marginBottom: 12 }}>
-                Send&hellip;
+                Send link&hellip;
               </button>
             )}
           </>
