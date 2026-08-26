@@ -29,10 +29,11 @@ function PreviewBanner() {
 
 export default function AuthSheet() {
   const { authOpen, closeAuth } = useUI();
-  const { session, pending, error, awaitingEmail, requestLink, confirmSignIn, signOut, reset, simulated } = useAuth();
+  const { session, pending, error, awaitingEmail, requestLink, confirmSignIn, verifyCode, signOut, reset, simulated } = useAuth();
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
 
-  useEffect(() => { if (authOpen) { setEmail(''); reset(); } }, [authOpen, reset]);
+  useEffect(() => { if (authOpen) { setEmail(''); setCode(''); reset(); } }, [authOpen, reset]);
 
   if (!authOpen) return null;
 
@@ -63,22 +64,44 @@ export default function AuthSheet() {
                 </>
               ) : (
                 <>
-                  A sign-in link is on its way to <strong style={{ color: 'var(--text)' }}>{awaitingEmail}</strong>.
-                  {/* Not a nicety. The link carries a code that is exchanged using a secret stored in
-                      the browser that asked for it, so opening the mail in a different browser —
-                      which is what tapping a link inside a mail app usually does on a phone —
-                      lands you back here still signed out, with nothing explaining why. */}
-                  {' '}Open it in <strong style={{ color: 'var(--text)' }}>this browser</strong>; a link opened
-                  somewhere else won&rsquo;t sign you in.
+                  We sent a code to <strong style={{ color: 'var(--text)' }}>{awaitingEmail}</strong>.
+                  Type it in below — that works from any device, on any browser.
+                  {/* The link is second on purpose, here and in the email. It is single-use, so
+                      whatever fetches the message first spends it: a mail scanner opening it before
+                      the recipient produces "link is invalid or has expired" for the person who
+                      actually clicked. It also has to open in the browser that asked for it, since
+                      the exchange needs a verifier stored there. A typed code has neither problem. */}
+                  {' '}The mail also has a link, which only works in this browser and only once.
                 </>
               )}
             </div>
-            {/* There was a code field here.
-                Removed because the email template sends a link only, so it asked for something the
-                message did not contain — a dead end with nothing on screen to explain it. The
-                adapter's `verifyCode` is deliberately left in place: adding `{{ .Token }}` to the
-                Supabase magic-link template is what makes a code exist, and bringing the field back
-                is then a change to this file alone. */}
+            {/* Back, now that the email actually contains a code.
+                It was removed once before for the right reason — the template sent a link only, so
+                the field asked for something the message did not contain. Custom SMTP is what let
+                `{{ .Token }}` into the templates, and this is the other half of that change. */}
+            {!simulated && (
+              <>
+                <input
+                  className="ct-type-lg"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && code.length === 6) void verifyCode(code); }}
+                  placeholder="000000"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  aria-label="Sign-in code from your email"
+                  style={{ width: '100%', height: 52, border: '1px solid var(--input-border)', borderRadius: 12, background: 'var(--surface)', color: 'var(--text)', padding: '0 16px', fontSize: 20, fontWeight: 700, letterSpacing: '0.28em', marginBottom: 10, outline: 'none' }}
+                />
+                <button
+                  onClick={() => void verifyCode(code)}
+                  disabled={code.length !== 6 || pending}
+                  className="ct-btn-primary ct-btn-primary-calm"
+                  style={{ width: '100%', marginBottom: 10, opacity: code.length === 6 && !pending ? 1 : 0.5, cursor: code.length === 6 && !pending ? 'pointer' : 'not-allowed' }}
+                >
+                  {pending ? 'Signing in…' : 'Sign in'}
+                </button>
+              </>
+            )}
             {simulated && (
               <button onClick={confirmSignIn} disabled={pending} className="ct-btn-primary ct-btn-primary-calm" style={{ width: '100%', marginBottom: 10 }}>
                 {pending ? 'Signing in…' : 'Simulate clicking the link'}
