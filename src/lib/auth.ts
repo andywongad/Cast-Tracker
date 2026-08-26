@@ -166,6 +166,44 @@ export function arrivedWithSignInCode(): boolean {
 export const SIGN_IN_EXCHANGE_FAILED =
   'That sign-in link couldn’t be completed. Use the most recent email if you requested more than one, and open it in this browser — or just sign in again from here.';
 
+/**
+ * Turns a failed sign-in request into something worth reading.
+ *
+ * Supabase answers "Email rate limit exceeded", which is accurate and lands like an accusation:
+ * the person reads it as a limit on *them*, on a screen where they have done nothing but type
+ * their address. The cap is the app's, shared by everyone, and it resets — so the message says
+ * whose limit it is and when to come back.
+ *
+ * Two different limits arrive through the same channel and they are not interchangeable:
+ *
+ *   - the per-address floor, 60 seconds between emails to one person. The remedy is to look in
+ *     the inbox, because a code is already sitting there.
+ *   - the project's hourly ceiling, shared across everyone using the app. The remedy is to wait,
+ *     and there is nothing the person can do to hurry it.
+ *
+ * Telling someone to check their inbox when the mail was never sent, or to wait an hour when it
+ * arrived a minute ago, is worse than the raw error.
+ */
+export function signInErrorMessage(error: { message?: string; status?: number; code?: string }): string {
+  const message = error.message ?? '';
+
+  // Supabase puts the remaining wait in the text — "you can only request this after 47 seconds" —
+  // so the number is quoted back rather than rounded to a vague "shortly".
+  const wait = message.match(/after (\d+) seconds?/i)?.[1];
+  if (wait) {
+    return `A code was just sent to that address — check your inbox, and your spam folder. You can ask for another in ${wait} seconds.`;
+  }
+
+  const rateLimited = error.status === 429
+    || error.code === 'over_email_send_rate_limit'
+    || /rate limit/i.test(message);
+  if (rateLimited) {
+    return 'Cast Tracker has sent all the sign-in emails it can this hour. That is a limit on the app, shared by everyone using it — nothing is wrong with your address or your account. Try again in an hour and it will work.';
+  }
+
+  return message || 'That didn\u2019t send. Try again in a moment.';
+}
+
 function delay(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }

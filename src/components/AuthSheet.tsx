@@ -107,7 +107,7 @@ export default function AuthSheet() {
                 {pending ? 'Signing in…' : 'Simulate clicking the link'}
               </button>
             )}
-            {error && <div style={{ fontSize: 12.5, color: 'var(--danger)', marginBottom: 12 }}>{error}</div>}
+            {error && <div style={{ fontSize: 12.5, color: 'var(--danger)', lineHeight: 1.5, marginBottom: 12 }}>{error}</div>}
             <button onClick={reset} className="ct-btn-ghost" style={{ width: '100%' }}>Use a different email</button>
           </>
         ) : (
@@ -138,7 +138,7 @@ export default function AuthSheet() {
               No password &mdash; you&rsquo;ll get a one-time sign-in link by email.
             </div>
 
-            {error && <div style={{ fontSize: 12.5, color: 'var(--danger)', marginBottom: 12 }}>{error}</div>}
+            {error && <div style={{ fontSize: 12.5, color: 'var(--danger)', lineHeight: 1.5, marginBottom: 12 }}>{error}</div>}
 
             <button onClick={() => requestLink(email)} disabled={!canSubmit} className="ct-btn-primary ct-btn-primary-calm" style={{ width: '100%', marginBottom: 10 }}>
               {pending ? 'Sending…' : 'Continue with email'}

@@ -1,5 +1,5 @@
 import { getSupabase, needsClientOnLoad, arrivingCode, arrivingFlowId } from './supabase';
-import { isValidEmail, type AuthAdapter, type AuthSession } from './auth';
+import { isValidEmail, signInErrorMessage, type AuthAdapter, type AuthSession } from './auth';
 
 /**
  * The real `AuthAdapter`, backed by Supabase magic links.
@@ -61,7 +61,7 @@ export const supabaseAuth: AuthAdapter = {
      * undo that. Reporting "no account for that email" would turn the sign-in box into a way to
      * test whether any given person uses the app.
      */
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(signInErrorMessage(error));
   },
 
   async completeSignIn(): Promise<AuthSession> {
