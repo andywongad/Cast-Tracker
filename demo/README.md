@@ -94,11 +94,14 @@ constraint, which is what makes this work on a phone.
 25. Delete a character on A. It disappears on B rather than coming back.
 
 ### Known gaps to mention to a tester before they find them
-- **Notifications are not available.** The follow control hides itself while the deployment has no
-  VAPID keys, so there is nothing to find — but if push is configured later, it reappears and
-  needs testing.
-- **Sign-in** is blocked on the Supabase configuration above.
-- **The app is device-local** until sign-in works. Say so before someone spends an hour on it.
+- **Notifications work, with one catch on iPhone.** The follow control is in a show's ⋯ menu. On
+  iOS, Safari only permits web push for apps added to the Home Screen — tapping the toggle in a
+  normal Safari tab fails no matter what the server is doing. Add Cast Tracker to the Home Screen
+  first, open it from that icon, then follow a show. Android and desktop have no such rule.
+  The nightly job runs at 06:00 UTC and only sends for episodes that aired in the previous two
+  days, so a follow won't produce anything until a show you follow actually airs.
+- **Sign-in is a code, not just a link.** Tell testers to type the six digits rather than tapping
+  the link: a link only works in the browser that requested it, and only once.
 
 ## Regenerating the seed
 
