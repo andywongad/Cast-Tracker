@@ -63,8 +63,10 @@ export interface ShowShare {
 export interface CastShare {
   v: 1;
   k: 'cast';
-  /** Only for display — "Sydney, from The Bear" — so the recipient knows what they are accepting. */
+  /** The show it came from, for display and for matching it to one the recipient already has. */
   st: string;
+  /** That show's TMDb id, which is what makes the match reliable when titles differ or repeat. */
+  si?: number;
   c: [PackedMember];
 }
 
@@ -153,7 +155,11 @@ export function packShow(show: Show): ShowShare {
 }
 
 export function packCast(show: Show, member: CastMember): CastShare {
-  return { v: 1, k: 'cast', st: show.title, c: [packMember(member)] };
+  return {
+    v: 1, k: 'cast', st: show.title,
+    ...(show.tmdbId ? { si: show.tmdbId } : {}),
+    c: [packMember(member)],
+  };
 }
 
 /** A show ready to push into the library, with fresh ids so it can sit alongside an existing copy. */

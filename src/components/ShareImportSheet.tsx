@@ -14,7 +14,7 @@ import Sheet from './Sheet';
  */
 export default function ShareImportSheet({ packet, onDone }: { packet: SharePacket | null; onDone: () => void }) {
   const { updateData, data } = useStore();
-  const { activeShowId, openShow } = useUI();
+  const { openShow } = useUI();
 
   if (!packet) return null;
 
@@ -27,40 +27,108 @@ export default function ShareImportSheet({ packet, onDone }: { packet: SharePack
       : `A show, with ${count} ${count === 1 ? 'character' : 'characters'} someone wrote`
     : `A character from ${packet.st}`;
 
-  /**
-   * A character card needs somewhere to land, and only the recipient knows where. Landing it in
-   * whatever show happens to be open is the one behaviour that could put someone's work in the
-   * wrong place silently.
-   */
-  const targetShow = !isShow ? data.shows.find((s) => s.id === activeShowId) : undefined;
-  const blocked = !isShow && !targetShow;
+  const first = packet.c[0] as Record<string, unknown>;
+  const preview = isShow
+    ? packet.p
+    : typeof first.pho === 'string'
+      ? first.pho
+      : typeof first.tmb === 'string'
+        ? `https://image.tmdb.org/t/p/w185${first.tmb}`
+        : null;
 
-  const add = () => {
-    if (isShow) {
-      const id = genId('s');
-      updateData((d) => {
-        d.shows.push(unpackShow(packet, (i) => colorForIndex(d.shows.length + i), id));
-      });
-      onDone();
-      openShow(id);
-      return;
-    }
-    if (!targetShow) return;
+  const addShow = () => {
+    if (packet.k !== 'show') return;
+    const id = genId('s');
     updateData((d) => {
-      const s = d.shows.find((x) => x.id === targetShow.id);
+      d.shows.push(unpackShow(packet, (i) => colorForIndex(d.shows.length + i), id));
+    });
+    onDone();
+    openShow(id);
+  };
+
+  const addCastTo = (showId: string) => {
+    if (packet.k !== 'cast') return;
+    updateData((d) => {
+      const s = d.shows.find((x) => x.id === showId);
       if (!s) return;
       s.cast.push(unpackCast(packet, colorForIndex(s.cast.length)));
     });
     onDone();
+    openShow(showId);
   };
+
+  /**
+   * Creates the show the character came from, then puts them in it.
+   *
+   * The character travels with its source show's title and TMDb id, so the shell this makes is a
+   * real show — episodes and the rest of the cast load into it from TMDb like any other.
+   */
+  const addCastToNewShow = () => {
+    if (packet.k !== 'cast') return;
+    const id = genId('s');
+    updateData((d) => {
+      d.shows.push({
+        id, title: packet.st, type: 'DRAMA', color: colorForIndex(d.shows.length), status: 'watching',
+        cast: [unpackCast(packet, colorForIndex(0))],
+        poster: null, tmdbId: packet.si ?? null, originCountry: '', wikiUrl: '', imdbUrl: '',
+      });
+    });
+    onDone();
+    openShow(id);
+  };
+
+  /**
+   * Where a character can land, best guess first.
+   *
+   * The first version of this required a show to already be open and refused otherwise — which
+   * meant it refused always, since a share link opens at the home screen and following it again
+   * lands there again. A character does need a destination, but asking is the way to get one; the
+   * app knows which show it came from and can usually pick it out of the recipient's library.
+   */
+  const matchIndex = !isShow
+    ? data.shows.findIndex((s) => (packet.si && s.tmdbId === packet.si) || s.title === packet.st)
+    : -1;
+  const matched = matchIndex >= 0 ? data.shows[matchIndex] : undefined;
+  const others = data.shows.filter((s) => s.id !== matched?.id);
+
+  /**
+   * Whether a show already holds this character — by actor id where there is one, by name where
+   * there isn't. Same principle as the duplicate-show handling: the app doesn't refuse, it says so,
+   * because two of someone is occasionally what you want and always worth knowing about first.
+   */
+  const alreadyHas = (showId: string): boolean => {
+    if (isShow) return false;
+    const target = data.shows.find((s) => s.id === showId);
+    if (!target) return false;
+    const actor = typeof first.a === 'number' ? first.a : null;
+    const name = (first.n as string) || '';
+    return target.cast.some((c) => (actor && c.actorTmdbId === actor) || (!!name && c.name === name));
+  };
+
+  const Row = ({ label, hint, onClick }: { label: string; hint?: string; onClick: () => void }) => (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, width: '100%',
+        border: 'none', background: 'none', padding: '13px 2px', cursor: 'pointer', textAlign: 'left',
+        borderBottom: '1px solid var(--border)',
+      }}
+    >
+      <span style={{ fontSize: 15, color: 'var(--text)' }}>{label}</span>
+      {hint && <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{hint}</span>}
+    </button>
+  );
 
   return (
     <Sheet onClose={onDone} label="Shared with you" sheetStyle={{ maxHeight: 'none', padding: '22px 18px 28px' }}>
       <div className="ct-sheet-title">Shared with you</div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0 18px' }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: 'rgba(255,255,255,0.85)', ...bgStyle(isShow ? packet.p : null) }}>
-          {(!isShow || !packet.p) && initials(title)}
+        {/* TMDb photos travel as a bare path, so the preview has to rebuild the URL the same way
+            the unpacker does — reading `pho` alone showed initials for the very characters that do
+            have a face. */}
+        <div style={{ width: 48, height: 48, borderRadius: 12, flex: 'none', backgroundColor: 'var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: 'rgba(255,255,255,0.85)', ...bgStyle(preview) }}>
+          {!preview && initials(title)}
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 16, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
@@ -68,27 +136,48 @@ export default function ShareImportSheet({ packet, onDone }: { packet: SharePack
         </div>
       </div>
 
-      {blocked ? (
-        <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 14 }}>
-          Open the show you want this character added to, then follow the link again — a character
-          has to go somewhere, and only you know where.
-        </div>
+      {isShow ? (
+        <>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 14 }}>
+            This becomes your own copy, yours to edit. Cast from TMDb loads on this device as you browse.
+          </div>
+          <button onClick={addShow} className="ct-btn-primary ct-btn-primary-calm" style={{ width: '100%', marginBottom: 8 }}>
+            Add to my library
+          </button>
+        </>
       ) : (
-        <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 14 }}>
-          {isShow
-            ? 'This becomes your own copy, yours to edit. Cast from TMDb loads on this device as you browse.'
-            : `This will be added to ${targetShow?.title}.`}
-        </div>
+        <>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 6 }}>
+            Which show should this character go in?
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            {matched && (
+              <Row
+                label={`Add to ${matched.title}`}
+                hint={alreadyHas(matched.id)
+                  ? `${matched.title} already has them — this adds a second copy`
+                  : 'The show they came from, already in your library'}
+                onClick={() => addCastTo(matched.id)}
+              />
+            )}
+            <Row
+              label={matched ? `Start a separate “${packet.st}”` : `Add to a new “${packet.st}”`}
+              hint={matched ? 'A second copy of the show, with only this character in it' : 'Creates the show, with this character in it'}
+              onClick={addCastToNewShow}
+            />
+            {others.map((s) => (
+              <Row
+                key={s.id}
+                label={`Add to ${s.title}`}
+                hint={alreadyHas(s.id) ? 'Already has them — this adds a second copy' : undefined}
+                onClick={() => addCastTo(s.id)}
+              />
+            ))}
+          </div>
+        </>
       )}
 
-      {!blocked && (
-        <button onClick={add} className="ct-btn-primary ct-btn-primary-calm" style={{ width: '100%', marginBottom: 8 }}>
-          Add to my library
-        </button>
-      )}
-      <button onClick={onDone} className="ct-btn-ghost" style={{ width: '100%' }}>
-        {blocked ? 'Close' : 'No thanks'}
-      </button>
+      <button onClick={onDone} className="ct-btn-ghost" style={{ width: '100%' }}>No thanks</button>
     </Sheet>
   );
 }
