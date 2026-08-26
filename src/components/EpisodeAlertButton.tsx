@@ -21,6 +21,7 @@ import {
   type LeadUnit,
 } from '../lib/episodeAlerts';
 import { useDismissible, useModalFocus } from './Sheet';
+import { getShowDetails, getWatchProviders, watchRegion, type WatchOptions } from '../lib/tmdb';
 
 /**
  * The bell beside a show's title, and the card behind it.
@@ -38,27 +39,73 @@ import { useDismissible, useModalFocus } from './Sheet';
  * fail. Both gates are the same ones the old toggle used.
  */
 
+/**
+ * Two states, drawn as two different bells rather than one bell in two weights.
+ *
+ * Struck-through means off and ringing means on in every interface anyone has used — a phone's
+ * ringer, a chat app's mute, a calendar's alert. Reading the difference does not depend on
+ * noticing that one shape is filled and the other is hollow, which is a distinction that survives
+ * neither a small screen nor a quick glance, and vanishes entirely for anyone who cannot separate
+ * the two oranges from each other.
+ *
+ * Colour still carries nothing on its own: the button's `aria-label` names the state, and the
+ * card it opens says it in words.
+ */
+const BELL =
+  'M12 3a6 6 0 00-6 6c0 3.6-1 5.1-1.7 5.9a.8.8 0 00.6 1.3h14.2a.8.8 0 00.6-1.3C19 14.1 18 12.6 18 9a6 6 0 00-6-6z';
+const CLAPPER = 'M10 19a2 2 0 004 0';
+
 function BellIcon({ on }: { on: boolean }) {
+  const orange = 'var(--cta)';
+  // Thinner than the bell's own outline: four arcs at the bell's weight closed the gaps between
+  // them and the dome, and the whole thing read as one dense blob at 20px.
+  const wave = { stroke: orange, strokeWidth: 1.45, strokeLinecap: 'round' as const };
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 3a6 6 0 00-6 6c0 3.6-1 5.1-1.7 5.9a.8.8 0 00.6 1.3h14.2a.8.8 0 00.6-1.3C19 14.1 18 12.6 18 9a6 6 0 00-6-6z"
-        stroke={on ? 'var(--accent)' : 'var(--text-secondary)'}
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-        fill={on ? 'var(--accent)' : 'none'}
-      />
-      <path
-        d="M10 19a2 2 0 004 0"
-        stroke={on ? 'var(--accent)' : 'var(--text-secondary)'}
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      {/* Ringing: two arcs off each side, near then far, so the sound reads as travelling rather
+          than as a bracket drawn around the bell. They sit high, in the corners: the dome is at
+          its widest around the shoulder line and arcs placed level with it touch the outline at
+          20px, which turns four separate marks into one dense shape. */}
+      {on && (
+        <>
+          <path d="M5.0 7.6c0-1.5.6-2.9 1.6-3.8" {...wave} />
+          <path d="M2.0 9.2c0-2.4.8-4.6 2.2-6.2" {...wave} />
+          <path d="M19.0 7.6c0-1.5-.6-2.9-1.6-3.8" {...wave} />
+          <path d="M22.0 9.2c0-2.4-.8-4.6-2.2-6.2" {...wave} />
+        </>
+      )}
+
+      {/* The bell is scaled in both states, not only the ringing one. Sized to clear the outer
+          wave, it would otherwise grow and shrink as you toggled it — a change of size reads as a
+          different icon, which is the one thing the two states must not look like. */}
+      <g transform="translate(12 12) scale(0.84) translate(-12 -12)">
+        <path
+          d={BELL}
+          stroke={orange}
+          strokeWidth={1.7 / 0.84}
+          strokeLinejoin="round"
+          fill={on ? orange : 'none'}
+        />
+        <path
+          d={CLAPPER}
+          stroke={orange}
+          strokeWidth={1.7 / 0.84}
+          strokeLinecap="round"
+          fill={on ? orange : 'none'}
+        />
+      </g>
+
+      {/* Silenced: one stroke, top-right down to bottom-left. Inset from the viewBox edges so the
+          round caps aren't clipped by the 19px frame. */}
+      {!on && <path d="M19.5 4.5l-15 15" stroke={orange} strokeWidth={1.7} strokeLinecap="round" />}
     </svg>
   );
 }
 
 type Choice = number | 'custom';
+
+/** TMDb production statuses that mean more episodes are expected, whether or not one is dated. */
+const STILL_RUNNING = new Set(['Returning Series', 'In Production', 'Planned']);
 
 export default function EpisodeAlertButton({
   showTitle,
@@ -70,6 +117,7 @@ export default function EpisodeAlertButton({
   const [open, setOpen] = useState(false);
   const [following, setFollowing] = useState(false);
   const [lead, setLead] = useState<number | null>(null);
+  const [expects, setExpects] = useState<'unknown' | 'yes' | 'no'>('unknown');
 
   useEffect(() => {
     let alive = true;
@@ -83,7 +131,37 @@ export default function EpisodeAlertButton({
     return () => { alive = false; };
   }, [showTmdbId]);
 
+  /**
+   * Whether this show can still deliver an episode to be alerted about.
+   *
+   * A finished show cannot, and offering to watch for new episodes of The Sopranos is a control
+   * that can only ever do nothing — worse than absent, because it implies something might arrive.
+   *
+   * Two signals, because neither is sufficient. A dated next episode is proof. Failing that,
+   * TMDb's production status carries shows that are between seasons with nothing scheduled yet,
+   * which are exactly the shows someone most wants to be told about.
+   *
+   * `unknown` hides the bell rather than flashing one in and out on every show you open. A lookup
+   * that comes back empty is treated as "yes": TMDb being unreachable is not evidence a show has
+   * ended, and silently removing the control from a currently-airing show is the worse mistake.
+   */
+  useEffect(() => {
+    let alive = true;
+    if (!showTmdbId || !PUSH_CONFIGURED) { setExpects('unknown'); return; }
+    setExpects('unknown');
+    getShowDetails(showTmdbId)
+      .then((d) => {
+        if (!alive) return;
+        if (!d) { setExpects('yes'); return; }
+        setExpects(d.nextEpisodeAt || STILL_RUNNING.has(d.status) ? 'yes' : 'no');
+      })
+      .catch(() => { if (alive) setExpects('yes'); });
+    return () => { alive = false; };
+  }, [showTmdbId]);
+
   if (!showTmdbId || !PUSH_CONFIGURED) return null;
+  // Still followed from an earlier season? Keep the control, or there is no way to turn it off.
+  if (expects !== 'yes' && !following) return null;
 
   return (
     <>
@@ -96,9 +174,14 @@ export default function EpisodeAlertButton({
             ? `New episode alerts on, ${formatLead(lead ?? DEFAULT_LEAD_MINUTES)}. Change`
             : 'Notify me about new episodes'
         }
+        /**
+         * No container. The 32px box is the tap target, not a visual — anything smaller is below
+         * the size a thumb should be asked to hit, and the icon inside it is what is actually
+         * seen. Colour does the work a surface was doing: this is the only orange in the bar.
+         */
         style={{
-          flex: 'none', width: 30, height: 30, marginLeft: 2, padding: 0,
-          border: 'none', borderRadius: 999, background: 'transparent', cursor: 'pointer',
+          flex: 'none', width: 32, height: 32, marginLeft: 6, padding: 0,
+          border: 'none', background: 'transparent', borderRadius: 999, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
@@ -302,6 +385,8 @@ function AlertCard({
           </div>
         )}
 
+        <WhereToWatch showTmdbId={showTmdbId} />
+
         {error && (
           <div role="alert" style={{ fontSize: 12.5, color: 'var(--danger)', lineHeight: 1.45, marginTop: 12 }}>
             {error}
@@ -387,3 +472,106 @@ const Option = ({
     <span>{label}</span>
   </button>
 );
+
+
+/**
+ * Where the show can be watched, under the alert options.
+ *
+ * The question this answers is a real one and it is not the same question as "tell me when it is
+ * on": knowing an episode has landed is no use if you cannot remember which of nine services
+ * carries it. Being told at the moment you set the reminder is the cheapest possible time to
+ * answer it.
+ *
+ * Below the options, not above: choosing a lead time is what the card is for, and a row of logos
+ * at the top would be the first thing read every time it opened.
+ *
+ * Fails quietly. This is supporting information — a card that shows an error where a logo should
+ * be is worse than a card that simply doesn't mention it.
+ */
+function WhereToWatch({ showTmdbId }: { showTmdbId: number }) {
+  const [state, setState] = useState<{ status: 'loading' | 'done'; data: WatchOptions | null }>({
+    status: 'loading',
+    data: null,
+  });
+
+  useEffect(() => {
+    let alive = true;
+    getWatchProviders(showTmdbId)
+      .then((d) => { if (alive) setState({ status: 'done', data: d }); })
+      .catch(() => { if (alive) setState({ status: 'done', data: null }); });
+    return () => { alive = false; };
+  }, [showTmdbId]);
+
+  if (state.status === 'loading') {
+    return (
+      <div style={{ marginTop: 16 }}>
+        <div className="ct-label-muted">WHERE TO WATCH</div>
+        <div className="ct-skeleton" style={{ height: 28, borderRadius: 8, marginTop: 6 }} />
+      </div>
+    );
+  }
+
+  const d = state.data;
+  const services = d ? [...d.stream, ...d.free] : [];
+  const region = d?.region ?? watchRegion();
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div className="ct-label-muted">WHERE TO WATCH</div>
+
+      {services.length > 0 ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+          {services.map((p) => (
+            <span
+              key={p.name}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px 5px 5px',
+                border: '1px solid var(--border)', borderRadius: 999, background: 'var(--surface)',
+                fontSize: 12.5, color: 'var(--text-secondary)', maxWidth: '100%',
+              }}
+            >
+              {p.logo ? (
+                <img
+                  src={p.logo}
+                  alt=""
+                  width={20}
+                  height={20}
+                  /* A logo that fails to load leaves the browser's broken-image glyph sitting in a
+                     row of brand marks, which looks like the app is broken rather than the image.
+                     The name beside it is the part that answers the question anyway. */
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  style={{ borderRadius: 5, flex: 'none', display: 'block' }}
+                />
+              ) : (
+                <span style={{ width: 20, height: 20, borderRadius: 5, background: 'var(--border)', flex: 'none' }} />
+              )}
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div style={{ fontSize: 13, color: 'var(--text-faint)', lineHeight: 1.45, marginTop: 2 }}>
+          {d?.buyOnly
+            ? `Only available to buy or rent in ${region}.`
+            : `No streaming service listed for ${region}.`}
+        </div>
+      )}
+
+      {/* JustWatch attribution is a condition of TMDb serving this data, not a nicety. The link
+          also earns its place: which services carry a show changes on licensing deals, and this
+          is the page that is right today. */}
+      {d?.link ? (
+        <a
+          href={d.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: 'inline-block', marginTop: 8, fontSize: 11.5, color: 'var(--text-faint)' }}
+        >
+          {region} listings via <span style={{ textDecoration: 'underline' }}>JustWatch</span>
+        </a>
+      ) : (
+        <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text-faint)' }}>Listings via JustWatch</div>
+      )}
+    </div>
+  );
+}

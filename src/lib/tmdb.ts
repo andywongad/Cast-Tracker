@@ -100,6 +100,14 @@ export interface ShowDetails {
    * end to be at, however far through it you are.
    */
   status: string;
+  /**
+   * `air_date` of the next episode TMDb has scheduled, or null when nothing is on the books.
+   *
+   * The pair of this and `status` is what decides whether a show can still surprise you. Neither
+   * answers it alone: a returning series between seasons has no scheduled episode and is very much
+   * still running, while a show TMDb calls 'Ended' occasionally has a special dated in the future.
+   */
+  nextEpisodeAt: string | null;
 }
 
 export async function getShowDetails(tmdbId: number): Promise<ShowDetails | null> {
@@ -108,7 +116,14 @@ export async function getShowDetails(tmdbId: number): Promise<ShowDetails | null
   const seasons: number[] = (data.seasons || []).filter((s: any) => s.season_number > 0).map((s: any) => s.season_number);
   const imdbId = data.external_ids?.imdb_id || null;
   const wikiGuess = data.name ? `https://en.wikipedia.org/wiki/${encodeURIComponent(String(data.name).replace(/ /g, '_'))}` : null;
-  return { seasons, imdbId, wikiGuess, totalEpisodes: data.number_of_episodes || 0, status: data.status || '' };
+  return {
+    seasons,
+    imdbId,
+    wikiGuess,
+    totalEpisodes: data.number_of_episodes || 0,
+    status: data.status || '',
+    nextEpisodeAt: data.next_episode_to_air?.air_date || null,
+  };
 }
 
 export async function getSeasonEpisodeCount(tmdbId: number, season: number): Promise<number | null> {
@@ -252,4 +267,70 @@ export async function getPersonWikiImdb(personId: number): Promise<{ imdbUrl: st
   const data = await get<any>(`/person/${personId}/external_ids`);
   if (!data) return null;
   return { imdbUrl: data.imdb_id ? `https://www.imdb.com/name/${data.imdb_id}/` : null };
+}
+
+/**
+ * Where a show can be watched, for one country.
+ *
+ * TMDb sources this from JustWatch, whose terms require the attribution the card renders — that
+ * line is not decoration and should not be dropped. `link` opens the full, always-current list;
+ * what comes back here is a snapshot and the set of services carrying a show changes constantly.
+ */
+export interface WatchProvider {
+  name: string;
+  logo: string | null;
+}
+
+export interface WatchOptions {
+  /** Included with a subscription, which is what "where can I watch this" usually means. */
+  stream: WatchProvider[];
+  /** Free or ad-supported. Worth showing beside a subscription, not below a purchase. */
+  free: WatchProvider[];
+  /** True when the only way to watch is to pay per episode or season. */
+  buyOnly: boolean;
+  /** TMDb's JustWatch page for this show and country. */
+  link: string | null;
+  region: string;
+}
+
+/**
+ * The country to ask about, from the browser rather than from a setting nobody would find.
+ *
+ * Availability is per country and the answer for the wrong one is worse than useless — it names
+ * services the person cannot subscribe to. `US` is the fallback because it is the region TMDb's
+ * data is densest for, not because it is a good guess for any particular visitor.
+ */
+export function watchRegion(): string {
+  try {
+    const locale = new Intl.Locale(navigator.language);
+    const region = locale.region || (navigator.language.split('-')[1] ?? '');
+    return /^[A-Z]{2}$/.test(region.toUpperCase()) ? region.toUpperCase() : 'US';
+  } catch {
+    return 'US';
+  }
+}
+
+const provider = (p: { provider_name?: string; logo_path?: string | null }): WatchProvider => ({
+  name: p.provider_name || 'Unknown',
+  // w45 is the size these are drawn at. See the note on cast photos: payload weight beats
+  // sharpness nobody is looking closely enough to notice.
+  logo: p.logo_path ? `https://image.tmdb.org/t/p/w45${p.logo_path}` : null,
+});
+
+export async function getWatchProviders(tmdbId: number, region = watchRegion()): Promise<WatchOptions | null> {
+  const data = await get<{ results?: Record<string, any> }>(`/tv/${tmdbId}/watch/providers`);
+  const forRegion = data?.results?.[region];
+  if (!forRegion) return null;
+
+  return {
+    stream: (forRegion.flatrate || []).map(provider),
+    free: [...(forRegion.free || []), ...(forRegion.ads || [])].map(provider),
+    buyOnly:
+      !(forRegion.flatrate || []).length &&
+      !(forRegion.free || []).length &&
+      !(forRegion.ads || []).length &&
+      !!((forRegion.buy || []).length || (forRegion.rent || []).length),
+    link: forRegion.link || null,
+    region,
+  };
 }

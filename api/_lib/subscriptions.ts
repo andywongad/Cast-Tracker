@@ -153,11 +153,17 @@ export async function followsShow(endpoint: string, tmdbId: number): Promise<boo
  * endpoint as it succeeds means a re-run resumes exactly where it stopped, which is the only
  * behaviour that's correct whether the previous run finished, timed out, or hit a rate limit.
  */
-export async function alreadySent(tmdbId: number, episodeId: number, endpoint: string): Promise<boolean> {
+export async function alreadySent(tmdbId: number, episodeId: string | number, endpoint: string): Promise<boolean> {
   return (await kv.sismember(`sent:${tmdbId}:${episodeId}`, endpoint)) === 1;
 }
 
-export async function markSent(tmdbId: number, episodeId: number, endpoint: string): Promise<void> {
+/**
+ * `episodeId` takes a string so callers can prefix it with the source that issued it. TVmaze and
+ * TMDb both number their episodes from their own sequences, and an unprefixed id would let a show
+ * that switches source between runs collide with a mark it already wrote — which reads as
+ * "already told them" and silently drops a notification.
+ */
+export async function markSent(tmdbId: number, episodeId: string | number, endpoint: string): Promise<void> {
   const key = `sent:${tmdbId}:${episodeId}`;
   await kv.sadd(key, endpoint);
   await kv.expire(key, SENT_TTL_SECONDS);

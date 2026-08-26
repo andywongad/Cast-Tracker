@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { json, resolveTvmazeShow, TVMAZE } from './_lib/tvmaze-id.js';
 
 /**
  * TVmaze cast lookup, keyed by TMDb show id.
@@ -8,52 +9,21 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * anyway so the browser makes exactly one same-origin request, the edge absorbs repeats, and no
  * upstream host details leak into the bundle.
  *
- * TVmaze has no TMDb lookup, so the id chain is:
- *   TMDb /tv/{id}?append_to_response=external_ids  ->  tvdb_id / imdb_id
- *   TVmaze /lookup/shows?thetvdb={id}   (falls back to ?imdb={id})
+ * The TMDb -> TVmaze id chain lives in _lib/tvmaze-id.ts, shared with the episode cron, which
+ * needs the same resolution to find air times. One copy, because the fallback's guard is the part
+ * that is easy to get subtly wrong and its failure mode is silent.
  *
  * The whole chain is three upstream calls, once per show. Callers persist the returned tvmazeId
  * so it never runs twice. Rate limit is ~20 calls / 10s per IP, which this stays far inside.
  */
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY;
-const TMDB = 'https://api.themoviedb.org/3';
-const TVMAZE = 'https://api.tvmaze.com';
 
 interface CastEntry {
   character: string;
   characterImage: string | null;
   actor: string;
   tvmazeCharacterId: number | null;
-}
-
-const norm = (s: string | null | undefined) =>
-  (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
-
-/**
- * Guard for the name-search fallback. Requires the title to match after normalisation AND the
- * premiere year to be within a year of TMDb's, so a common-word title can't pull in a remake or
- * an unrelated show with the same name.
- */
-function isPlausible(candidate: any, tmdb: any): boolean {
-  const names = [tmdb.name, tmdb.original_name].filter(Boolean).map(norm);
-  if (!names.includes(norm(candidate.name))) return false;
-
-  const a = Number(String(tmdb.first_air_date || '').slice(0, 4));
-  const b = Number(String(candidate.premiered || '').slice(0, 4));
-  if (a && b && Math.abs(a - b) > 1) return false;
-
-  return true;
-}
-
-async function json<T>(url: string): Promise<T | null> {
-  try {
-    const r = await fetch(url);
-    if (!r.ok) return null;
-    return (await r.json()) as T;
-  } catch {
-    return null;
-  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -79,28 +49,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ tvmazeId: null, reason, cast: [] });
   };
 
-  const ext = await json<any>(
-    `${TMDB}/tv/${tmdbId}?${new URLSearchParams({ api_key: TMDB_API_KEY, append_to_response: 'external_ids' })}`,
-  );
-  if (!ext) return miss('tmdb-lookup-failed');
-
-  const tvdbId = ext.external_ids?.tvdb_id ?? null;
-  const imdbId = ext.external_ids?.imdb_id ?? null;
-
-  let show = tvdbId ? await json<any>(`${TVMAZE}/lookup/shows?thetvdb=${encodeURIComponent(String(tvdbId))}`) : null;
-  if (!show && imdbId) show = await json<any>(`${TVMAZE}/lookup/shows?imdb=${encodeURIComponent(String(imdbId))}`);
-
-  // The id chain alone isn't enough. TVmaze only resolves /lookup when it has recorded that
-  // external id, and newer or international titles often have `externals: {thetvdb: null,
-  // imdb: null}` while still being fully present with cast and images. Fall back to name search,
-  // but verify the hit — an unvalidated title match will happily return the wrong show.
-  if (!show?.id) {
-    const candidate = await json<any>(`${TVMAZE}/singlesearch/shows?q=${encodeURIComponent(ext.name || '')}`);
-    if (candidate?.id && isPlausible(candidate, ext)) show = candidate;
-    else if (candidate?.id) console.info('[tvmaze] rejected name match', candidate.name, 'for', ext.name);
-  }
-
-  if (!show?.id) return miss('no-tvmaze-match');
+  const { show, reason } = await resolveTvmazeShow(tmdbId, TMDB_API_KEY);
+  if (!show?.id) return miss(reason || 'no-tvmaze-match');
 
   // One call returns the entire cast. Never fetch per character.
   const cast = await json<any[]>(`${TVMAZE}/shows/${show.id}/cast`);

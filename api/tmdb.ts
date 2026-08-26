@@ -24,6 +24,7 @@ const ALLOWED: RegExp[] = [
   /^\/tv\/\d+\/season\/\d+\/aggregate_credits$/,
   /^\/tv\/\d+\/season\/\d+\/episode\/\d+\/credits$/,
   /^\/tv\/\d+\/aggregate_credits$/,
+  /^\/tv\/\d+\/watch\/providers$/,
   /^\/person\/\d+\/combined_credits$/,
   /^\/person\/\d+\/external_ids$/,
 ];
@@ -94,6 +95,11 @@ export function cacheControl(path: string, body: string): string {
     }
     return control(DAY, WEEK);
   }
+
+  // Which services carry a show changes on licensing deals, not on a schedule — days apart at the
+  // fastest, and never in a way anyone is watching for. A day fresh, a week stale, and the card
+  // links out to JustWatch's live page for anyone who needs the truth this minute.
+  if (/\/watch\/providers$/.test(path)) return control(DAY, WEEK);
 
   // Person lookups. A filmography gains a credit now and then; nothing here is time-critical.
   return control(DAY, WEEK);

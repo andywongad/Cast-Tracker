@@ -4,46 +4,47 @@ import {
   watchedShows,
   followersOf,
   getSubscription,
+  getLead,
   alreadySent,
   markSent,
   forget,
 } from './_lib/subscriptions.js';
+import { scheduleFor, type ScheduledEpisode } from './_lib/schedule.js';
 
 /**
- * Daily check for episodes that have just aired, and a push to whoever asked about that show.
+ * Tells each follower about an episode at the moment they asked to be told.
  *
- * This is a rewrite. The previous version could not have worked: it requested
- * `/tv/{id}/season/latest`, which is not a TMDb endpoint and answers 400; it iterated `show:*`
- * keys that nothing ever wrote; it called JSON.parse on a value @vercel/kv had already
- * deserialized, which threw inside a try that wrapped the entire run; and it posted to
- * `fcm.googleapis.com/fcm/send`, the legacy FCM endpoint Google decommissioned in June 2024,
- * passing a Web Push encryption key as if it were an FCM token. Nothing about it was salvageable
- * except the schedule.
+ * This used to run once a day and read TMDb's `last_episode_to_air.air_date` — a date, no time,
+ * for an episode that had already gone out. It could only ever report the past, which made the
+ * lead times the UI offers ("30 minutes before") undeliverable. Air times now come from TVmaze's
+ * `airstamp` (see _lib/schedule.ts) and the schedule in vercel.json runs every fifteen minutes,
+ * so "before" means before.
+ *
+ * The send decision is per recipient, not per show, because two people following the same show
+ * have different answers: one wants a day's warning, one wants telling when it starts. So the
+ * show is resolved once and the window is evaluated once per follower.
+ *
+ * ON CRON FREQUENCY. Nothing here assumes fifteen minutes. A run sends everything whose moment
+ * has passed and has not been sent, so a coarser schedule makes notifications late rather than
+ * wrong — on Vercel's Hobby plan, where cron fires once a day whatever the expression says, this
+ * degrades to roughly the behaviour it replaced instead of breaking. Accuracy is bounded by the
+ * interval; correctness is not.
  */
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY;
 
-/** How many shows to check at once. TMDb tolerates far more; this is about staying polite. */
+/** How many shows to check at once. TMDb tolerates far more; TVmaze's ~20 calls/10s is the bound. */
 const CONCURRENCY = 5;
 
 /**
- * An episode counts as new if it aired in this window, not if its date equals today.
+ * How long after an episode airs it is still worth mentioning.
  *
- * TMDb's air_date is the broadcaster's local date, and this runs at 06:00 UTC, so an episode that
- * aired last night in Los Angeles or this evening in Seoul does not match a UTC "today". A window
- * also absorbs a run that was skipped or failed. It is only safe to widen because delivery is
- * recorded per recipient below — a wider net cannot produce a second notification, only catch one
- * that would otherwise have been missed.
+ * A run that was skipped, a deploy, a browser that was unreachable — the window has to be wider
+ * than the gap between runs or a missed moment is missed forever. Two days is the old
+ * `RECENT_DAYS` and it is safe to be generous because delivery is recorded per recipient: a wider
+ * net catches what would have been lost and cannot produce a second notification.
  */
-const RECENT_DAYS = 2;
-
-interface TmdbEpisode {
-  id: number;
-  name?: string;
-  air_date?: string;
-  season_number?: number;
-  episode_number?: number;
-}
+const GRACE_MS = 2 * 86_400_000;
 
 function vapidReady(): boolean {
   const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = process.env;
@@ -52,44 +53,66 @@ function vapidReady(): boolean {
   return true;
 }
 
-function airedRecently(airDate: string | undefined): boolean {
-  if (!airDate) return false;
-  const aired = Date.parse(`${airDate}T00:00:00Z`);
-  if (Number.isNaN(aired)) return false;
-  const now = Date.now();
-  return aired <= now && now - aired <= RECENT_DAYS * 86_400_000;
+/**
+ * The episode this recipient should be told about now, or null.
+ *
+ * `airsAt - lead` is the moment they asked for; the grace window is the far edge. Candidates are
+ * ordered upcoming-first by `scheduleFor`, so someone with a long lead gets the next episode while
+ * someone with none gets the one that just aired, from the same pair.
+ */
+function dueFor(episodes: ScheduledEpisode[], leadMinutes: number, now: number): ScheduledEpisode | null {
+  for (const ep of episodes) {
+    const sendAt = ep.airsAt - leadMinutes * 60_000;
+    if (now >= sendAt && now <= ep.airsAt + GRACE_MS) return ep;
+  }
+  return null;
 }
 
-/** The show's latest aired episode, or null. One request, and the only TMDb call per show. */
-async function latestAired(tmdbId: number): Promise<{ title: string; episode: TmdbEpisode } | null> {
-  const res = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${TMDB_API_KEY}`);
-  if (!res.ok) return null;
-  const data = (await res.json()) as { name?: string; last_episode_to_air?: TmdbEpisode | null };
-  const episode = data.last_episode_to_air;
-  if (!episode?.id || !airedRecently(episode.air_date)) return null;
-  return { title: data.name || 'A show you follow', episode };
+/**
+ * How far off it is, in the largest unit that is still true.
+ *
+ * Only for episodes with a real timestamp. A date-only fallback is read as midnight UTC, and
+ * telling someone a show "airs in 40 minutes" on the strength of that would be a fabrication —
+ * those get day-level wording instead.
+ */
+function whenWords(ep: ScheduledEpisode, now: number): string {
+  const ms = ep.airsAt - now;
+  if (ms <= 0) return 'is out now';
+
+  if (!ep.exact) return ms < 36 * 3_600_000 ? 'airs today' : 'airs soon';
+
+  const mins = Math.round(ms / 60_000);
+  if (mins <= 1) return 'is starting now';
+  if (mins < 60) return `airs in ${mins} minutes`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `airs in ${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  const days = Math.round(hours / 24);
+  return `airs in ${days} ${days === 1 ? 'day' : 'days'}`;
+}
+
+function episodeLabel(ep: ScheduledEpisode): string {
+  return ep.season && ep.number ? `Season ${ep.season}, Episode ${ep.number}` : 'A new episode';
 }
 
 async function notifyOne(
   endpoint: string,
   tmdbId: number,
   showTitle: string,
-  episode: TmdbEpisode,
+  episode: ScheduledEpisode,
+  now: number,
 ): Promise<'sent' | 'skipped' | 'gone' | 'failed'> {
-  if (await alreadySent(tmdbId, episode.id, endpoint)) return 'skipped';
+  if (await alreadySent(tmdbId, episode.key, endpoint)) return 'skipped';
 
   const subscription = await getSubscription(endpoint);
   // The endpoint is in a show's follower set but its subscription is gone — expired TTL, or a
-  // half-finished removal. Clean it up rather than retrying it every night.
+  // half-finished removal. Clean it up rather than retrying it every run.
   if (!subscription) {
     await forget(endpoint);
     return 'gone';
   }
 
-  const label =
-    episode.season_number && episode.episode_number
-      ? `Season ${episode.season_number}, Episode ${episode.episode_number}`
-      : 'A new episode';
+  const when = whenWords(episode, now);
+  const label = episodeLabel(episode);
 
   try {
     await webpush.sendNotification(
@@ -102,17 +125,17 @@ async function notifyOne(
        * a service worker lives in browsers we don't control until it next updates.
        */
       JSON.stringify({
-        title: `New episode of ${showTitle}`,
-        body: episode.name ? `${label} — ${episode.name}` : `${label} is out.`,
+        title: when === 'is out now' ? `New episode of ${showTitle}` : `${showTitle} ${when}`,
+        body: episode.name ? `${label} — ${episode.name}` : `${label} ${when}.`,
         showId: String(tmdbId),
         url: '/',
       }),
     );
-    await markSent(tmdbId, episode.id, endpoint);
+    await markSent(tmdbId, episode.key, endpoint);
     return 'sent';
   } catch (err) {
     // 404 and 410 are the push service saying this browser is gone for good. Anything else —
-    // a timeout, a 5xx — might work tomorrow, so the subscription stays and no mark is written,
+    // a timeout, a 5xx — might work later, so the subscription stays and no mark is written,
     // which means the next run retries exactly this recipient and nobody else.
     const status = (err as { statusCode?: number }).statusCode;
     if (status === 404 || status === 410) {
@@ -150,12 +173,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   if (!vapidReady()) {
     // Not an error worth failing the schedule over, but it must be loud: with no VAPID keys the
-    // job would otherwise run every day, find episodes, and deliver nothing.
+    // job would otherwise run, find episodes, and deliver nothing.
     console.error('VAPID keys are not set; no notifications can be delivered');
     return res.status(503).json({ error: 'Push is not configured' });
   }
 
+  // Same keys as before, so anything reading the tally still works. `withNewEpisode` now counts
+  // shows with an episode inside anyone's window rather than shows that aired yesterday.
   const tally = { shows: 0, withNewEpisode: 0, sent: 0, skipped: 0, gone: 0, failed: 0 };
+  const now = Date.now();
 
   try {
     const shows = await watchedShows();
@@ -163,17 +189,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await pool(shows, CONCURRENCY, async (tmdbId) => {
       // Per show, so one bad response can't end the run for every other show — the failure mode
-      // the previous version had, where a single throw aborted everything.
+      // the original had, where a single throw aborted everything.
       try {
-        const latest = await latestAired(tmdbId);
-        if (!latest) return;
-        tally.withNewEpisode++;
+        const schedule = await scheduleFor(tmdbId, TMDB_API_KEY);
+        if (!schedule?.episodes.length) return;
 
         const endpoints = await followersOf(tmdbId);
+        let anyDue = false;
+
         for (const endpoint of endpoints) {
-          const outcome = await notifyOne(endpoint, tmdbId, latest.title, latest.episode);
+          // Per follower: the same pair of episodes lands differently for a one-hour lead and a
+          // one-day lead, and on most runs neither is due for either of them.
+          const lead = await getLead(endpoint, tmdbId);
+          const episode = dueFor(schedule.episodes, lead, now);
+          if (!episode) continue;
+          anyDue = true;
+
+          const outcome = await notifyOne(endpoint, tmdbId, schedule.title, episode, now);
           tally[outcome === 'sent' ? 'sent' : outcome === 'skipped' ? 'skipped' : outcome === 'gone' ? 'gone' : 'failed']++;
         }
+
+        if (anyDue) tally.withNewEpisode++;
       } catch (err) {
         tally.failed++;
         console.error(`check failed for show ${tmdbId}`, err);
