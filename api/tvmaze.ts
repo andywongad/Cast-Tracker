@@ -17,7 +17,7 @@ import { json, resolveTvmazeShow, TVMAZE } from './_lib/tvmaze-id.js';
  * so it never runs twice. Rate limit is ~20 calls / 10s per IP, which this stays far inside.
  */
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY;
+const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
 interface CastEntry {
   character: string;

@@ -31,7 +31,7 @@ import { scheduleFor, type ScheduledEpisode } from './_lib/schedule.js';
  * interval; correctness is not.
  */
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY;
+const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
 /** How many shows to check at once. TMDb tolerates far more; TVmaze's ~20 calls/10s is the bound. */
 const CONCURRENCY = 5;

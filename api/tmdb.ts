@@ -10,7 +10,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * as coming from you.
  */
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY || process.env.VITE_TMDB_API_KEY;
+const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB = 'https://api.themoviedb.org/3';
 
 /** Exactly the endpoints src/lib/tmdb.ts calls — nothing else gets through. */
