@@ -4,7 +4,9 @@ import {
   followShowNotifications,
   unfollowShowNotifications,
   followsShowNotifications,
+  homeScreenHint,
   PUSH_CONFIGURED,
+  type HomeScreenHint,
 } from '../lib/notifications';
 import {
   LEAD_PRESETS,
@@ -100,6 +102,88 @@ function BellIcon({ on }: { on: boolean }) {
           round caps aren't clipped by the 19px frame. */}
       {!on && <path d="M19.5 4.5l-15 15" stroke={orange} strokeWidth={1.7} strokeLinecap="round" />}
     </svg>
+  );
+}
+
+/**
+ * Safari's own two buttons, drawn rather than named.
+ *
+ * "Tap Share" is a description of an icon; the icon is the thing on screen. Someone scanning a
+ * toolbar for a square with an arrow coming out of it finds it in a second, and the same person
+ * reading the word can look straight past it — which is what the text-only version was asking
+ * them to do.
+ */
+function IosMenuGlyph() {
+  return (
+    <svg width="22" height="18" viewBox="0 0 24 20" aria-hidden="true" style={{ verticalAlign: '-4px', flex: 'none' }}>
+      <rect x="1" y="1" width="22" height="18" rx="5" fill="none" stroke="var(--icon-muted)" strokeWidth="1.3" />
+      <circle cx="7.5" cy="10" r="1.6" fill="var(--text-secondary)" />
+      <circle cx="12" cy="10" r="1.6" fill="var(--text-secondary)" />
+      <circle cx="16.5" cy="10" r="1.6" fill="var(--text-secondary)" />
+    </svg>
+  );
+}
+
+function IosShareGlyph() {
+  return (
+    <svg width="18" height="20" viewBox="0 0 20 22" fill="none" aria-hidden="true" style={{ verticalAlign: '-4px', flex: 'none' }}>
+      <path d="M10 2.5v10" stroke="var(--text-secondary)" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M6.6 5.6L10 2.2l3.4 3.4" stroke="var(--text-secondary)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M6 8.5H4.6A1.6 1.6 0 003 10.1v8.3a1.6 1.6 0 001.6 1.6h10.8a1.6 1.6 0 001.6-1.6v-8.3a1.6 1.6 0 00-1.6-1.6H14"
+        stroke="var(--text-secondary)"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/**
+ * What to do instead, when the browser cannot subscribe because the app is not installed.
+ *
+ * Shown in place of the lead-time options rather than beside them. Offering a choice and a button
+ * that cannot work, and explaining afterwards, is the ambush this replaces.
+ */
+function HomeScreenSteps({ device }: { device: HomeScreenHint }) {
+  const steps: React.ReactNode[] =
+    device === 'ipad'
+      ? [
+          <>Tap <IosShareGlyph /> in the toolbar at the top</>,
+          <>Choose <strong>Add to Home Screen</strong></>,
+          <>Open Cast Tracker from the new icon and turn alerts on there</>,
+        ]
+      : [
+          <>Tap <IosMenuGlyph /> at the bottom right</>,
+          <>Tap <IosShareGlyph /> <strong>Share</strong></>,
+          <>Choose <strong>Add to Home Screen</strong> — under <strong>View More</strong> if you don&rsquo;t see it</>,
+          <>Open Cast Tracker from the new icon and turn alerts on there</>,
+        ];
+
+  return (
+    <div style={{ margin: '4px 0 2px' }}>
+      <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 12 }}>
+        Alerts on {device === 'ipad' ? 'iPad' : 'iPhone'} only work from the Home Screen — Safari
+        won&rsquo;t allow them in a browser tab.
+      </div>
+      <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {steps.map((step, i) => (
+          <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, color: 'var(--text)', lineHeight: 1.45 }}>
+            <span
+              aria-hidden="true"
+              style={{
+                flex: 'none', width: 20, height: 20, borderRadius: 999, background: 'var(--surface)',
+                border: '1px solid var(--border)', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: 11.5, fontWeight: 700, color: 'var(--text-secondary)',
+              }}
+            >
+              {i + 1}
+            </span>
+            <span>{step}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -237,6 +321,12 @@ function AlertCard({
   const [error, setError] = useState('');
 
   /**
+   * Read once, at mount, not per render: the answer cannot change while the card is open — the
+   * only thing that changes it is installing the app, which closes this tab's world entirely.
+   */
+  const [hint] = useState<HomeScreenHint | null>(homeScreenHint);
+
+  /**
    * Roving tabindex over the options, which is what a radio group is supposed to do: one stop on
    * the way through with Tab, and the arrows move the selection inside it. Without this every
    * option is a tab stop and a keyboard user pages through five of them to reach the buttons.
@@ -334,6 +424,9 @@ function AlertCard({
           about to come on.
         </div>
 
+        {hint && <HomeScreenSteps device={hint} />}
+
+        {!hint && (
         <div
           role="radiogroup"
           aria-labelledby="ct-alert-title"
@@ -356,10 +449,11 @@ function AlertCard({
             onSelect={() => setChoice('custom')}
           />
         </div>
+        )}
 
         {/* Revealed rather than always shown: four presets and two form controls at once is a lot
             of card for a decision most people make by tapping the second row. */}
-        {choice === 'custom' && (
+        {!hint && choice === 'custom' && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '10px 0 2px', paddingLeft: 30 }}>
             <input
               type="number"
@@ -385,7 +479,7 @@ function AlertCard({
             </select>
           </div>
         )}
-        {customInvalid && (
+        {!hint && customInvalid && (
           <div style={{ fontSize: 12.5, color: 'var(--danger)', lineHeight: 1.45, marginTop: 8 }}>
             Choose between 0 minutes and 4 weeks before.
           </div>
@@ -399,6 +493,11 @@ function AlertCard({
           </div>
         )}
 
+        {hint ? (
+          <button onClick={onClose} className="ct-btn-primary ct-btn-primary-calm" style={{ width: '100%', height: 44, marginTop: 18 }}>
+            Got it
+          </button>
+        ) : (
         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
           <button onClick={onClose} className="ct-btn-ghost" style={{ flex: 1, height: 44 }} disabled={busy}>
             Cancel
@@ -412,10 +511,11 @@ function AlertCard({
             {busy ? 'Saving…' : following ? 'Save' : 'Turn on'}
           </button>
         </div>
+        )}
 
         {/* Only when there is something to turn off, and last, because it is the one action here
             that throws away a setting rather than changing it. */}
-        {following && (
+        {following && !hint && (
           <button
             onClick={turnOff}
             disabled={busy}

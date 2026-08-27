@@ -110,6 +110,27 @@ function addToHomeScreenSteps(): string {
     : 'Tap the ⋯ button at the bottom right, then Share, then "Add to Home Screen" — you may need "View More" to see it.';
 }
 
+export type HomeScreenHint = 'iphone' | 'ipad';
+
+/**
+ * Which device's Home Screen instructions to show, or null when there is nothing to explain.
+ *
+ * Exported so the card can say this *before* someone taps Turn on. As an error afterwards it is
+ * an ambush: the options and the button were offered, they were used, and only then does the app
+ * mention that none of it could have worked in a browser tab.
+ *
+ * The absence of PushManager is the test rather than any version sniffing. On Apple's mobile
+ * platforms it is missing exactly when the site is not installed, so this is the condition itself
+ * rather than a guess at it — and everywhere else a missing PushManager means genuinely
+ * unsupported, which is a different message.
+ */
+export function homeScreenHint(): HomeScreenHint | null {
+  if (typeof window === 'undefined') return null;
+  if ('PushManager' in window) return null;
+  if (!isAppleMobile()) return null;
+  return isIPad() ? 'ipad' : 'iphone';
+}
+
 /** Running from the Home Screen rather than in a browser tab. */
 function isInstalled(): boolean {
   try {
