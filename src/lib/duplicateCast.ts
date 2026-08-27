@@ -64,9 +64,17 @@ export function mergeCastRecords(group: CastMember[]): CastMember {
 
   merged.id = keeper.id;
   /**
-   * The newest stamp among the sources, never `Date.now()`. A fresh timestamp would differ on each
-   * device, so every sync would see the other's merge as newer, rewrite it, and hand back a record
-   * that had changed again — a loop with no end state.
+   * The newest stamp among the sources rather than `Date.now()`, so this function alone is
+   * deterministic and two devices merging the same pair produce byte-identical records.
+   *
+   * It does not survive the sync path, and that is worth stating rather than implying otherwise:
+   * `mergeDuplicateCast` has to be called inside a *stamped* `updateData` to get the loser's
+   * tombstone written, and `stampEdits` sees changed content and re-stamps this record with the
+   * local clock. So in practice the merged record carries a fresh, per-device time.
+   *
+   * That still settles, because the merge is not self-triggering. Once a device holds one record
+   * for the actor there is no group to merge, so the newer stamp propagates once and stops. The
+   * determinism that matters — which record survives — is `keeperOf`, which no re-stamping touches.
    */
   merged.editedAt = Math.max(...group.map((c) => c.editedAt ?? 0)) || undefined;
   /**
