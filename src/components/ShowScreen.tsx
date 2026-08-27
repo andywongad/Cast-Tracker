@@ -452,6 +452,30 @@ export default function ShowScreen() {
 
   // Kept for the two empty states, where importing everything is the primary action rather than
   // a shortcut. Same shared code path as tapping a single placeholder.
+  /**
+   * The sticky header's height, published as `--ct-sticky-h` for anything that needs to stick
+   * *below* it — the relationship map's legend, so far.
+   *
+   * Measured rather than hardcoded for the reason given on the header itself: its height changes
+   * with content, so a fixed offset is wrong the moment the rails gain a row or the import button
+   * appears. Observed rather than read once, because the change that matters most — episodes
+   * arriving from TMDb — happens after the first render.
+   */
+  const screenRef = useRef<HTMLDivElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = screenRef.current;
+    if (!root) return;
+    const el = stickyRef.current;
+    // No header on this view: anything sticking below it should sit at the very top instead.
+    if (!el) { root.style.setProperty('--ct-sticky-h', '0px'); return; }
+    const apply = () => root.style.setProperty('--ct-sticky-h', `${el.offsetHeight}px`);
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
+
   const bulkAdd = () => addPeople(missingPeople);
 
   const bulkAddLabel = `+ Add cast from S${currentSeason} E${bulkEp}`;
@@ -461,7 +485,7 @@ export default function ShowScreen() {
     // No top padding. The sticky header carries its own, and 16px of gap between the top bar and
     // a header that is the same colour was reading as nothing but lost cast. Anything that used
     // to lean on this padding sets its own top margin below.
-    <div data-screen-label="Show" style={{ padding: '0 16px 100px' }}>
+    <div ref={screenRef} data-screen-label="Show" style={{ padding: '0 16px 100px' }}>
       {/* Poster, link pills, notifications, caught-up and the redeem link all moved into the
           top bar's ⋯ menu — they cost ~150px above the fold and are all occasional. Only the view
           switch stays inline, because it changes what the whole screen is. */}
@@ -485,7 +509,7 @@ export default function ShowScreen() {
           the button appears only for TMDb-backed shows — and a hardcoded offset would be wrong the
           moment it did. */}
       {(hasSeasons || (gridMode && show.cast.length > 0)) && (
-        <div style={{ position: 'sticky', top: 0, zIndex: 6, background: 'var(--bg)', borderBottom: '1px solid var(--border)', margin: '0 -16px 12px', padding: '4px 16px 8px' }}>
+        <div ref={stickyRef} style={{ position: 'sticky', top: 0, zIndex: 6, background: 'var(--bg)', borderBottom: '1px solid var(--border)', margin: '0 -16px 12px', padding: '4px 16px 8px' }}>
           {/* Rails rather than the two native selects. Those fitted on one row and got iOS's wheel
               picker for free; these cost ~100px more and buy episode titles, scanning, and a
               selection pinned in place while you browse. */}

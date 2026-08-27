@@ -409,24 +409,41 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
             <li>Tap the &times; on a contestant to take them off the map — they move to “Not shown on map” below, where you can add them back</li>
           </ul>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 14, color: 'var(--text-faint)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="15" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /></svg><span>interested in</span></div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13.6s-5.6-3.4-5.6-7.3C2.4 3.9 4.2 2.3 6.3 2.3c1.1 0 2.1.5 2.9 1.4.7-.9 1.7-1.4 2.8-1.4 2.1 0 3.9 1.6 3.9 4 0 3.9-5.6 7.3-5.6 7.3z" fill={MAP_HEART} /></svg><span>mutual</span></div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <MapSizeToggle value={zoom} onChange={setMapZoom} />
-            {hasImportable && <button onClick={importPrevLines} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Import from {episodeOptions[prevIdx]}</button>}
-            {hasLines && (
-              <>
-                <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)' }} />
-                <button onClick={resetLines} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--text-muted)', background: 'none', border: '1px solid transparent', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Reset lines</button>
-              </>
-            )}
-          </div>
-        </div>
       </div>
 
+      {/* Sticky, and a sibling of the board rather than a child of the heading block above it.
+          A sticky element only sticks within its own parent's box, so left in that wrapper it
+          would have unstuck the moment the title scrolled past — which is the whole length of the
+          thing it is meant to stay above.
+
+          `--ct-sticky-h` is the show screen's own sticky header, measured there and published for
+          this. The header's height changes with content, so the offset cannot be a number: the
+          episode rail grows a row when titles arrive, and a hardcoded top would leave this either
+          overlapping the rail or floating below it. */}
+      <div
+        style={{
+          position: 'sticky', top: 'var(--ct-sticky-h, 0px)', zIndex: 5,
+          // Full-bleed, so the board scrolling underneath is covered edge to edge rather than
+          // showing through the screen's 16px gutters.
+          margin: '0 -16px', padding: '6px 16px 8px', background: 'var(--bg)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 14, color: 'var(--text-faint)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="15" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /></svg><span>interested in</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13.6s-5.6-3.4-5.6-7.3C2.4 3.9 4.2 2.3 6.3 2.3c1.1 0 2.1.5 2.9 1.4.7-.9 1.7-1.4 2.8-1.4 2.1 0 3.9 1.6 3.9 4 0 3.9-5.6 7.3-5.6 7.3z" fill={MAP_HEART} /></svg><span>mutual</span></div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <MapSizeToggle value={zoom} onChange={setMapZoom} />
+          {hasImportable && <button onClick={importPrevLines} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Import from {episodeOptions[prevIdx]}</button>}
+          {hasLines && (
+            <>
+              <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)' }} />
+              <button onClick={resetLines} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--text-muted)', background: 'none', border: '1px solid transparent', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Reset lines</button>
+            </>
+          )}
+        </div>
+      </div>
       <div
         ref={viewportRef}
         onPointerDown={onViewportDown}
