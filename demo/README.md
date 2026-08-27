@@ -176,10 +176,19 @@ constraint, which is what makes this work on a phone.
 46. Delete a character on A. It disappears on B rather than coming back.
 
 ### Known gaps to mention to a tester before they find them
-- **Notifications work, with one catch on iPhone.** The bell is beside the show title. On iOS,
-  Safari only permits web push for apps added to the Home Screen — tapping it in a normal Safari
-  tab fails no matter what the server is doing. Add Cast Tracker to the Home Screen first, open it
-  from that icon, then follow a show. Android and desktop have no such rule.
+- **Notifications work, with one catch on iPhone and iPad.** The bell is beside the show title. On
+  iOS, Safari only permits web push for apps added to the Home Screen — tapping it in a normal
+  Safari tab fails no matter what the server is doing. The app now says so and gives the steps for
+  the device it is running on, so a tester who hits it is not stuck:
+  - **iPhone:** ⋯ at the bottom right → Share → "Add to Home Screen" (behind "View More" if it
+    isn't visible).
+  - **iPad:** the Share button in the toolbar at the top → scroll to "Add to Home Screen".
+  - Then open Cast Tracker from that new icon and turn alerts on *there* — the tab and the
+    installed app are the same origin but only the installed one is allowed to subscribe.
+
+  The exact route to Share moves between iOS versions and if the address bar is set to the top;
+  what has not moved is that "Add to Home Screen" is in the Share sheet, below the row of apps.
+  Android and desktop have no such rule.
 - **A lead time cannot be tested to order.** The job runs every fifteen minutes and sends when the
   moment you chose arrives, so nothing happens until an episode of a show you follow is genuinely
   that close. Setting the alert and waiting is the only honest end-to-end test. To check the

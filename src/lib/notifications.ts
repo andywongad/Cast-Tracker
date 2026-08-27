@@ -67,8 +67,47 @@ function isAppleMobile(): boolean {
   if (typeof navigator === 'undefined') return false;
   return (
     /iP(hone|ad|od)/.test(navigator.userAgent) ||
-    (navigator.userAgent.includes('Mac') && navigator.maxTouchPoints > 1)
+    (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1)
   );
+}
+
+/**
+ * iPad, which puts Share in the toolbar along the top and has no bottom menu at all.
+ *
+ * Worth telling apart, because the alternative is sending an iPad user to hunt at the bottom of a
+ * screen where the button is at the top. iPadOS reports a Mac user agent — the touch-point check
+ * is what catches it — while an iPhone says so plainly.
+ */
+function isIPad(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  // First, and not merely for speed: an iPhone's user agent reads "CPU iPhone OS 18_0 like
+  // Mac OS X", so a substring test for Mac matches it, and the touch-point check cannot separate
+  // them. Without this an iPhone is told to look in a toolbar it does not have.
+  if (/iPhone|iPod/.test(ua)) return false;
+  if (/iPad/.test(ua)) return true;
+  // Macintosh, not Mac, for the same reason.
+  return ua.includes('Macintosh') && navigator.maxTouchPoints > 1;
+}
+
+/**
+ * Where "Add to Home Screen" is, on the device actually holding the phone.
+ *
+ * Deliberately anchored on the Share sheet rather than on one version's exact chrome. The route
+ * to Share moved in iOS 18 — into a ⋯ menu, where it used to sit directly in the toolbar — and
+ * the layout moves again if someone puts the address bar back at the top. What has not changed in
+ * a decade is that Add to Home Screen lives in the Share sheet, below the row of apps, sometimes
+ * behind "View More". So the instruction names the destination and gives the common route to it.
+ *
+ * There is no shortcut to offer instead: iOS exposes no URL scheme or API that opens the Share
+ * sheet or triggers this action, and `beforeinstallprompt` — the one-tap install other platforms
+ * have — is Chrome and Android only. Telling someone where to tap is the whole of what is
+ * available.
+ */
+function addToHomeScreenSteps(): string {
+  return isIPad()
+    ? 'Tap the Share button in the toolbar at the top, then scroll down to "Add to Home Screen".'
+    : 'Tap the ⋯ button at the bottom right, then Share, then "Add to Home Screen" — you may need "View More" to see it.';
 }
 
 /** Running from the Home Screen rather than in a browser tab. */
@@ -102,7 +141,8 @@ async function ensureSubscription(): Promise<PushSubscription | null> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     if (isAppleMobile() && !isInstalled()) {
       throw new Error(
-        'On iPhone and iPad, notifications only work from the Home Screen. Tap Share, then "Add to Home Screen", open Cast Tracker from that icon, and try again.',
+        `Notifications on ${isIPad() ? 'iPad' : 'iPhone'} only work from the Home Screen. ` +
+          `${addToHomeScreenSteps()} Then open Cast Tracker from that new icon and turn alerts on there.`,
       );
     }
     throw new Error('Push notifications are not supported in this browser');
