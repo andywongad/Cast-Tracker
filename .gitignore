@@ -11,3 +11,6 @@ tsconfig.tsbuildinfo
 
 # Supabase CLI scratch (version checks, local state)
 supabase/.temp
+
+# graphify: derived knowledge graph, rebuilt on demand
+graphify-out/
