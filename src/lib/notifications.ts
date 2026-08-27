@@ -56,9 +56,55 @@ export async function requestNotificationPermission() {
  * the set of shows it follows now lives on the server, keyed by its endpoint.
  */
 
-/** The browser's existing push subscription, or a new one. Null when the user says no. */
+/**
+ * iOS and iPadOS, where every browser is WebKit underneath and the Home Screen rule applies
+ * whichever one is installed.
+ *
+ * iPadOS reports a Mac user agent, so touch points are what separates it from a desktop Safari
+ * that genuinely cannot do this.
+ */
+function isAppleMobile(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return (
+    /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (navigator.userAgent.includes('Mac') && navigator.maxTouchPoints > 1)
+  );
+}
+
+/** Running from the Home Screen rather than in a browser tab. */
+function isInstalled(): boolean {
+  try {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as unknown as { standalone?: boolean }).standalone === true
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The browser's existing push subscription, or a new one. Null when the user says no.
+ *
+ * The three ways this can be impossible are told apart, because "not supported in this browser"
+ * was true in the narrowest sense and useless in every other: on an iPhone it is the message
+ * shown to someone two taps away from it working, and it reads as a dead end rather than as an
+ * instruction. Safari exposes PushManager only to a site added to the Home Screen, so a normal
+ * tab fails this check no matter what the server does.
+ */
 async function ensureSubscription(): Promise<PushSubscription | null> {
+  // Checked first: service workers are absent outside a secure context, so this would otherwise
+  // surface as "your browser can't do this" to someone whose browser can, over plain http on a
+  // phone pointed at a dev server.
+  if (typeof window !== 'undefined' && !window.isSecureContext) {
+    throw new Error('Notifications need a secure (https) connection. Open the app at casttracker.app.');
+  }
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (isAppleMobile() && !isInstalled()) {
+      throw new Error(
+        'On iPhone and iPad, notifications only work from the Home Screen. Tap Share, then "Add to Home Screen", open Cast Tracker from that icon, and try again.',
+      );
+    }
     throw new Error('Push notifications are not supported in this browser');
   }
   const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
