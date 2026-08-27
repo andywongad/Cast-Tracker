@@ -542,7 +542,15 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
                 <div
                   style={{
                     position: 'absolute', top: 'calc(100% + 4px)', left: '50%', transform: 'translateX(-50%)',
-                    width: 76, fontSize: 12, fontWeight: 700, lineHeight: 1.2, color: 'var(--text)',
+                    width: 76,
+                    /* The board is scaled bodily, so a 12px label comes out at 24px once the
+                       faces double — far larger than anything else on the screen and louder than
+                       the photo it belongs to. Shrunk to 60% at the larger size it lands near
+                       14px on screen: still comfortably readable, and back to captioning the face
+                       rather than competing with it. A smaller label also wraps less, so more
+                       names fit on one line at 2x than at 1x. */
+                    fontSize: zoom > 1 ? 12 * 0.6 : 12,
+                    fontWeight: 700, lineHeight: 1.2, color: 'var(--text)',
                     textAlign: 'center', overflowWrap: 'break-word',
                     display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                   }}
