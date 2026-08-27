@@ -4,6 +4,7 @@ import { useStore } from './useStore';
 import { applyRemote, pull, push, saveCursor } from '../lib/sync';
 import type { AppData } from '../types';
 import { applyResolutions, findDuplicateGroups } from '../lib/duplicateShows';
+import { findCastDuplicates, mergeDuplicateCast } from '../lib/duplicateCast';
 
 /**
  * When sync runs.
@@ -108,6 +109,22 @@ function useSyncEngine() {
        */
       if (findDuplicateGroups(dataRef.current).length) {
         updateData((d) => { applyResolutions(d); });
+      }
+
+      /**
+       * Same person, two ids: the cast-level twin of the show case above, and it appears at the
+       * same moment for a different reason. Selecting an episode auto-loads everyone credited on
+       * it, and each device mints its own id for the same person — harmless while those records
+       * stay disposable, and two records for one person the moment somebody types into each.
+       *
+       * Merged rather than dropped, because both sides hold work: the two copies are usually
+       * disjoint, one carrying a note and the other a nickname. Stamped, like the show
+       * resolution, so the loser's tombstone is written and the other device stops sending it
+       * back. Guarded read-only for the same reason: an unconditional `updateData` re-persists,
+       * which restarts the debounce, which syncs, forever.
+       */
+      if (findCastDuplicates(dataRef.current).length) {
+        updateData((d) => { mergeDuplicateCast(d); });
       }
 
       // Advance past our own writes too, or the next pull hands them straight back.

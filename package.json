@@ -7,9 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "npm run test:sync && npm run test:dupes && npm run test:share && npm run test:auth",
+    "test": "npm run test:sync && npm run test:dupes && npm run test:castdupes && npm run test:share && npm run test:auth",
     "test:sync": "esbuild src/lib/sync.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/sync.test.mjs && node .vite/sync.test.mjs",
     "test:dupes": "esbuild src/lib/duplicateShows.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/dupes.test.mjs && node .vite/dupes.test.mjs",
+    "test:castdupes": "esbuild src/lib/duplicateCast.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/castdupes.test.mjs && node .vite/castdupes.test.mjs",
     "test:share": "esbuild src/lib/shareLink.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/share.test.mjs && node .vite/share.test.mjs",
     "test:auth": "esbuild src/lib/auth.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/auth.test.mjs && node .vite/auth.test.mjs"
   },
