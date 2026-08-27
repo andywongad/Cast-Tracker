@@ -518,14 +518,38 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           const x = isDragging ? dragMove!.x : p.x;
           const y = isDragging ? dragMove!.y : p.y;
           return (
-            <div key={c.id} data-node-id={c.id} onPointerDown={(e) => onNodeDown(c.id, e)} style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, userSelect: 'none', zIndex: isDragging ? 5 : 2, cursor: 'grab', touchAction: 'none' }}>
+            /* The node box is the avatar and nothing else, with the name hung beneath it out of
+               flow. Names wrap now, and if the label were still a flex child every extra line
+               would make the box taller — and because the box is centred on the cell, a two-line
+               name would push its face half a line off the point every relationship line is drawn
+               to. This way one-line and two-line names sit identically. */
+            <div key={c.id} data-node-id={c.id} onPointerDown={(e) => onNodeDown(c.id, e)} style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', userSelect: 'none', zIndex: isDragging ? 5 : 2, cursor: 'grab', touchAction: 'none' }}>
               <div style={{ position: 'relative' }}>
                 <div style={{ width: 44, height: 44, borderRadius: 999, backgroundColor: c.color, border: '2px solid var(--sheet)', boxShadow: '0 0 0 1px var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'rgba(255,255,255,0.85)', overflow: 'hidden', fontSize: 13, ...bgStyle(c.photo, 'cover') }}>
                   {!c.photo && initials(c.name)}
                 </div>
                 <button onPointerDown={(e) => { e.stopPropagation(); toggleHide(c.id); }} aria-label="Remove from map" style={{ position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 999, border: '1px solid var(--border)', background: 'var(--sheet)', color: 'var(--text-muted)', fontSize: 12, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>&times;</button>
+                {/* Wraps to two lines instead of ellipsising at one. At 60px and nowrap, "Shin
+                    Ji-yeon" and "Kang So-yeon" both rendered as "Kang So…" — on a board whose
+                    entire job is telling people apart, the label is the last thing that should
+                    truncate. 76px is wider than the face and still inside the column spacing, so
+                    neighbours cannot run into each other.
+
+                    Two lines is a cap, not a target, and it is deliberate: left to wrap freely a
+                    long name reaches a third line and lands on top of the row below, which is
+                    worse than an ellipsis. Real cast names fit in two at this width; the ones that
+                    don't are the ones you'd shorten by hand anyway. */}
+                <div
+                  style={{
+                    position: 'absolute', top: 'calc(100% + 4px)', left: '50%', transform: 'translateX(-50%)',
+                    width: 76, fontSize: 12, fontWeight: 700, lineHeight: 1.2, color: 'var(--text)',
+                    textAlign: 'center', overflowWrap: 'break-word',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}
+                >
+                  {c.name}
+                </div>
               </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 60 }}>{c.name}</div>
             </div>
           );
         })}
