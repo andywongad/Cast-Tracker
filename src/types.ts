@@ -181,6 +181,8 @@ export interface AppSettings {
   theme: 'Light' | 'Dark' | null;
   showColumns: number;
   castColumns: number;
+  /** Relationship-map scale: 1 for the whole board at once, 2 for faces you can actually read. */
+  mapZoom: number;
   autoSave: boolean;
 }
 

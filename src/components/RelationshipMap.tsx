@@ -14,6 +14,43 @@ function getEpCell(c: CastMember, epKey: string): MapCell | null { return c.mapC
 
 const cellKey = (cell: MapCell) => `${cell.r}:${cell.c}`;
 
+/**
+ * Board size, drawn as the thing it changes: one face, small or large.
+ *
+ * Not the column bars used for the grids — those say "how many across", and this says "how big",
+ * which is a different question on a board whose layout doesn't reflow. Same shape and weight as
+ * that control though, because it sits in the same kind of row and does the same kind of job.
+ */
+function MapSizeToggle({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  return (
+    <div role="group" aria-label="Map size" style={{ display: 'inline-flex', gap: 2, background: 'var(--surface)', borderRadius: 999, padding: 2, flex: 'none' }}>
+      {[1, 2].map((z) => {
+        const active = value === z;
+        return (
+          <button
+            key={z}
+            onClick={() => onChange(z)}
+            aria-label={z === 1 ? 'Fit the whole map' : 'Bigger faces, drag to move around'}
+            aria-pressed={active}
+            title={z === 1 ? 'Fit the whole map' : 'Bigger faces'}
+            style={{
+              width: 30, height: 26, border: 'none', borderRadius: 999, cursor: 'pointer',
+              background: active ? 'var(--accent)' : 'transparent',
+              color: active ? 'var(--accent-text)' : 'var(--icon-muted)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+              transition: 'background 0.15s ease, color 0.15s ease',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
+              <circle cx="7" cy="7" r={z === 1 ? 3.2 : 6} fill="currentColor" />
+            </svg>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Dating-show split: women left, men right, everyone else centred. Falls back to the full width. */
 function colRange(c: CastMember, split: boolean): [number, number] {
   if (!split) return [0, COLS - 1];
@@ -71,8 +108,20 @@ function resolveCells(cast: CastMember[], epKey: string): { byId: Record<string,
 export default function RelationshipMap({ show, seasonCast, currentSeason, episodeOptions, mapHelpOpen, onToggleHelp }: {
   show: Show; seasonCast: CastMember[]; currentSeason: number; episodeOptions: string[]; mapHelpOpen: boolean; onToggleHelp: () => void;
 }) {
-  const { updateData } = useStore();
+  const { updateData, settings, setMapZoom } = useStore();
+  /**
+   * Two refs, and the distinction matters. `viewportRef` is the fixed window you look through;
+   * `containerRef` is the board itself, which at 2x is twice the size of that window and slides
+   * behind it.
+   *
+   * Every coordinate in this file is a percentage of the *board*, so `containerRef` has to stay on
+   * the board for `pctFromClient` to keep working. It does, unchanged, because a scaled element's
+   * `getBoundingClientRect()` reports its on-screen size — the percentages come out right at
+   * either zoom with no arithmetic added anywhere.
+   */
+  const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragMove, setDragMove] = useState<{ id: string; x: number; y: number } | null>(null);
   const [dragRelate, setDragRelate] = useState<{ sourceId: string; x: number; y: number } | null>(null);
   const [lineDrag, setLineDrag] = useState<{ sourceId: string; relId: string; end: 'source' | 'target'; x: number; y: number } | null>(null);
@@ -118,6 +167,50 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   }, [visibleCast, epKey, cellById, rows]);
 
   const containerH = Math.max(260, rows * 46 + 40) * 3;
+
+  /**
+   * Two sizes, not a free zoom. A pinch-zoom range means every session starts at whatever scale it
+   * was left at and nothing is ever quite the same twice; two named sizes are a choice you can
+   * make and remake in one tap, which is how the column controls elsewhere behave.
+   */
+  const zoom = settings.mapZoom === 2 ? 2 : 1;
+
+  /** Kept inside the board's edges, so panning can never strand you on blank surface. */
+  const clampPan = (p: { x: number; y: number }, z: number) => {
+    const el = viewportRef.current;
+    if (!el || z <= 1) return { x: 0, y: 0 };
+    return {
+      x: Math.min(el.clientWidth * (z - 1), Math.max(0, p.x)),
+      y: Math.min(el.clientHeight * (z - 1), Math.max(0, p.y)),
+    };
+  };
+
+  // Going back to 1x has nowhere to pan to, and coming back to 2x should not resume half off-board.
+  useEffect(() => { setPan((p) => clampPan(p, zoom)); }, [zoom]);
+
+  /**
+   * One finger on the background moves the board.
+   *
+   * Nodes claim the same gesture — a drag from a face draws a relationship, a press-and-hold moves
+   * it — and they call `stopPropagation`, so a press that starts on someone never reaches this.
+   * The explicit check covers the rest of the furniture, the hearts especially, which delete on
+   * click and would otherwise fire at the end of a pan.
+   */
+  const onViewportDown = (e: React.PointerEvent) => {
+    if (zoom <= 1) return;
+    if ((e.target as HTMLElement).closest('[data-node-id]')) return;
+    const startX = e.clientX, startY = e.clientY;
+    const from = pan;
+    const onMove = (ev: PointerEvent) => {
+      setPan(clampPan({ x: from.x - (ev.clientX - startX), y: from.y - (ev.clientY - startY) }, zoom));
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  };
 
   const pctFromClient = (clientX: number, clientY: number) => {
     const el = containerRef.current;
@@ -311,6 +404,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           <ul style={{ margin: '0 0 8px', padding: '0 0 0 14px', fontSize: 14, color: 'var(--text-faint)', lineHeight: 1.4, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <li>Drag from one contestant to another to show interest — the line starts at the person who's interested</li>
             <li>Press and hold a contestant to reposition them</li>
+            {zoom > 1 && <li>Drag the background to move around the map</li>}
             <li>Drag a line's end to reconnect it, or drop it away from everyone to delete</li>
             <li>Tap the &times; on a contestant to take them off the map — they move to “Not shown on map” below, where you can add them back</li>
           </ul>
@@ -321,6 +415,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13.6s-5.6-3.4-5.6-7.3C2.4 3.9 4.2 2.3 6.3 2.3c1.1 0 2.1.5 2.9 1.4.7-.9 1.7-1.4 2.8-1.4 2.1 0 3.9 1.6 3.9 4 0 3.9-5.6 7.3-5.6 7.3z" fill={MAP_HEART} /></svg><span>mutual</span></div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <MapSizeToggle value={zoom} onChange={setMapZoom} />
             {hasImportable && <button onClick={importPrevLines} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Import from {episodeOptions[prevIdx]}</button>}
             {hasLines && (
               <>
@@ -332,7 +427,25 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
         </div>
       </div>
 
-      <div ref={containerRef} style={{ position: 'relative', width: '100%', height: containerH, border: '1px solid var(--border)', borderRadius: 16, background: 'var(--surface)', overflow: 'hidden' }}>
+      <div
+        ref={viewportRef}
+        onPointerDown={onViewportDown}
+        style={{
+          position: 'relative', width: '100%', height: containerH, border: '1px solid var(--border)',
+          borderRadius: 16, background: 'var(--surface)', overflow: 'hidden',
+          // Only at 2x: at 1x there is nothing to pan, and swallowing touch would take the page's
+          // own scroll away from a board that fits on screen.
+          touchAction: zoom > 1 ? 'none' : undefined,
+          cursor: zoom > 1 ? 'grab' : undefined,
+        }}
+      >
+      <div
+        ref={containerRef}
+        style={{
+          position: 'absolute', inset: 0, transformOrigin: '0 0',
+          transform: `translate(${-pan.x}px, ${-pan.y}px) scale(${zoom})`,
+        }}
+      >
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
           <defs>
             <marker id="relArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill={MAP_LINE} /></marker>
@@ -399,6 +512,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
             </div>
           );
         })}
+      </div>
       </div>
 
       {hiddenCast.length > 0 && (

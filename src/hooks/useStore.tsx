@@ -43,6 +43,7 @@ interface StoreValue {
   setTheme: (t: 'Light' | 'Dark') => void;
   setShowColumns: (n: number) => void;
   setCastColumns: (n: number) => void;
+  setMapZoom: (n: number) => void;
   setAutoSave: (enabled: boolean) => void;
   exportBackup: () => Backup;
   /** How many of a show's records were auto-loaded and still hold nothing of the user's. */
@@ -116,6 +117,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const setTheme = useCallback((t: 'Light' | 'Dark') => persistSettingsPatch({ theme: t }), [persistSettingsPatch]);
   const setShowColumns = useCallback((n: number) => persistSettingsPatch({ showColumns: n }), [persistSettingsPatch]);
   const setCastColumns = useCallback((n: number) => persistSettingsPatch({ castColumns: n }), [persistSettingsPatch]);
+  const setMapZoom = useCallback((n: number) => persistSettingsPatch({ mapZoom: n }), [persistSettingsPatch]);
   const setAutoSave = useCallback((enabled: boolean) => persistSettingsPatch({ autoSave: enabled }), [persistSettingsPatch]);
 
   const [backupState, setBackupState] = useState<storage.BackupState>(() => storage.loadBackupState());
@@ -255,10 +257,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [data]);
 
   const value = useMemo<StoreValue>(() => ({
-    data, settings, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave,
+    data, settings, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setMapZoom, setAutoSave,
     exportBackup, importBackup, resetAll, clearEverywhere, pushRecent, showById, shareShow, shareCast,
     backupState, dismissBackupNudge, disposableCount, clearDisposable, keptTotal, storageFailed,
-  }), [keptTotal, storageFailed, data, settings, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setAutoSave, exportBackup, importBackup, resetAll, clearEverywhere, pushRecent, showById, shareShow, shareCast, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
+  }), [keptTotal, storageFailed, data, settings, recentShows, updateData, setTheme, setShowColumns, setCastColumns, setMapZoom, setAutoSave, exportBackup, importBackup, resetAll, clearEverywhere, pushRecent, showById, shareShow, shareCast, backupState, dismissBackupNudge, disposableCount, clearDisposable]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
