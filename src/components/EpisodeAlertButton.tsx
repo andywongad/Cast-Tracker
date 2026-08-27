@@ -184,6 +184,11 @@ export default function EpisodeAlertButton({
           flex: 'none', width: 32, height: 32, marginLeft: 6, padding: 0,
           border: 'none', background: 'transparent', borderRadius: 999, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          // Optically aligned rather than centred. Flex centres the 32px box against the heading's
+          // line box, but the bell's visual mass sits above its own centre — the clapper is a thin
+          // tail — so geometric centring reads as riding high next to the title's x-height.
+          // `relative` so the nudge costs no layout.
+          position: 'relative', top: 2,
         }}
       >
         <BellIcon on={following} />
