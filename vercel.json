@@ -1,14 +1,14 @@
 {
   "redirects": [
     {
-      "source": "/:path*",
+      "source": "/:path(.*)",
       "has": [
         {
           "type": "host",
           "value": "cast-tracker-m8g3.vercel.app"
         }
       ],
-      "destination": "https://casttracker.app/:path*",
+      "destination": "https://casttracker.app/:path",
       "permanent": true
     }
   ],
