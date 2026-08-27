@@ -317,14 +317,42 @@ const provider = (p: { provider_name?: string; logo_path?: string | null }): Wat
   logo: p.logo_path ? `https://image.tmdb.org/t/p/w45${p.logo_path}` : null,
 });
 
+/**
+ * The ad-supported tier of a service someone already thinks of as one thing.
+ *
+ * Reacher comes back as "Amazon Prime Video", "Amazon Prime Video with Ads" and "Amazon Prime
+ * Video Free with Ads" — three providers with three ids, across two categories, which render as
+ * three chips saying the same brand. Nobody reading the card is choosing between them.
+ *
+ * Only the tier suffix is stripped, and only to compare. "Paramount+ Amazon Channel" and
+ * "Paramount+" are deliberately left as two: that one really is a different subscription, and
+ * collapsing it would tell someone they have a service they do not.
+ */
+const AD_TIER = /\s+(free\s+)?(with ads|basic with ads|standard with ads)$/i;
+
 export async function getWatchProviders(tmdbId: number, region = watchRegion()): Promise<WatchOptions | null> {
   const data = await get<{ results?: Record<string, any> }>(`/tv/${tmdbId}/watch/providers`);
   const forRegion = data?.results?.[region];
   if (!forRegion) return null;
 
+  /**
+   * One entry per service, first listing wins. `flatrate` is read before the free and ad-supported
+   * lists, so the plain name is the one kept and the tier variants drop out behind it — and a
+   * service that only appears as an ad tier keeps its full name, because there "with Ads" is the
+   * useful part rather than noise.
+   */
+  const seen = new Set<string>();
+  const take = (list: unknown[] | undefined): WatchProvider[] =>
+    (list || []).map((p) => provider(p as { provider_name?: string; logo_path?: string | null })).filter((p) => {
+      const key = p.name.replace(AD_TIER, '').trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
   return {
-    stream: (forRegion.flatrate || []).map(provider),
-    free: [...(forRegion.free || []), ...(forRegion.ads || [])].map(provider),
+    stream: take(forRegion.flatrate),
+    free: take([...(forRegion.free || []), ...(forRegion.ads || [])]),
     buyOnly:
       !(forRegion.flatrate || []).length &&
       !(forRegion.free || []).length &&
