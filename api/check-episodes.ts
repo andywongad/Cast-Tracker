@@ -180,6 +180,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Same keys as before, so anything reading the tally still works. `withNewEpisode` now counts
   // shows with an episode inside anyone's window rather than shows that aired yesterday.
+  // `failed` covers both a delivery that failed and a schedule that could not be looked up at
+  // all, so `failed === shows` reads as "the upstream refused everything" rather than as calm.
   const tally = { shows: 0, withNewEpisode: 0, sent: 0, skipped: 0, gone: 0, failed: 0 };
   const now = Date.now();
 
@@ -191,7 +193,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Per show, so one bad response can't end the run for every other show — the failure mode
       // the original had, where a single throw aborted everything.
       try {
-        const schedule = await scheduleFor(tmdbId, TMDB_API_KEY);
+        const { schedule, reason } = await scheduleFor(tmdbId, TMDB_API_KEY);
+        if (reason) {
+          // Counted, not swallowed. This is the path a revoked or rate-limited TMDb key takes,
+          // and it used to return here silently — leaving a run where every lookup was refused
+          // indistinguishable from a night when nothing aired. `failed` climbing to match
+          // `shows` is what makes that legible.
+          tally.failed++;
+          console.error(`schedule lookup failed for show ${tmdbId}: ${reason}`);
+          return;
+        }
         if (!schedule?.episodes.length) return;
 
         const endpoints = await followersOf(tmdbId);

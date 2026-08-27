@@ -36,6 +36,20 @@ export interface ShowSchedule {
   episodes: ScheduledEpisode[];
 }
 
+/**
+ * A schedule, or the reason there isn't one.
+ *
+ * The distinction is the point. `schedule: null, reason: null` means the show has nothing to
+ * report, which is the normal outcome on most nights. A non-null `reason` means an upstream
+ * refused to answer, which is a fault — and one that looked identical to a quiet night for as
+ * long as this returned a bare `ShowSchedule | null`. A revoked TMDb key made every show take
+ * that path and the run still reported `ok: true`. Mirrors `Resolved.reason` in tvmaze-id.ts.
+ */
+export interface ScheduleResult {
+  schedule: ShowSchedule | null;
+  reason: 'tmdb-lookup-failed' | null;
+}
+
 /** A TVmaze id, once found, is permanent. The negative answer is not, so it is kept briefly. */
 const ID_TTL_SECONDS = 60 * 60 * 24 * 30;
 const NO_MATCH_TTL_SECONDS = 60 * 60 * 24;
@@ -81,7 +95,7 @@ function fromTvmaze(ep: any, exact = true): ScheduledEpisode | null {
  * either, depending on which side of the airstamp the run lands on. The caller decides — this only
  * reports what exists.
  */
-export async function scheduleFor(tmdbId: number, tmdbKey: string): Promise<ShowSchedule | null> {
+export async function scheduleFor(tmdbId: number, tmdbKey: string): Promise<ScheduleResult> {
   const tvmazeId = await tvmazeIdFor(tmdbId, tmdbKey);
 
   if (tvmazeId) {
@@ -90,8 +104,11 @@ export async function scheduleFor(tmdbId: number, tmdbKey: string): Promise<Show
       const next = fromTvmaze(show._embedded?.nextepisode);
       const prev = fromTvmaze(show._embedded?.previousepisode);
       return {
-        title: show.name || 'A show you follow',
-        episodes: [next, prev].filter((e): e is ScheduledEpisode => !!e),
+        schedule: {
+          title: show.name || 'A show you follow',
+          episodes: [next, prev].filter((e): e is ScheduledEpisode => !!e),
+        },
+        reason: null,
       };
     }
   }
@@ -101,7 +118,10 @@ export async function scheduleFor(tmdbId: number, tmdbKey: string): Promise<Show
   const data = await json<any>(
     `https://api.themoviedb.org/3/tv/${tmdbId}?${new URLSearchParams({ api_key: tmdbKey })}`,
   );
-  if (!data) return null;
+  // Both upstreams gave nothing: TVmaze could not be reached or had no match, and TMDb — the
+  // fallback that is supposed to always answer — returned nothing either. Report it as a fault
+  // rather than as a show with no episodes.
+  if (!data) return { schedule: null, reason: 'tmdb-lookup-failed' };
 
   const episodes: ScheduledEpisode[] = [];
   for (const raw of [data.next_episode_to_air, data.last_episode_to_air]) {
@@ -118,5 +138,5 @@ export async function scheduleFor(tmdbId: number, tmdbKey: string): Promise<Show
     });
   }
 
-  return { title: data.name || 'A show you follow', episodes };
+  return { schedule: { title: data.name || 'A show you follow', episodes }, reason: null };
 }
