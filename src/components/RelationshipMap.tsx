@@ -14,43 +14,6 @@ function getEpCell(c: CastMember, epKey: string): MapCell | null { return c.mapC
 
 const cellKey = (cell: MapCell) => `${cell.r}:${cell.c}`;
 
-/**
- * Board size, drawn as the thing it changes: one face, small or large.
- *
- * Not the column bars used for the grids — those say "how many across", and this says "how big",
- * which is a different question on a board whose layout doesn't reflow. Same shape and weight as
- * that control though, because it sits in the same kind of row and does the same kind of job.
- */
-function MapSizeToggle({ value, onChange }: { value: number; onChange: (n: number) => void }) {
-  return (
-    <div role="group" aria-label="Map size" style={{ display: 'inline-flex', gap: 2, background: 'var(--surface)', borderRadius: 999, padding: 2, flex: 'none' }}>
-      {[1, 2].map((z) => {
-        const active = value === z;
-        return (
-          <button
-            key={z}
-            onClick={() => onChange(z)}
-            aria-label={z === 1 ? 'Fit the whole map' : 'Bigger faces, drag to move around'}
-            aria-pressed={active}
-            title={z === 1 ? 'Fit the whole map' : 'Bigger faces'}
-            style={{
-              width: 30, height: 26, border: 'none', borderRadius: 999, cursor: 'pointer',
-              background: active ? 'var(--accent)' : 'transparent',
-              color: active ? 'var(--accent-text)' : 'var(--icon-muted)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-              transition: 'background 0.15s ease, color 0.15s ease',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
-              <circle cx="7" cy="7" r={z === 1 ? 3.2 : 6} fill="currentColor" />
-            </svg>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 /** Dating-show split: women left, men right, everyone else centred. Falls back to the full width. */
 function colRange(c: CastMember, split: boolean): [number, number] {
   if (!split) return [0, COLS - 1];
@@ -122,6 +85,15 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  /**
+   * Every finger currently on the board, so a second one can be noticed the moment it lands.
+   *
+   * A ref rather than state: these change on every move event and nothing renders from them
+   * directly — putting them in state would re-render the whole board on each frame of a pinch.
+   */
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  /** Finger separation when the pinch began, or null when fewer than two are down. */
+  const pinchFrom = useRef<number | null>(null);
   const [dragMove, setDragMove] = useState<{ id: string; x: number; y: number } | null>(null);
   const [dragRelate, setDragRelate] = useState<{ sourceId: string; x: number; y: number } | null>(null);
   const [lineDrag, setLineDrag] = useState<{ sourceId: string; relId: string; end: 'source' | 'target'; x: number; y: number } | null>(null);
@@ -188,6 +160,55 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   // Going back to 1x has nowhere to pan to, and coming back to 2x should not resume half off-board.
   useEffect(() => { setPan((p) => clampPan(p, zoom)); }, [zoom]);
 
+  const spread = () => {
+    const [a, b] = [...pointers.current.values()];
+    return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+  };
+
+  /**
+   * Pinch to shrink, spread to enlarge — between the same two sizes, not a free zoom.
+   *
+   * The thresholds are deliberately far apart and asymmetric. A gesture has to change the
+   * separation by a third before anything happens, so the small drift of two fingers that were
+   * only meant to scroll never resizes the board; and once it fires the starting distance resets,
+   * so a long gesture cannot chatter between sizes on its way.
+   */
+  const onPointerMoveViewport = (e: React.PointerEvent) => {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size !== 2 || pinchFrom.current === null) return;
+
+    const ratio = spread() / pinchFrom.current;
+    if (ratio > 1.33 && zoom !== 2) { setMapZoom(2); pinchFrom.current = spread(); }
+    else if (ratio < 0.75 && zoom !== 1) { setMapZoom(1); pinchFrom.current = spread(); }
+  };
+
+  const releasePointer = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) pinchFrom.current = null;
+  };
+
+  /**
+   * The same gesture on a laptop. A trackpad pinch arrives as a wheel event with ctrlKey set —
+   * that is how browsers have reported it for years — and ctrl+wheel on a mouse is the same
+   * convention. Without this, removing the button would have left anyone without a touchscreen
+   * no way to change the size at all.
+   *
+   * Registered by hand because it has to be non-passive: React attaches wheel listeners passively,
+   * where preventDefault is ignored and the browser zooms the whole page instead.
+   */
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return; // a plain wheel still scrolls the page past the map
+      e.preventDefault();
+      setMapZoom(e.deltaY < 0 ? 2 : 1);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [setMapZoom]);
+
   /**
    * One finger on the background moves the board.
    *
@@ -197,11 +218,18 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
    * click and would otherwise fire at the end of a pan.
    */
   const onViewportDown = (e: React.PointerEvent) => {
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // The second finger turns whatever was happening into a pinch. Recording the separation here
+    // is what makes the gesture relative to where it started rather than to some absolute size.
+    if (pointers.current.size === 2) { pinchFrom.current = spread(); return; }
     if (zoom <= 1) return;
     if ((e.target as HTMLElement).closest('[data-node-id]')) return;
     const startX = e.clientX, startY = e.clientY;
     const from = pan;
     const onMove = (ev: PointerEvent) => {
+      // A pan that a second finger has turned into a pinch must stop moving the board, or the
+      // map slides away underneath the gesture that was only meant to resize it.
+      if (pointers.current.size >= 2) return;
       setPan(clampPan({ x: from.x - (ev.clientX - startX), y: from.y - (ev.clientY - startY) }, zoom));
     };
     const onUp = () => {
@@ -404,6 +432,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           <ul style={{ margin: '0 0 8px', padding: '0 0 0 14px', fontSize: 14, color: 'var(--text-faint)', lineHeight: 1.4, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <li>Drag from one contestant to another to show interest — the line starts at the person who's interested</li>
             <li>Press and hold a contestant to reposition them</li>
+            <li>Spread two fingers to make the map bigger, pinch to fit it back on screen</li>
             {zoom > 1 && <li>Drag the background to move around the map</li>}
             <li>Drag a line's end to reconnect it, or drop it away from everyone to delete</li>
             <li>Tap the &times; on a contestant to take them off the map — they move to “Not shown on map” below, where you can add them back</li>
@@ -434,7 +463,6 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13.6s-5.6-3.4-5.6-7.3C2.4 3.9 4.2 2.3 6.3 2.3c1.1 0 2.1.5 2.9 1.4.7-.9 1.7-1.4 2.8-1.4 2.1 0 3.9 1.6 3.9 4 0 3.9-5.6 7.3-5.6 7.3z" fill={MAP_HEART} /></svg><span>mutual</span></div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <MapSizeToggle value={zoom} onChange={setMapZoom} />
           {hasImportable && <button onClick={importPrevLines} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Import from {episodeOptions[prevIdx]}</button>}
           {hasLines && (
             <>
@@ -447,12 +475,19 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
       <div
         ref={viewportRef}
         onPointerDown={onViewportDown}
+        onPointerMove={onPointerMoveViewport}
+        onPointerUp={releasePointer}
+        onPointerCancel={releasePointer}
+        onPointerLeave={releasePointer}
         style={{
           position: 'relative', width: '100%', height: containerH, border: '1px solid var(--border)',
           borderRadius: 16, background: 'var(--surface)', overflow: 'hidden',
-          // Only at 2x: at 1x there is nothing to pan, and swallowing touch would take the page's
-          // own scroll away from a board that fits on screen.
-          touchAction: zoom > 1 ? 'none' : undefined,
+          /* At the larger size the board takes the whole gesture, because one finger pans it.
+             At the fitted size it gives vertical scrolling back to the page — the board is taller
+             than the screen and being unable to scroll past it would be worse than any gesture —
+             while still denying the browser its own pinch-zoom, which is what leaves the two
+             fingers for this to read. */
+          touchAction: zoom > 1 ? 'none' : 'pan-y',
           cursor: zoom > 1 ? 'grab' : undefined,
         }}
       >
