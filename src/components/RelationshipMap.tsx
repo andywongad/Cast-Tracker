@@ -14,6 +14,48 @@ function getEpCell(c: CastMember, epKey: string): MapCell | null { return c.mapC
 
 const cellKey = (cell: MapCell) => `${cell.r}:${cell.c}`;
 
+/**
+ * Board size, drawn as the thing it changes: one face, small or large.
+ *
+ * Not the column bars used for the grids — those say "how many across", and this says "how big",
+ * which is a different question on a board whose layout doesn't reflow. Same shape and weight as
+ * that control though, because it sits in the same kind of row and does the same kind of job.
+ *
+ * Sits alongside the pinch gesture rather than instead of it. A gesture is the natural reach on a
+ * phone and invisible everywhere else: nothing on screen says the second size exists, or which one
+ * you are in. These two buttons answer both, and cost one tap for anyone who would rather not
+ * pinch at all.
+ */
+function MapSizeToggle({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  return (
+    <div role="group" aria-label="Map size" style={{ display: 'inline-flex', gap: 2, background: 'var(--surface)', borderRadius: 999, padding: 2, flex: 'none' }}>
+      {[1, 2].map((z) => {
+        const active = value === z;
+        return (
+          <button
+            key={z}
+            onClick={() => onChange(z)}
+            aria-label={z === 1 ? 'Fit the whole map' : 'Bigger faces, drag to move around'}
+            aria-pressed={active}
+            title={z === 1 ? 'Fit the whole map' : 'Bigger faces'}
+            style={{
+              width: 30, height: 26, border: 'none', borderRadius: 999, cursor: 'pointer',
+              background: active ? 'var(--accent)' : 'transparent',
+              color: active ? 'var(--accent-text)' : 'var(--icon-muted)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+              transition: 'background 0.15s ease, color 0.15s ease',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
+              <circle cx="7" cy="7" r={z === 1 ? 3.2 : 6} fill="currentColor" />
+            </svg>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Dating-show split: women left, men right, everyone else centred. Falls back to the full width. */
 function colRange(c: CastMember, split: boolean): [number, number] {
   if (!split) return [0, COLS - 1];
@@ -432,7 +474,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           <ul style={{ margin: '0 0 8px', padding: '0 0 0 14px', fontSize: 14, color: 'var(--text-faint)', lineHeight: 1.4, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <li>Drag from one contestant to another to show interest — the line starts at the person who's interested</li>
             <li>Press and hold a contestant to reposition them</li>
-            <li>Spread two fingers to make the map bigger, pinch to fit it back on screen</li>
+            <li>Tap the circles, or spread two fingers, to make the map bigger — pinch to fit it back on screen</li>
             {zoom > 1 && <li>Drag the background to move around the map</li>}
             <li>Drag a line's end to reconnect it, or drop it away from everyone to delete</li>
             <li>Tap the &times; on a contestant to take them off the map — they move to “Not shown on map” below, where you can add them back</li>
@@ -463,6 +505,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13.6s-5.6-3.4-5.6-7.3C2.4 3.9 4.2 2.3 6.3 2.3c1.1 0 2.1.5 2.9 1.4.7-.9 1.7-1.4 2.8-1.4 2.1 0 3.9 1.6 3.9 4 0 3.9-5.6 7.3-5.6 7.3z" fill={MAP_HEART} /></svg><span>mutual</span></div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <MapSizeToggle value={zoom} onChange={setMapZoom} />
           {hasImportable && <button onClick={importPrevLines} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Import from {episodeOptions[prevIdx]}</button>}
           {hasLines && (
             <>
