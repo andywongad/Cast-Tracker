@@ -50,7 +50,15 @@ type Layer =
   | { k: 'share' }
   | { k: 'webView'; url: string; label: string }
   /** The previous episode's recap. Carries which episode it is *about*, not the one you're on. */
-  | { k: 'recap'; season: number; episode: number };
+  | { k: 'recap'; season: number; episode: number }
+  /**
+   * The characters in one show that carry something the user wrote.
+   *
+   * Holds its own showId rather than reading `activeShowId`, because it opens from a tile on the
+   * home screen where no show is active. That is also why it is a layer at all: it can sit at the
+   * bottom of the stack with nothing under it.
+   */
+  | { k: 'noted'; showId: string };
 
 /** Namespaced so anything else that lands in history.state is left alone. */
 const STATE_KEY = 'ct.nav';
@@ -99,6 +107,13 @@ interface UIValue {
   castDetailId: string | null;
   openCastDetail: (id: string) => void;
   closeCastDetail: () => void;
+  /** Opens a character on its show screen, from somewhere that isn't that show. */
+  openCastDetailInShow: (showId: string, castId: string) => void;
+
+  /** Which show's noted characters are listed, or null when the list is closed. */
+  notedShowId: string | null;
+  openNoted: (showId: string) => void;
+  closeNoted: () => void;
 
   settingsOpen: boolean;
   openSettings: () => void;
@@ -168,6 +183,8 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     const out: Layer[] = [];
     for (const l of stack) {
       if (l.k === 'show' && !shows.some((s) => s.id === l.id)) continue;
+      // Same rule as a show layer: a list of one show's notes is meaningless once it is deleted.
+      if (l.k === 'noted' && !shows.some((s) => s.id === l.showId)) continue;
       // A character sheet is meaningless without the show it belongs to.
       if (l.k === 'castDetail') {
         const showLayer = lastOf(out, 'show');
@@ -297,6 +314,23 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const openRecap = useCallback((season: number, episode: number) => push({ k: 'recap', season, episode }), [push]);
   const closeRecap = useCallback(() => pop(), [pop]);
 
+  const openNoted = useCallback((showId: string) => push({ k: 'noted', showId }), [push]);
+  const closeNoted = useCallback(() => pop(), [pop]);
+
+  /**
+   * Jump straight from the noted list to one character, on the show screen.
+   *
+   * One `apply` rather than close-then-open-then-open. Chained calls would work — `apply` writes
+   * `stackRef` synchronously, so each push sees the last — but they would also write three history
+   * entries' worth of intent for what is one move, and the pendingPop swap only covers the first
+   * of them. Building the stack the destination needs, in one go, is both simpler and the right
+   * history shape: back from the character returns to the show, and back again to where you were.
+   */
+  const openCastDetailInShow = useCallback((showId: string, castId: string) => {
+    pendingPop.current = false;
+    apply([{ k: 'show', id: showId }, { k: 'castDetail', id: castId }], 'push');
+  }, [apply]);
+
   // Every flag the app used to hold separately is now read off the stack, so there is exactly one
   // source of truth for what's on screen and it's the same one the back gesture manipulates.
   const derived = useMemo(() => {
@@ -306,6 +340,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     const castDetail = lastOf(stack, 'castDetail');
     const webViewLayer = lastOf(stack, 'webView');
     const recapLayer = lastOf(stack, 'recap');
+    const notedLayer = lastOf(stack, 'noted');
     return {
       screen: (showLayer ? 'show' : 'home') as 'home' | 'show',
       activeShowId: showLayer?.id ?? null,
@@ -323,6 +358,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       shareOpen: stack.some((l) => l.k === 'share'),
           webView: { open: !!webViewLayer, url: webViewLayer?.url ?? '', label: webViewLayer?.label ?? '' },
       recap: { open: !!recapLayer, season: recapLayer?.season ?? 0, episode: recapLayer?.episode ?? 0 },
+      notedShowId: notedLayer?.showId ?? null,
     };
   }, [stack]);
 
@@ -345,13 +381,14 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
     shareSheet: derived.shareOpen ? shareData : null, openShareSheet, closeShareSheet,
     webView: derived.webView, openWebView, closeWebView,
     recap: derived.recap, openRecap, closeRecap,
+    notedShowId: derived.notedShowId, openNoted, closeNoted, openCastDetailInShow,
   }), [derived, query, addShowPrefill, converterPrefill, shareData,
       openShow, goHome, resetToHome, openAddShow, openEditShow, closeAddShow,
       openAddCast, openEditCast, closeAddCast, openCastDetail, closeCastDetail,
       openSettings, closeSettings, openAuth, closeAuth, openDuplicates, closeDuplicates, openPrivacy, closePrivacy, openShowMenu, closeShowMenu,
       openFeedback, closeFeedback, openConverter, closeConverter, openTranslator, closeTranslator,
       openShareSheet, closeShareSheet, openWebView, closeWebView,
-      openRecap, closeRecap]);
+      openRecap, closeRecap, openNoted, closeNoted, openCastDetailInShow]);
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }

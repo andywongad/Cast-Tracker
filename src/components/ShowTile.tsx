@@ -6,7 +6,7 @@ import { useStore } from '../hooks/useStore';
 import CardActions from './CardActions';
 
 export function ShowTile({ show, columns, done = false }: { show: Show; columns: number; done?: boolean }) {
-  const { openShow, openEditShow, openShareSheet } = useUI();
+  const { openShow, openEditShow, openShareSheet, openNoted } = useUI();
   const { shareShow } = useStore();
   /**
    * How many of these people carry something the user wrote.
@@ -34,36 +34,17 @@ export function ShowTile({ show, columns, done = false }: { show: Show; columns:
   return (
     /* A button, not a div with a click handler. It was unreachable by keyboard and announced as
        nothing — the largest, most obvious target on the home screen, invisible to anyone not using
-       a mouse. The accessible name is built here because the visible text is split across a badge
-       and a title, which reads as unrelated fragments otherwise. It names what is actually on the
-       tile: the type badge that used to be announced here is no longer shown to anyone. */
+       a mouse. Its name is now just the title and its state: the badges that used to be read out
+       as part of it have moved outside, and the noted one announces itself. */
     <div style={{ position: 'relative' }}>
     <button
       type="button"
       onClick={() => openShow(show.id)}
-      aria-label={`${show.title}${noted ? `, ${noted} with your notes` : ''}${done ? ', completed' : ''}`}
+      aria-label={`${show.title}${done ? ', completed' : ''}`}
       style={{ position: 'relative', display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--text)', background: 'none', border: 'none', padding: 0, borderRadius: 18 }}
     >
       <div style={{ position: 'relative', aspectRatio: '1', borderRadius: 18, overflow: 'hidden', backgroundColor: show.color, opacity: done ? 0.75 : 1, ...bgStyle(show.poster) }}>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(150deg, rgba(255,255,255,0.14), rgba(0,0,0,0.32))' }} />
-        {/* Top-left, and only what is worth covering artwork for.
-
-            The count used to sit bottom-left, which is where a poster prints its own title — it
-            was over REACHER, over SINGLE'S INFERNO. The type badge that used to be here said
-            SCRIPTED or REALITY, which is taxonomy the owner of the library already knows: it
-            drives real behaviour on the show screen, but nothing on this one filters or sorts by
-            it, and ShowMenuSheet already names it where it can also be changed.
-
-            So the corner carries state instead of category, and a show with nothing written in it
-            carries nothing at all — most tiles come back to being just the poster. */}
-        <div style={{ position: 'absolute', top: 10, left: 10, maxWidth: 'calc(100% - 74px)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          {done && (
-            <span style={{ flex: 'none', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.92)', background: 'rgba(0,0,0,0.28)', padding: '4px 8px', borderRadius: 999, whiteSpace: 'nowrap' }}>DONE</span>
-          )}
-          {noted > 0 && (
-            <span style={{ flex: 'none', fontSize: 12.5, fontWeight: 600, color: '#fff', background: 'rgba(0,0,0,0.45)', padding: '3px 8px', borderRadius: 999, backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', whiteSpace: 'nowrap' }}>{notedLabel}</span>
-          )}
-        </div>
         {!show.poster && <span style={{ position: 'absolute', right: 8, bottom: 6, fontSize: 60, fontWeight: 800, color: 'rgba(255,255,255,0.16)', lineHeight: 0.7 }}>{initials(show.title)}</span>}
         {/* Dropped to where the count used to sit, now that it has vacated. */}
         {caughtUpVisible && (
@@ -73,7 +54,32 @@ export function ShowTile({ show, columns, done = false }: { show: Show; columns:
       <div style={{ marginTop: 9, fontSize: 15, fontWeight: 700, lineHeight: 1.2 }}>{show.title}</div>
     </button>
     {/* Outside the button: a button inside a button is invalid, and nesting them made these two
-        unreachable by keyboard as well. */}
+        unreachable by keyboard as well. The badges below are here for the same reason — the noted
+        one is now a control in its own right, and it sits over the poster, so it has to be a
+        sibling of the tile rather than a child of it.
+
+        Top-left, and only what is worth covering artwork for. The count used to sit bottom-left,
+        which is where a poster prints its own title — it was over REACHER, over SINGLE'S INFERNO.
+        The type badge that used to be here said SCRIPTED or REALITY, which is taxonomy the owner
+        of the library already knows: it drives real behaviour on the show screen, but nothing on
+        this one filters or sorts by it, and ShowMenuSheet already names it where it can also be
+        changed. So the corner carries state instead of category, and a show with nothing written
+        in it carries nothing at all. */}
+    <div style={{ position: 'absolute', top: 10, left: 10, maxWidth: 'calc(100% - 74px)', display: 'flex', alignItems: 'center', gap: 6, zIndex: 2 }}>
+      {done && (
+        <span style={{ flex: 'none', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.92)', background: 'rgba(0,0,0,0.28)', padding: '4px 8px', borderRadius: 999, whiteSpace: 'nowrap' }}>DONE</span>
+      )}
+      {noted > 0 && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); openNoted(show.id); }}
+          aria-label={`${noted} ${noted === 1 ? 'character' : 'characters'} with your notes in ${show.title}`}
+          style={{ flex: 'none', font: 'inherit', fontSize: 12.5, fontWeight: 600, color: '#fff', background: 'rgba(0,0,0,0.45)', padding: '3px 8px', borderRadius: 999, backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', whiteSpace: 'nowrap', border: 'none', cursor: 'pointer' }}
+        >
+          {notedLabel}
+        </button>
+      )}
+    </div>
     <CardActions onEdit={() => openEditShow(show.id)} onShare={() => openShareSheet(shareShow(show.id))} />
     </div>
   );

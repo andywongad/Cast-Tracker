@@ -23,6 +23,7 @@ import { ShareSheet } from './components/ShareRedeem';
 import ShareImportSheet from './components/ShareImportSheet';
 import WebViewOverlay from './components/WebViewOverlay';
 import CastDetailSheet from './components/CastDetailSheet';
+import NotedSheet from './components/NotedSheet';
 import AuthSheet from './components/AuthSheet';
 import ShowMenuSheet from './components/ShowMenuSheet';
 import DuplicateShowsSheet from './components/DuplicateShowsSheet';
@@ -290,6 +291,7 @@ function Shell() {
       </main>
       <WebViewOverlay />
       <CastDetailSheet />
+      <NotedSheet />
       <ShareSheet />
       <ShareImportSheet packet={incomingShare} onDone={() => setIncomingShare(null)} />
       <Footer />
