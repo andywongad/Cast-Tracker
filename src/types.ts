@@ -169,6 +169,14 @@ export interface Show {
    * a lookup that will never succeed.
    */
   tvmazeId?: number | null;
+  /**
+   * Framing for the poster, set by the user in the edit sheet. Absent = TMDb's poster shown
+   * whole, cropped to fill by the browser, which is what every show had before this existed.
+   *
+   * Same shape and the same non-destructive contract as CastMember.photoCrop: parameters applied
+   * at render time, never a rewritten image, so zooming back out restores the original framing.
+   */
+  posterCrop?: PhotoCrop | null;
   /** Last edit to the show's own fields, epoch ms. Cast records carry their own — see CastMember. */
   editedAt?: number;
 }

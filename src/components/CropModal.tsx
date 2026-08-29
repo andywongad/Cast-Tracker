@@ -3,6 +3,19 @@ import type { PhotoCrop } from '../types';
 import { useDismissible } from './Sheet';
 
 const FRAME = 220;
+/**
+ * The frame is square unless a caller says otherwise.
+ *
+ * A crop is stored as `size%` of the container width plus a background-position, so the same
+ * numbers frame differently in containers of different shapes. That was invisible while the only
+ * caller was the character photo — cropper, card and thumbnail are all square — and stopped being
+ * invisible the moment show posters wanted framing, because a show tile is 4:5. Cropping a poster
+ * in a square window and rendering it in a tall one is a promise the preview cannot keep.
+ *
+ * Width is fixed and height follows, so `aspect: 1` reproduces the old 220x220 frame exactly and
+ * nothing about the character path changes.
+ */
+const DEFAULT_ASPECT = 1;
 /** Uploads are stored at this longest edge — big enough to re-crop later, small enough for localStorage. */
 const UPLOAD_MAX = 800;
 /**
@@ -38,6 +51,8 @@ interface CropModalProps {
   file: File | null;
   src?: string | null;
   initial?: PhotoCrop | null;
+  /** Width / height of the frame, matching wherever the result will be shown. Defaults to square. */
+  aspect?: number;
   onCancel: () => void;
   onConfirm: (result: { dataUrl?: string; crop: PhotoCrop }) => void;
 }
@@ -53,7 +68,9 @@ export default function CropModal(props: CropModalProps) {
   return <CropModalBody {...props} />;
 }
 
-function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: CropModalProps) {
+function CropModalBody({ file, src: srcProp, initial, aspect = DEFAULT_ASPECT, onCancel, onConfirm }: CropModalProps) {
+  const FRAME_W = FRAME;
+  const FRAME_H = Math.round(FRAME / aspect);
   // Escape cancels. No backdrop dismissal on purpose -- a stray tap outside would throw away a
   // crop in progress, and unlike a sheet there is no cheap way back to where you were.
   useDismissible(onCancel);
@@ -100,28 +117,33 @@ function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: Cro
   if (!src && !tooLarge) return null;
 
   // Render maths mirror cropStyle(): width is `size%` of the frame, height follows aspect.
-  const dispW = FRAME * zoom;
-  const dispH = natural ? dispW * (natural.h / natural.w) : FRAME;
+  const dispW = FRAME_W * zoom;
+  const dispH = natural ? dispW * (natural.h / natural.w) : FRAME_H;
 
   const clamp = (o: { x: number; y: number }) => ({
-    x: Math.min(0, Math.max(FRAME - dispW, o.x)),
-    y: Math.min(0, Math.max(FRAME - dispH, o.y)),
+    x: Math.min(0, Math.max(FRAME_W - dispW, o.x)),
+    y: Math.min(0, Math.max(FRAME_H - dispH, o.y)),
   });
 
-  /** background-position percentage <-> pixel offset, per the CSS definition. */
-  const pctToPx = (pct: number, disp: number) => (disp <= FRAME ? (FRAME - disp) / 2 : ((FRAME - disp) * pct) / 100);
-  const pxToPct = (px: number, disp: number) => (disp <= FRAME ? 50 : (px / (FRAME - disp)) * 100);
+  /**
+   * background-position percentage <-> pixel offset, per the CSS definition.
+   *
+   * `frame` is the container's extent along the axis being converted. It used to be the single
+   * FRAME constant, which was correct only while the frame was square.
+   */
+  const pctToPx = (pct: number, disp: number, frame: number) => (disp <= frame ? (frame - disp) / 2 : ((frame - disp) * pct) / 100);
+  const pxToPct = (px: number, disp: number, frame: number) => (disp <= frame ? 50 : (px / (frame - disp)) * 100);
 
   const onImgLoad = () => {
     const el = imgRef.current;
     if (!el) return;
     const w = el.naturalWidth, h = el.naturalHeight;
     setNatural({ w, h });
-    const dw = FRAME * zoom;
+    const dw = FRAME_W * zoom;
     const dh = dw * (h / w);
     setOffset({
-      x: pctToPx(initial ? initial.x : 50, dw),
-      y: pctToPx(initial ? initial.y : 50, dh),
+      x: pctToPx(initial ? initial.x : 50, dw, FRAME_W),
+      y: pctToPx(initial ? initial.y : 50, dh, FRAME_H),
     });
   };
 
@@ -136,12 +158,12 @@ function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: Cro
     setZoom(z1);
     if (!natural) return;
     const k = z1 / z0;
-    const dw = FRAME * z1;
+    const dw = FRAME_W * z1;
     const dh = dw * (natural.h / natural.w);
     const o = offsetRef.current;
     setOffset({
-      x: Math.min(0, Math.max(FRAME - dw, anchor.x - (anchor.x - o.x) * k)),
-      y: Math.min(0, Math.max(FRAME - dh, anchor.y - (anchor.y - o.y) * k)),
+      x: Math.min(0, Math.max(FRAME_W - dw, anchor.x - (anchor.x - o.x) * k)),
+      y: Math.min(0, Math.max(FRAME_H - dh, anchor.y - (anchor.y - o.y) * k)),
     });
   };
 
@@ -194,14 +216,14 @@ function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: Cro
       : null;
   };
 
-  const onZoom = (v: number) => applyZoom(v, { x: FRAME / 2, y: FRAME / 2 });
+  const onZoom = (v: number) => applyZoom(v, { x: FRAME_W / 2, y: FRAME_H / 2 });
 
   const confirm = () => {
     if (!natural) return;
     const crop: PhotoCrop = {
       size: Math.round(zoom * 1000) / 10,
-      x: Math.round(pxToPct(offset.x, dispW) * 10) / 10,
-      y: Math.round(pxToPct(offset.y, dispH) * 10) / 10,
+      x: Math.round(pxToPct(offset.x, dispW, FRAME_W) * 10) / 10,
+      y: Math.round(pxToPct(offset.y, dispH, FRAME_H) * 10) / 10,
     };
 
     // Existing photo: framing only, source untouched.
@@ -242,7 +264,7 @@ function CropModalBody({ file, src: srcProp, initial, onCancel, onConfirm }: Cro
           ref={frameRef}
           onPointerDown={onPointerDown} onPointerMove={onPointerMove}
           onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onPointerLeave={onPointerUp}
-          style={{ position: 'relative', width: FRAME, height: FRAME, margin: '0 auto 16px', borderRadius: 26, overflow: 'hidden', background: '#000', cursor: 'grab', touchAction: 'none' }}
+          style={{ position: 'relative', width: FRAME_W, height: FRAME_H, margin: '0 auto 16px', borderRadius: 26, overflow: 'hidden', background: '#000', cursor: 'grab', touchAction: 'none' }}
         >
           <img
             ref={imgRef}

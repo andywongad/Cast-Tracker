@@ -1,5 +1,5 @@
 import type { Show } from '../types';
-import { initials, bgStyle } from '../lib/utils';
+import { initials, posterStyle } from '../lib/utils';
 import { hasUserContent } from '../lib/castValue';
 import { useUI } from '../hooks/useUI';
 import { useStore } from '../hooks/useStore';
@@ -53,7 +53,7 @@ export function ShowTile({ show, columns, done = false }: { show: Show; columns:
           Full portrait would crop nothing and cost half a row of height again on every row, on the
           one screen whose job is picking a show quickly. 4:5 gives back half the crop for a
           quarter of the height, and keeps enough squareness that this still reads as a grid. */}
-      <div style={{ position: 'relative', aspectRatio: '4 / 5', borderRadius: 18, overflow: 'hidden', backgroundColor: show.color, opacity: done ? 0.75 : 1, ...bgStyle(show.poster) }}>
+      <div style={{ position: 'relative', aspectRatio: '4 / 5', borderRadius: 18, overflow: 'hidden', backgroundColor: show.color, opacity: done ? 0.75 : 1, ...posterStyle(show.poster, show.posterCrop) }}>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(150deg, rgba(255,255,255,0.14), rgba(0,0,0,0.32))' }} />
         {!show.poster && <span style={{ position: 'absolute', right: 8, bottom: 6, fontSize: 60, fontWeight: 800, color: 'rgba(255,255,255,0.16)', lineHeight: 0.7 }}>{initials(show.title)}</span>}
         {/* Dropped to where the count used to sit, now that it has vacated. */}
@@ -104,7 +104,7 @@ export function RecentShowTile({ show }: { show: Show }) {
       aria-label={`${show.title}, recently viewed`}
       style={{ flex: 'none', width: 84, textAlign: 'left', cursor: 'pointer', color: 'var(--text)', background: 'none', border: 'none', padding: 0 }}
     >
-      <div style={{ position: 'relative', width: 84, height: 84, borderRadius: 16, overflow: 'hidden', backgroundColor: show.color, display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(show.poster) }}>
+      <div style={{ position: 'relative', width: 84, height: 84, borderRadius: 16, overflow: 'hidden', backgroundColor: show.color, display: 'flex', alignItems: 'center', justifyContent: 'center', ...posterStyle(show.poster, show.posterCrop) }}>
         {!show.poster && <span style={{ fontSize: 26, fontWeight: 800, color: 'rgba(255,255,255,0.85)' }}>{initials(show.title)}</span>}
       </div>
       {/* Two lines rather than one with an ellipsis. At 84px wide almost nothing fits on one:

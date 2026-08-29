@@ -3,7 +3,7 @@ import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { findDuplicateGroups, planResolution, mergeGroup } from '../lib/duplicateShows';
 import { isDisposable } from '../lib/castValue';
-import { bgStyle, initials } from '../lib/utils';
+import { posterStyle, initials } from '../lib/utils';
 import Sheet from './Sheet';
 
 /**
@@ -58,7 +58,7 @@ export default function DuplicateShowsSheet() {
         return (
           <div key={group.tmdbId} style={{ marginBottom: 26 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, flex: 'none', backgroundColor: show?.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: 'rgba(255,255,255,0.85)', ...bgStyle(show?.poster) }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, flex: 'none', backgroundColor: show?.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: 'rgba(255,255,255,0.85)', ...posterStyle(show?.poster, show?.posterCrop) }}>
                 {!show?.poster && initials(group.title)}
               </div>
               <div className="ct-heading" style={{ fontSize: 18 }}>{group.title}</div>

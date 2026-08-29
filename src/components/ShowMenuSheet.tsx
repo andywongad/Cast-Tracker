@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
-import { bgStyle, initials, SHOW_TYPE_LABELS } from '../lib/utils';
+import { posterStyle, initials, SHOW_TYPE_LABELS } from '../lib/utils';
 import Sheet from './Sheet';
 
 /**
@@ -66,7 +66,7 @@ export default function ShowMenuSheet() {
         {/* The poster lived on the show page purely for identity; it belongs here now that the
             title carries that job in the top bar. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div style={{ width: 54, height: 54, borderRadius: 14, flex: 'none', backgroundColor: show.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: 'rgba(255,255,255,0.85)', ...bgStyle(show.poster) }}>
+          <div style={{ width: 54, height: 54, borderRadius: 14, flex: 'none', backgroundColor: show.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: 'rgba(255,255,255,0.85)', ...posterStyle(show.poster, show.posterCrop) }}>
             {!show.poster && initials(show.title)}
           </div>
           <div style={{ minWidth: 0 }}>

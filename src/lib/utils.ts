@@ -86,6 +86,18 @@ export function cropStyle(url: string | null | undefined, crop: PhotoCrop | null
   };
 }
 
+/**
+ * How a show's poster is framed: the user's crop when they set one, cover otherwise.
+ *
+ * The fallback matters and is easy to get wrong. `cropStyle(url, null)` sizes at `100% auto`,
+ * which letterboxes a 2:3 poster in anything that isn't its own aspect — so reaching for
+ * cropStyle everywhere would have quietly re-framed every show that has never been touched.
+ * Cover is what those have always had, and it stays theirs.
+ */
+export function posterStyle(url: string | null | undefined, crop: PhotoCrop | null | undefined) {
+  return crop ? cropStyle(url, crop) : bgStyle(url);
+}
+
 export function bgStyle(url: string | null | undefined, size: string = 'cover', position: string = 'center') {
   return url ? { backgroundImage: `url("${url}")`, backgroundSize: size, backgroundPosition: position, backgroundRepeat: 'no-repeat' as const } : {};
 }

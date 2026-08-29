@@ -2,14 +2,25 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../hooks/useStore';
 import { useUI } from '../hooks/useUI';
 import { searchShows, hasTmdbKey, img, inferShowType, type TmdbShowResult } from '../lib/tmdb';
-import { bgStyle, colorForIndex, genId, SHOW_TYPE_LABELS } from '../lib/utils';
-import type { ShowType } from '../types';
+import { bgStyle, posterStyle, colorForIndex, genId, SHOW_TYPE_LABELS } from '../lib/utils';
+import type { PhotoCrop, ShowType } from '../types';
+import CropModal from './CropModal';
 import Sheet from './Sheet';
+
+/**
+ * The shape a poster is framed against.
+ *
+ * Matches the aspect of the show tile, which is the surface this framing exists to fix — a crop
+ * adjusted in a square window and then rendered on a 4:5 tile would not be the thing the user
+ * approved. Keep in step with ShowTile's aspectRatio.
+ */
+const TILE_ASPECT = 4 / 5;
 
 interface FormState {
   title: string;
   type: ShowType;
   poster: string | null;
+  posterCrop: PhotoCrop | null;
   tmdbId: number | null;
   originCountry: string;
   wikiUrl: string;
@@ -20,7 +31,7 @@ interface FormState {
 const TYPES: ShowType[] = ['DRAMA', 'REALITY'];
 
 function blank(): FormState {
-  return { title: '', type: 'DRAMA', poster: null, tmdbId: null, originCountry: '', wikiUrl: '', imdbUrl: '' };
+  return { title: '', type: 'DRAMA', poster: null, posterCrop: null, tmdbId: null, originCountry: '', wikiUrl: '', imdbUrl: '' };
 }
 
 export default function AddShowSheet() {
@@ -28,6 +39,7 @@ export default function AddShowSheet() {
   const { addShowSheet, addShowPrefill, closeAddShow, openShow } = useUI();
   const [form, setForm] = useState<FormState>(blank());
   const [results, setResults] = useState<TmdbShowResult[]>([]);
+  const [cropping, setCropping] = useState(false);
   const [searching, setSearching] = useState(false);
 
   const editingShow = addShowSheet.editingId ? data.shows.find((s) => s.id === addShowSheet.editingId) : null;
@@ -37,6 +49,7 @@ export default function AddShowSheet() {
     if (editingShow) {
       setForm({
         title: editingShow.title, type: editingShow.type, poster: editingShow.poster || null,
+        posterCrop: editingShow.posterCrop ?? null,
         tmdbId: editingShow.tmdbId || null, originCountry: editingShow.originCountry || '',
         wikiUrl: editingShow.wikiUrl || '', imdbUrl: editingShow.imdbUrl || '',
       });
@@ -47,6 +60,7 @@ export default function AddShowSheet() {
     }
     setResults([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    setCropping(false);
   }, [addShowSheet.open, addShowSheet.editingId]);
 
   useEffect(() => {
@@ -63,7 +77,8 @@ export default function AddShowSheet() {
   if (!addShowSheet.open) return null;
 
   const pickTmdb = (r: TmdbShowResult) => {
-    setForm((f) => ({ ...f, title: r.name, type: inferShowType(r.genre_ids), tmdbId: r.id, poster: img(r.poster_path), originCountry: r.origin_country?.[0] || '' }));
+    // A new poster invalidates the old framing — it was measured against a different image.
+    setForm((f) => ({ ...f, title: r.name, type: inferShowType(r.genre_ids), tmdbId: r.id, poster: img(r.poster_path), posterCrop: null, originCountry: r.origin_country?.[0] || '' }));
     setResults([]);
   };
 
@@ -73,7 +88,7 @@ export default function AddShowSheet() {
       updateData((d) => {
         const s = d.shows.find((x) => x.id === editingShow.id);
         if (!s) return;
-        Object.assign(s, { title: form.title.trim(), type: form.type, poster: form.poster, tmdbId: form.tmdbId, originCountry: form.originCountry || s.originCountry, wikiUrl: form.wikiUrl, imdbUrl: form.imdbUrl });
+        Object.assign(s, { title: form.title.trim(), type: form.type, poster: form.poster, posterCrop: form.posterCrop, tmdbId: form.tmdbId, originCountry: form.originCountry || s.originCountry, wikiUrl: form.wikiUrl, imdbUrl: form.imdbUrl });
       });
       closeAddShow();
       return;
@@ -82,7 +97,7 @@ export default function AddShowSheet() {
     updateData((d) => {
       d.shows.push({
         id, title: form.title.trim(), type: form.type, color: colorForIndex(d.shows.length), status: 'watching',
-        cast: [], poster: form.poster, tmdbId: form.tmdbId, originCountry: form.originCountry, wikiUrl: form.wikiUrl, imdbUrl: form.imdbUrl,
+        cast: [], poster: form.poster, posterCrop: form.posterCrop, tmdbId: form.tmdbId, originCountry: form.originCountry, wikiUrl: form.wikiUrl, imdbUrl: form.imdbUrl,
       });
     });
     closeAddShow();
@@ -104,13 +119,58 @@ export default function AddShowSheet() {
         <div className="ct-sheet-title">{editingShow ? 'Edit Show' : 'Add a Show'}</div>
 
         <label className="ct-label">TITLE *</label>
+        {/* The poster, framed the way the tile will frame it, and tappable to change that.
+
+            Same affordance as the character sheet: the image itself is the control, with a worded
+            button beside it because a tappable picture announces nothing on its own. The preview
+            is 4:5 rather than the old 40x56 so what is approved here is what the grid shows. */}
         {form.poster && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 40, height: 56, borderRadius: 8, flex: 'none', ...bgStyle(form.poster) }} />
-            <span style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>Matched from TMDb</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <button
+              type="button"
+              onClick={() => setCropping(true)}
+              aria-label="Adjust how the poster is framed"
+              style={{ width: 44, height: 55, borderRadius: 8, flex: 'none', border: 'none', padding: 0, cursor: 'pointer', backgroundColor: 'var(--surface)', ...posterStyle(form.poster, form.posterCrop) }}
+            />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>
+                {form.tmdbId ? 'Matched from TMDb' : 'Poster'}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
+                <button
+                  type="button"
+                  onClick={() => setCropping(true)}
+                  style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: 'var(--accent-soft)' }}
+                >
+                  {form.posterCrop ? 'Reframe' : 'Adjust framing'}
+                </button>
+                {/* Only offered once there is something to undo, and it restores the default
+                    rather than opening the cropper to hunt for where the image started. */}
+                {form.posterCrop && (
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, posterCrop: null }))}
+                    style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: 'var(--text-faint)' }}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
-        <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value, poster: null, tmdbId: null }))} placeholder="Search TMDb or type a title" className="ct-input" style={{ marginBottom: 8 }} />
+
+        {cropping && form.poster && (
+          <CropModal
+            file={null}
+            src={form.poster}
+            initial={form.posterCrop}
+            aspect={TILE_ASPECT}
+            onCancel={() => setCropping(false)}
+            onConfirm={({ crop }) => { setForm((f) => ({ ...f, posterCrop: crop })); setCropping(false); }}
+          />
+        )}
+        <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value, poster: null, posterCrop: null, tmdbId: null }))} placeholder="Search TMDb or type a title" className="ct-input" style={{ marginBottom: 8 }} />
         {results.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12, maxHeight: 220, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 12, padding: 6 }}>
             {results.map((r) => (
