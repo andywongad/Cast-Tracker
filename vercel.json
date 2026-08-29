@@ -22,6 +22,9 @@
     "api/enrichment.ts": {
       "maxDuration": 30
     },
+    "api/recap.ts": {
+      "maxDuration": 60
+    },
     "api/check-episodes.ts": {
       "maxDuration": 300
     }

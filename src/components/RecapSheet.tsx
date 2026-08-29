@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useUI } from '../hooks/useUI';
 import { getSeason, type Season } from '../lib/tmdb';
+import { fetchRecap, type RecapState } from '../lib/recap/client';
 import Sheet from './Sheet';
 
 /**
@@ -30,15 +31,19 @@ export default function RecapSheet({
   currentSeasonData,
   currentSeason,
   showTmdbId,
+  showTitle,
 }: {
   /** The loaded season, so the common case needs no request at all. */
   currentSeasonData: Season;
   currentSeason: number;
   showTmdbId: number | null;
+  /** Sent to the recap endpoint, which names the show to the model. */
+  showTitle: string;
 }) {
   const { recap, closeRecap } = useUI();
   const [prior, setPrior] = useState<{ season: number; data: Season } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [written, setWritten] = useState<RecapState>({ status: 'idle' });
 
   const wantsPrior = recap.open && recap.season !== currentSeason;
 
@@ -58,8 +63,6 @@ export default function RecapSheet({
     return () => { alive = false; };
   }, [wantsPrior, showTmdbId, recap.season, prior?.season]);
 
-  if (!recap.open) return null;
-
   const crossesSeasons = recap.season !== currentSeason;
   const season = crossesSeasons ? prior?.data : currentSeasonData;
   const episodes = season?.episodes ?? [];
@@ -72,6 +75,31 @@ export default function RecapSheet({
   const number = episode?.number ?? recap.episode;
   const seasonText = season?.overview ?? '';
   const episodeText = episode?.overview ?? '';
+
+  /**
+   * The written recap, for the season up to and including the episode this sheet is about.
+   *
+   * Asked for only once the season is in hand, because the episode number has to be resolved
+   * before the request: episode 0 means "the last one", and sending that would cache the same
+   * paragraph a second time under a second key. See api/_lib/recap-key.ts.
+   *
+   * Nothing here blocks the sheet. TMDb's own text renders immediately and stays on screen until
+   * something better arrives, so the slowest this feature can make the app is "the same as it was
+   * before it existed".
+   */
+  useEffect(() => {
+    if (!recap.open) { setWritten({ status: 'idle' }); return; }
+    if (!showTmdbId || !season || number < 1) return;
+    let alive = true;
+    setWritten({ status: 'loading' });
+    fetchRecap({ showTmdbId, showTitle, season: recap.season, throughEpisode: number })
+      .then((state) => { if (alive) setWritten(state); });
+    return () => { alive = false; };
+  }, [recap.open, recap.season, showTmdbId, showTitle, season, number]);
+
+  if (!recap.open) return null;
+
+  const composed = written.status === 'ready' ? written.data : null;
 
   /**
    * Crossing a season boundary, the season is the answer.
@@ -114,6 +142,29 @@ export default function RecapSheet({
 
       {loading && !season ? (
         <div style={{ fontSize: 14, color: 'var(--text-faint)' }}>Loading&hellip;</div>
+      ) : composed ? (
+        /* The written recap replaces TMDb's prose rather than sitting above it. Both say the same
+           thing, and a reader who has already got the answer doesn't want the raw material
+           underneath it. When there's no written recap the branches below are unchanged, so the
+           sheet is never worse than it was. */
+        <>
+          {composed.beats.length > 0 && (
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px' }}>
+              {composed.beats.map((beat, i) => (
+                <li key={i} style={{ display: 'flex', gap: 8, fontSize: 14, lineHeight: 1.45, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 7 }}>
+                  <span aria-hidden="true" style={{ color: 'var(--accent-soft)', flex: 'none' }}>&bull;</span>
+                  <span>{beat}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {body(composed.text)}
+          {/* Says where the boundary is, in the sheet whose whole promise is that there is one.
+              Someone about to press play should be able to see that this stops where they did. */}
+          <p style={{ fontSize: 11.5, lineHeight: 1.45, color: 'var(--text-faint)', margin: '14px 0 0' }}>
+            Written from TMDb summaries, through Ep {composed.throughEpisode}. Nothing after it.
+          </p>
+        </>
       ) : leadWithSeason ? (
         <>
           {body(seasonText)}
@@ -145,6 +196,12 @@ export default function RecapSheet({
         <p style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--text-faint)', margin: 0 }}>
           TMDb doesn&rsquo;t have a summary for this one.
         </p>
+      )}
+
+      {/* Only ever additive: TMDb's text is already on screen above this, so the wait costs the
+          reader nothing and the note explains why the sheet might change under them. */}
+      {written.status === 'loading' && !composed && (
+        <p style={{ fontSize: 12.5, color: 'var(--text-faint)', margin: '14px 0 0' }}>Writing a fuller recap&hellip;</p>
       )}
 
       <button onClick={closeRecap} className="ct-btn-ghost" style={{ width: '100%', marginTop: 22 }}>Done</button>

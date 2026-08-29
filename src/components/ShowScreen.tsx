@@ -726,6 +726,7 @@ export default function ShowScreen() {
         currentSeasonData={season}
         currentSeason={currentSeason}
         showTmdbId={show.tmdbId ?? null}
+        showTitle={show.title}
       />
     </div>
   );

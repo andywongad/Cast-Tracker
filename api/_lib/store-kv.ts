@@ -1,12 +1,14 @@
 import { kv } from '@vercel/kv';
 import type { Enrichment, EnrichmentStore, StoredEnrichment } from '../../src/lib/enrichment/types.js';
+import type { Recap, RecapStore, StoredRecap } from '../../src/lib/recap/types.js';
 
 /**
  * Redis-backed implementation of EnrichmentStore.
  *
- * This is the only file that knows where enrichment physically lives. Swapping Redis for Postgres
- * later means writing one more file that satisfies the same interface — the key derivation, the
- * Wikipedia fetch, the Claude call and the handler all stay untouched.
+ * This is the only file that knows where generated content physically lives — bios and recaps
+ * both. Swapping Redis for Postgres later means writing one more file that satisfies the same
+ * interfaces — the key derivation, the source fetches, the Claude calls and the handlers all stay
+ * untouched.
  *
  * `@vercel/kv` picks up KV_REST_API_URL and KV_REST_API_TOKEN from the environment on its own;
  * there is no client to construct.
@@ -20,6 +22,14 @@ import type { Enrichment, EnrichmentStore, StoredEnrichment } from '../../src/li
 export const NO_SOURCE_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 /** A refusal on fixed source text won't change on its own, so hold it longer. */
 export const REFUSAL_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
+
+/**
+ * A season whose episode summaries say too little to recap.
+ *
+ * Shorter than it could be because TMDb overviews are community-written and a currently-airing
+ * season fills in over weeks — a season that was unrecappable in March is often fine by May.
+ */
+export const NO_RECAP_SOURCE_TTL_SECONDS = 60 * 60 * 24 * 3; // 3 days
 
 function isEnrichment(v: unknown): v is Enrichment {
   if (!v || typeof v !== 'object') return false;
@@ -90,6 +100,75 @@ export const kvEnrichmentStore: EnrichmentStore = {
   },
 };
 
+function isRecap(v: unknown): v is Recap {
+  if (!v || typeof v !== 'object') return false;
+  const r = v as Record<string, unknown>;
+  return typeof r.text === 'string' && Array.isArray(r.beats) && typeof r.throughEpisode === 'number';
+}
+
+/**
+ * Anything already in Redis was written by an earlier version of this code, so validate rather
+ * than trust. A shape that no longer parses is a miss, which regenerates — the safe direction.
+ */
+function coerceRecap(raw: unknown): StoredRecap | null {
+  if (raw == null) return null;
+
+  let value: unknown = raw;
+  if (typeof raw === 'string') {
+    try {
+      value = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!value || typeof value !== 'object') return null;
+  const v = value as Record<string, unknown>;
+
+  if (v.status === 'ready' && isRecap(v.data)) return { status: 'ready', data: v.data };
+  if (v.status === 'unavailable' && typeof v.reason === 'string') {
+    return { status: 'unavailable', reason: v.reason, at: typeof v.at === 'string' ? v.at : '' };
+  }
+  return null;
+}
+
+export const kvRecapStore: RecapStore = {
+  async get(key) {
+    try {
+      return coerceRecap(await kv.get<unknown>(key));
+    } catch (err) {
+      console.error('recap cache read failed', err);
+      return null; // Treated as a miss — regenerate rather than fail the request.
+    }
+  },
+
+  async putReady(key, data) {
+    try {
+      /**
+       * No TTL. A recap of episodes 1–6 of a season that finished airing in 2003 is finished too;
+       * the episodes it covers cannot change. A currently-airing season is the same story, because
+       * the key names the episode the recap stops at — a new episode is a new key, not an edit to
+       * this one.
+       */
+      await kv.set(key, { status: 'ready', data } satisfies StoredRecap);
+    } catch (err) {
+      console.error('recap cache write failed', err);
+    }
+  },
+
+  async putUnavailable(key, reason, ttlSeconds) {
+    try {
+      await kv.set(
+        key,
+        { status: 'unavailable', reason, at: new Date().toISOString() } satisfies StoredRecap,
+        { ex: ttlSeconds },
+      );
+    } catch (err) {
+      console.error('recap negative-cache write failed', err);
+    }
+  },
+};
+
 /**
  * Per-IP daily cap on *generations*. Cache hits are free and uncapped; only the path that spends
  * money is counted.
@@ -112,14 +191,19 @@ export const kvEnrichmentStore: EnrichmentStore = {
  * Fails open, like its neighbour. A Redis outage should degrade this feature to "slow", not take
  * the app down; the honest trade is that cost protection is unavailable for exactly as long as KV
  * is, which is visible in the logs below.
+ *
+ * `scope` keeps each kind of generation on its own counter. Recaps cost several times a bio, so a
+ * shared ceiling would let a day of recaps starve the bios — and the two are capped at different
+ * numbers precisely because they cost different amounts. The default preserves the key shape that
+ * enrichment has been writing since before this parameter existed.
  */
-export async function underGlobalGenerationLimit(maxPerDay: number): Promise<boolean> {
+export async function underGlobalGenerationLimit(maxPerDay: number, scope = 'enrich'): Promise<boolean> {
   const day = new Date().toISOString().slice(0, 10);
-  const key = `rl:enrich:global:${day}`;
+  const key = `rl:${scope}:global:${day}`;
   try {
     const count = await kv.incr(key);
     if (count === 1) await kv.expire(key, 60 * 60 * 24);
-    if (count > maxPerDay) console.warn(`enrichment: global daily cap reached (${count}/${maxPerDay})`);
+    if (count > maxPerDay) console.warn(`${scope}: global daily cap reached (${count}/${maxPerDay})`);
     return count <= maxPerDay;
   } catch (err) {
     console.error('global rate limit check failed', err);
@@ -127,9 +211,9 @@ export async function underGlobalGenerationLimit(maxPerDay: number): Promise<boo
   }
 }
 
-export async function underGenerationLimit(ip: string, maxPerDay: number): Promise<boolean> {
+export async function underGenerationLimit(ip: string, maxPerDay: number, scope = 'enrich'): Promise<boolean> {
   const day = new Date().toISOString().slice(0, 10);
-  const key = `rl:enrich:${day}:${ip}`;
+  const key = `rl:${scope}:${day}:${ip}`;
   try {
     const count = await kv.incr(key);
     if (count === 1) await kv.expire(key, 60 * 60 * 24);
