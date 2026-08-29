@@ -25,6 +25,8 @@ import {
 import { useDismissible, useModalFocus } from './Sheet';
 import { getShowDetails, getWatchProviders, watchRegion, type WatchOptions } from '../lib/tmdb';
 import { fetchTvmazeChannel, type TvmazeChannel } from '../lib/tvmaze';
+import { fetchNextEpisode, type NextEpisode } from '../lib/nextEpisode';
+import { airWords } from '../lib/airTime';
 
 /**
  * The bell beside a show's title, and the card behind it.
@@ -327,6 +329,28 @@ function AlertCard({
   const [hint] = useState<HomeScreenHint | null>(homeScreenHint);
 
   /**
+   * When the next episode actually airs.
+   *
+   * The card was asking someone to choose a lead time — "30 minutes before" — without ever saying
+   * before *what*. The show's own next airing is the missing half of that question, and the card
+   * is where it is being asked.
+   *
+   * Fetched here rather than lifted to the button: the button renders on every show screen and
+   * this only matters once the card is open, so a show nobody sets an alert on costs nothing.
+   * Silent on failure — see the header of lib/nextEpisode.ts.
+   */
+  const [next, setNext] = useState<NextEpisode | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetchNextEpisode(showTmdbId).then((ep) => { if (alive) setNext(ep); });
+    return () => { alive = false; };
+  }, [showTmdbId]);
+
+  // Recomputed per render rather than stored: `now` moves, and a card left open through an air
+  // time should stop naming it rather than keep insisting the episode is still to come.
+  const airs = next ? airWords(next.airsAt, next.exact, Date.now()) : '';
+
+  /**
    * Roving tabindex over the options, which is what a radio group is supposed to do: one stop on
    * the way through with Tab, and the arrows move the selection inside it. Without this every
    * option is a tab stop and a keyboard user pages through five of them to reach the buttons.
@@ -419,10 +443,24 @@ function AlertCard({
           New episode alerts
         </div>
         {/* Names the show, because the bell sits next to a title that the card covers. */}
-        <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.45, marginBottom: 16 }}>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.45, marginBottom: airs ? 10 : 16 }}>
           We&rsquo;ll notify you when a new episode of <strong style={{ color: 'var(--text)' }}>{showTitle}</strong> is
           about to come on.
         </div>
+
+        {/* What the lead time is measured against. Absent entirely when it isn't known — between
+            seasons, or a show no upstream has a schedule for — because "Next episode: unknown" is
+            a line that costs space to say nothing. */}
+        {airs && (
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', fontSize: 13, marginBottom: 16 }}>
+            <span style={{ color: 'var(--text-muted)' }}>
+              {next?.season && next?.number ? `S${next.season} E${next.number} airs` : 'Next episode'}
+            </span>
+            <strong style={{ color: 'var(--text)' }}>{airs}</strong>
+            {/* Said once, plainly, rather than repeated on every reading of the time. */}
+            <span style={{ color: 'var(--text-faint)', fontSize: 11.5 }}>your time</span>
+          </div>
+        )}
 
         {hint && <HomeScreenSteps device={hint} />}
 

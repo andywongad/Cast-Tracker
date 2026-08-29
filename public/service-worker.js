@@ -106,6 +106,11 @@ self.addEventListener('fetch', (event) => {
 /**
  * The day and time an episode airs, in the reader's own timezone.
  *
+ * A COPY. src/lib/airTime.ts holds the canonical version and the alert card uses it; this file is
+ * served verbatim and cannot import from the bundle, which is why the logic is repeated rather
+ * than shared. src/lib/airTime.test.ts runs both through the same table and fails if they
+ * disagree — so change both, or the suite will say so.
+ *
  * Formatted here rather than in the cron because this is the only code in the path that knows
  * where the reader is. One body is composed per episode and pushed to every follower of that
  * show; they are not in the same place, so a time written on the server would be right for one
