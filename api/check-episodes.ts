@@ -126,9 +126,28 @@ async function notifyOne(
        */
       JSON.stringify({
         title: when === 'is out now' ? `New episode of ${showTitle}` : `${showTitle} ${when}`,
-        body: episode.name ? `${label} — ${episode.name}` : `${label} ${when}.`,
+        body: episode.name ? `${label} — ${episode.name}` : `${label} ${when}`,
         showId: String(tmdbId),
         url: '/',
+        /**
+         * When it airs, as a timestamp, for the worker to render in the reader's own timezone.
+         *
+         * Deliberately not formatted here. One body is composed per episode and sent to every
+         * follower of that show, and they are not in the same place — a "9:00 PM" written on this
+         * side would be right for whoever shares the broadcaster's offset and wrong for everyone
+         * else. The worker runs on the reader's device and is the only code in this path that can
+         * know the answer.
+         *
+         * `exact` travels with it because it changes what may honestly be said: a date-only
+         * upstream is read as midnight UTC by schedule.ts, and a clock time off that is invented.
+         * See airWords() in public/service-worker.js.
+         *
+         * Additive, so a worker that predates this ignores both fields and shows exactly the
+         * notification it shows today. Workers update on the next visit; nothing has to be
+         * migrated and nothing breaks in the meantime.
+         */
+        airsAt: episode.airsAt,
+        exact: episode.exact,
       }),
     );
     await markSent(tmdbId, episode.key, endpoint);

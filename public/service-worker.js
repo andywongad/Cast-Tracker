@@ -103,11 +103,63 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
+/**
+ * The day and time an episode airs, in the reader's own timezone.
+ *
+ * Formatted here rather than in the cron because this is the only code in the path that knows
+ * where the reader is. One body is composed per episode and pushed to every follower of that
+ * show; they are not in the same place, so a time written on the server would be right for one
+ * of them and wrong for the rest.
+ *
+ * Two rules the format has to respect:
+ *
+ *   - An inexact airsAt is a *date* that api/_lib/schedule.ts read as midnight UTC, because the
+ *     upstream had no time. So it is rendered in UTC and with no clock time. Rendered locally it
+ *     would slide: midnight UTC is the previous evening anywhere west of Greenwich, and the
+ *     notification would name the wrong day with total confidence.
+ *   - An episode already out gets nothing. The title and body have said so; a time is noise.
+ *
+ * Returns '' for anything it cannot state honestly, including a payload from a server that
+ * predates these fields, and the caller then shows the body unchanged.
+ */
+function airWords(airsAt, exact, now) {
+  if (typeof airsAt !== 'number' || !isFinite(airsAt)) return '';
+  const date = new Date(airsAt);
+  if (isNaN(date.getTime())) return '';
+  if (airsAt <= now) return '';
+
+  if (!exact) {
+    return date.toLocaleDateString(undefined, {
+      weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
+    });
+  }
+
+  const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+  // Compared on calendar date rather than on elapsed hours: an episode at 11pm tonight and one at
+  // 1am tomorrow are two hours apart and are not the same answer to "what day".
+  const today = new Date(now);
+  const sameDay =
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
+  if (sameDay) return time;
+
+  // A weekday name is only unambiguous inside a week of today; past that it needs a date.
+  const withinTheWeek = airsAt - now < 6 * 86400000;
+  const day = date.toLocaleDateString(
+    undefined,
+    withinTheWeek ? { weekday: 'short' } : { weekday: 'short', month: 'short', day: 'numeric' },
+  );
+  return `${day} ${time}`;
+}
+
 self.addEventListener('push', (event) => {
   if (event.data) {
     const data = event.data.json();
+    const air = airWords(data.airsAt, data.exact, Date.now());
     const options = {
-      body: data.body,
+      body: air ? `${data.body} · ${air}` : data.body,
       icon: '/cast-tracker-icon.png',
       badge: '/cast-tracker-badge.png',
       tag: data.showId,
