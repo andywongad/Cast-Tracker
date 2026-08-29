@@ -43,7 +43,17 @@ export function ShowTile({ show, columns, done = false }: { show: Show; columns:
       aria-label={`${show.title}${done ? ', completed' : ''}`}
       style={{ position: 'relative', display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer', color: 'var(--text)', background: 'none', border: 'none', padding: 0, borderRadius: 18 }}
     >
-      <div style={{ position: 'relative', aspectRatio: '1', borderRadius: 18, overflow: 'hidden', backgroundColor: show.color, opacity: done ? 0.75 : 1, ...bgStyle(show.poster) }}>
+      {/* 4:5, not square and not the poster's own 2:3.
+
+          TMDb posters are 2:3, so a square crop threw away a third of the height — and a poster
+          prints its title in the part that went, which is why the grid read SINGLE'S rather than
+          SINGLE'S INFERNO. Nothing was actually lost, because the title is written underneath as
+          text, but a wall of decapitated artwork reads as broken.
+
+          Full portrait would crop nothing and cost half a row of height again on every row, on the
+          one screen whose job is picking a show quickly. 4:5 gives back half the crop for a
+          quarter of the height, and keeps enough squareness that this still reads as a grid. */}
+      <div style={{ position: 'relative', aspectRatio: '4 / 5', borderRadius: 18, overflow: 'hidden', backgroundColor: show.color, opacity: done ? 0.75 : 1, ...bgStyle(show.poster) }}>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(150deg, rgba(255,255,255,0.14), rgba(0,0,0,0.32))' }} />
         {!show.poster && <span style={{ position: 'absolute', right: 8, bottom: 6, fontSize: 60, fontWeight: 800, color: 'rgba(255,255,255,0.16)', lineHeight: 0.7 }}>{initials(show.title)}</span>}
         {/* Dropped to where the count used to sit, now that it has vacated. */}
@@ -97,7 +107,12 @@ export function RecentShowTile({ show }: { show: Show }) {
       <div style={{ position: 'relative', width: 84, height: 84, borderRadius: 16, overflow: 'hidden', backgroundColor: show.color, display: 'flex', alignItems: 'center', justifyContent: 'center', ...bgStyle(show.poster) }}>
         {!show.poster && <span style={{ fontSize: 26, fontWeight: 800, color: 'rgba(255,255,255,0.85)' }}>{initials(show.title)}</span>}
       </div>
-      <div style={{ marginTop: 6, fontSize: 13.5, fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{show.title}</div>
+      {/* Two lines rather than one with an ellipsis. At 84px wide almost nothing fits on one:
+          this row read "Single's In…", "Breaking B…", "My Royal …" — three shows identified by
+          their first ten characters, in the strip whose whole purpose is getting back to one of
+          them quickly. Two lines cost one line of height, once, on a single row. Still clamped,
+          because a long title would otherwise push this strip taller than the tiles in it. */}
+      <div style={{ marginTop: 6, fontSize: 13.5, fontWeight: 700, lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{show.title}</div>
     </button>
   );
 }
