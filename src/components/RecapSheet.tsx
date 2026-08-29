@@ -3,6 +3,7 @@ import { useUI } from '../hooks/useUI';
 import { getSeason, type Season } from '../lib/tmdb';
 import { fetchRecap, type RecapState } from '../lib/recap/client';
 import Sheet from './Sheet';
+import { SkeletonText } from './Skeleton';
 
 /**
  * Below this an "overview" is a teaser, not a recap.
@@ -141,7 +142,7 @@ export default function RecapSheet({
       </h2>
 
       {loading && !season ? (
-        <div style={{ fontSize: 14, color: 'var(--text-faint)' }}>Loading&hellip;</div>
+        <SkeletonText lines={3} label="Loading the previous season" />
       ) : composed ? (
         /* The written recap replaces TMDb's prose rather than sitting above it. Both say the same
            thing, and a reader who has already got the answer doesn't want the raw material

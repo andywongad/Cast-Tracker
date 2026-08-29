@@ -9,6 +9,7 @@ import type { RoleTag } from '../lib/enrichment/types';
 import type { PhotoCrop } from '../types';
 import CropModal from './CropModal';
 import Sheet from './Sheet';
+import { SkeletonRows, SkeletonText } from './Skeleton';
 
 // Softer, sentence-case field labels — less shouting for a glanceable sheet
 const fieldLabel: CSSProperties = { fontSize: 13.5, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 };
@@ -558,9 +559,9 @@ export default function CastDetailSheet() {
               )}
             </div>
 
-            {bio.status === 'loading' && (
-              <div style={{ fontSize: 13.5, color: 'var(--text-faint)', lineHeight: 1.5 }}>Writing a short bio&hellip;</div>
-            )}
+            {/* Two lines, because that is what a bio is — see the prompt in api/_lib/generate.ts,
+                which asks for one sentence and allows a second. */}
+            {bio.status === 'loading' && <SkeletonText lines={2} label="Writing a short bio" height={12} />}
 
             {bio.status === 'ready' && (
               <>
@@ -712,7 +713,8 @@ export default function CastDetailSheet() {
                 </button>
                 {creditsExpanded && (
                   creditsLoading ? (
-                    <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 10 }}>Looking up their credits&hellip;</div>
+                    /* Text-only rows: a credit is a title and a year, with no thumbnail. */
+                    <SkeletonRows count={4} label="Looking up their credits" thumb={0} lines={1} gap={8} style={{ marginTop: 10 }} />
                   ) : credits.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                       {credits.map((cr, i) => (

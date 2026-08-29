@@ -3,6 +3,7 @@ import { useUI } from '../hooks/useUI';
 import { CCY_RATES, YEARS, fmtMoney, getLiveRates, convertCurrency, inflate } from '../lib/currency';
 import { LANGUAGES, translateText } from '../lib/translate';
 import Sheet from './Sheet';
+import { SkeletonText } from './Skeleton';
 
 const CCY_CODES = Object.keys(CCY_RATES);
 
@@ -245,7 +246,11 @@ export function TranslatorSheet() {
             <select value={to} onChange={(e) => { setTo(e.target.value); setResult(''); }} style={{ ...pickerStyle, display: 'block', maxWidth: '100%', color: 'var(--text)' }}>
               {LANGUAGES.filter((l) => l.code !== 'auto').map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
             </select>
-            <div style={{ marginTop: 10, fontSize: 17, fontWeight: result ? 400 : 300, lineHeight: 1.4, color: result ? 'var(--text)' : 'var(--text-faint)', minHeight: 46 }}>{loading ? 'Translating…' : (result || 'Translation')}</div>
+            {/* The result area gets a placeholder shaped like a translation; the button keeps its
+                word, because a button says what it is doing rather than standing in for it. */}
+            <div style={{ marginTop: 10, fontSize: 17, fontWeight: result ? 400 : 300, lineHeight: 1.4, color: result ? 'var(--text)' : 'var(--text-faint)', minHeight: 46 }}>
+              {loading ? <SkeletonText lines={2} label="Translating" height={14} /> : (result || 'Translation')}
+            </div>
           </div>
         </div>
 

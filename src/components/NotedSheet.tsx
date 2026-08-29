@@ -2,7 +2,7 @@ import { useUI } from '../hooks/useUI';
 import { useStore } from '../hooks/useStore';
 import { initials, cropStyle } from '../lib/utils';
 import { displayPhoto } from '../lib/tvmaze';
-import { hasUserContent } from '../lib/castValue';
+import { hasUserNotes } from '../lib/castValue';
 import type { CastMember } from '../types';
 import Sheet from './Sheet';
 
@@ -10,7 +10,7 @@ import Sheet from './Sheet';
  * Everyone in one show that the user has written something about.
  *
  * Opened from the count on a show tile, which until now was a number you could read and not act
- * on. The number and this list are derived from the same predicate — `hasUserContent` — so the
+ * on. The number and this list are derived from the same predicate — `hasUserNotes` — so the
  * badge cannot say eight and the list show seven.
  *
  * Reachable from the home screen, where no show is active, which is why the layer carries its own
@@ -50,7 +50,7 @@ export default function NotedSheet() {
 
   if (!notedShowId || !show) return null;
 
-  const noted = show.cast.filter(hasUserContent);
+  const noted = show.cast.filter(hasUserNotes);
 
   return (
     <Sheet onClose={closeNoted} label={`Characters you've noted in ${show.title}`}>

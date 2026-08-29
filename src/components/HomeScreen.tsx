@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../hooks/useStore';
+import { SkeletonRows } from './Skeleton';
 import { useUI } from '../hooks/useUI';
 import { useAuth } from '../hooks/useAuth';
 import { isSyncConfigured } from '../lib/supabase';
@@ -118,7 +119,8 @@ export default function HomeScreen() {
               </div>
             </>
           )}
-          {tmdbSearching && <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 18 }}>Searching TMDb&hellip;</div>}
+          {/* Shaped like the TMDb rows below, so the list doesn't jump when they land. */}
+          {tmdbSearching && <SkeletonRows count={4} label="Searching TMDb" thumb={40} bordered style={{ marginTop: 20 }} />}
           {/* Manual entry is the fallback when TMDb has nothing — offering it above the TMDb list
               steered people away from the option that brings cast, poster and seasons with it. */}
           {!tmdbSearching && tmdbResults.length === 0 && searchResults.length === 0 && (

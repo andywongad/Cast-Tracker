@@ -6,6 +6,7 @@ import { bgStyle, posterStyle, colorForIndex, genId, SHOW_TYPE_LABELS } from '..
 import type { PhotoCrop, ShowType } from '../types';
 import CropModal from './CropModal';
 import Sheet from './Sheet';
+import { SkeletonRows } from './Skeleton';
 
 /**
  * The shape a poster is framed against.
@@ -184,7 +185,12 @@ export default function AddShowSheet() {
             ))}
           </div>
         )}
-        {searching && <div style={{ fontSize: 13.5, color: 'var(--text-muted)', marginBottom: 12 }}>Searching TMDb&hellip;</div>}
+        {/* Same 32x46 poster and two lines as a real result row, inside the same bordered box. */}
+        {searching && (
+          <div style={{ marginBottom: 12, border: '1px solid var(--border)', borderRadius: 12, padding: 6 }}>
+            <SkeletonRows count={3} label="Searching TMDb" thumb={32} thumbRadius={6} />
+          </div>
+        )}
 
         {/* Asked only when there's nothing to infer from, or when you've deliberately opened a
             show to edit it.

@@ -1,6 +1,6 @@
 import type { Show } from '../types';
 import { initials, posterStyle } from '../lib/utils';
-import { hasUserContent } from '../lib/castValue';
+import { hasUserNotes } from '../lib/castValue';
 import { useUI } from '../hooks/useUI';
 import { useStore } from '../hooks/useStore';
 import CardActions from './CardActions';
@@ -15,13 +15,15 @@ export function ShowTile({ show, columns, done = false }: { show: Show; columns:
    * everyone credited on it into the show, so the old badge measured how many episodes had been
    * opened rather than anything the user decided. On this library that read 176 for one show and
    * 23 for another, which said nothing about either. The header of lib/castValue.ts has the
-   * numbers — 4 of 357 records held anything typed — and `hasUserContent` is the same predicate
-   * "Clear auto-loaded characters" already trusts.
+   * numbers — 4 of 357 records held anything typed.
    *
-   * Read here, never written: that function is load-bearing for sync, and this is one more
-   * caller of it.
+   * `hasUserNotes`, deliberately, and not the `hasUserContent` that "Clear auto-loaded characters"
+   * trusts. That one counts every decision worth keeping, photo framing and map visibility
+   * included, which is the right question for what is disposable and the wrong one for a badge
+   * that says "noted": a library with seven contestants hidden from a relationship map and
+   * nothing written anywhere reported seven notes over seven blank cards.
    */
-  const noted = show.cast.reduce((n, c) => (hasUserContent(c) ? n + 1 : n), 0);
+  const noted = show.cast.reduce((n, c) => (hasUserNotes(c) ? n + 1 : n), 0);
   /**
    * The word is dropped at the densest setting, the same place the type badge used to switch to
    * its two-letter form. A four-column tile is not wide enough for a badge and a word: on a

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Skeleton, SkeletonBar } from './Skeleton';
 import type { SeasonEpisode } from '../lib/tmdb';
 
 /**
@@ -131,9 +132,15 @@ export default function SeasonEpisodeRails({
         <div style={{ flex: 1, minWidth: 0 }}>
       <Rail listKey={currentSeason} label="Episode">
         {episodesLoading && episodes.length === 0 ? (
-          <div style={{ minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 13, color: 'var(--text-faint)' }}>
-            Loading episodes&hellip;
-          </div>
+          /* Chips, not a sentence: the rail is a row of tappable pills and the placeholder should
+             say so. minHeight matches a real chip so the rail doesn't change height on arrival. */
+          <Skeleton label="Loading episodes" style={{ minHeight: 44, display: 'flex', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {Array.from({ length: 6 }, (_, i) => (
+                <SkeletonBar key={i} width={i === 0 ? 62 : 54} height={32} radius={999} />
+              ))}
+            </div>
+          </Skeleton>
         ) : (
           episodes.map((ep) => {
             const selected = ep.number === currentEpisode;

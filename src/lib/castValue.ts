@@ -54,6 +54,36 @@ export function hasUserContent(c: CastMember): boolean {
 }
 
 /**
+ * True when the user has *written* something about this person.
+ *
+ * A narrower question than hasUserContent, and the two must not be confused. hasUserContent asks
+ * "would deleting this lose something?" — so it counts a reframed photo, a hidden-from-map flag,
+ * a pinned arrival episode, a set of revealed fields. All of those are decisions worth keeping,
+ * and none of them is writing.
+ *
+ * The show tile's badge learned that the hard way. It counted hasUserContent, and a library where
+ * seven Single's Inferno contestants had been hidden from the relationship map — and nothing else
+ * — reported "7 noted" over a set of cards with nothing written on any of them. The number was
+ * true and the word was a lie.
+ *
+ * So: text the user typed, collections they built, and a photo they supplied. Not settings, not
+ * framing, not visibility.
+ */
+export function hasUserNotes(c: CastMember): boolean {
+  for (const f of USER_AUTHORED) {
+    const v = c[f];
+    if (typeof v === 'string' && v.trim() !== '') return true;
+  }
+  for (const f of USER_COLLECTIONS) {
+    const v = c[f];
+    if (Array.isArray(v) && v.length > 0) return true;
+  }
+  // An uploaded photo is content the user added; a *crop* of a stock photo is not.
+  if (typeof c.photo === 'string' && c.photo.startsWith('data:')) return true;
+  return false;
+}
+
+/**
  * True when this record was loaded automatically and still holds nothing of the user's, so
  * discarding it loses nothing that can't be fetched again.
  */

@@ -27,6 +27,7 @@ import { getShowDetails, getWatchProviders, watchRegion, type WatchOptions } fro
 import { fetchTvmazeChannel, type TvmazeChannel } from '../lib/tvmaze';
 import { fetchNextEpisode, type NextEpisode } from '../lib/nextEpisode';
 import { airWords } from '../lib/airTime';
+import { Skeleton, SkeletonBar } from './Skeleton';
 
 /**
  * The bell beside a show's title, and the card behind it.
@@ -442,10 +443,18 @@ function AlertCard({
         <div id="ct-alert-title" className="ct-sheet-title" style={{ marginBottom: 4 }}>
           New episode alerts
         </div>
-        {/* Names the show, because the bell sits next to a title that the card covers. */}
+        {/* Names the show, because the bell sits next to a title that the card covers — and names
+            the device, because "we'll notify you" invites two wrong assumptions.
+
+            The first is the channel: there is no email anywhere in this feature, and someone
+            expecting one waits for a mail that cannot arrive. The second matters more, and is the
+            one that produces real silence — a subscription is stored against `sub.endpoint`, so
+            alerts belong to the browser that turned them on, not to the account. Turn them on
+            once on a laptop, watch on a phone, and nothing ever reaches the phone. That is
+            working as designed and reads exactly like a bug unless the card says so. */}
         <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.45, marginBottom: airs ? 10 : 16 }}>
-          We&rsquo;ll notify you when a new episode of <strong style={{ color: 'var(--text)' }}>{showTitle}</strong> is
-          about to come on.
+          We&rsquo;ll send a notification to this device when a new episode of{' '}
+          <strong style={{ color: 'var(--text)' }}>{showTitle}</strong> is about to come on.
         </div>
 
         {/* What the lead time is measured against. Absent entirely when it isn't known — between
@@ -677,7 +686,11 @@ function WhereToWatch({ showTmdbId }: { showTmdbId: number }) {
     return (
       <div style={{ marginTop: 16 }}>
         <div className="ct-label-muted">WHERE TO WATCH</div>
-        <div className="ct-skeleton" style={{ height: 28, borderRadius: 8, marginTop: 6 }} />
+        {/* Was a bare .ct-skeleton, which meant it flashed on every cached lookup. Through the
+            wrapper it inherits the same delay as every other placeholder in the app. */}
+        <Skeleton label="Looking up where to watch" style={{ marginTop: 6 }}>
+          <SkeletonBar height={28} radius={8} />
+        </Skeleton>
       </div>
     );
   }

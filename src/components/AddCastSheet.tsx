@@ -8,6 +8,7 @@ import { getAggregateCredits, getEpisodeCredits, getSeasonEpisodeCount, getPerso
 import CropModal from './CropModal';
 import EditControls from './EditControls';
 import Sheet from './Sheet';
+import { SkeletonText } from './Skeleton';
 
 const SOCIAL_PLATFORMS = ['Instagram', 'TikTok', 'X', 'YouTube', 'Facebook', 'Snapchat', 'Other'];
 
@@ -466,7 +467,8 @@ export default function AddCastSheet() {
               </div>
             </div>
             {afLoading ? (
-              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>Loading cast&hellip;</div>
+              /* Stands in for the "N people found: …" line that replaces it. */
+              <SkeletonText lines={2} label="Loading the cast for this episode" style={{ marginBottom: 10 }} />
             ) : afPreview.length > 0 ? (
               <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>{afPreview.length} people found: {afPreview.slice(0, 6).map((p) => isDrama ? p.character || p.name : p.name).join(', ')}{afPreview.length > 6 ? '…' : ''}</div>
             ) : null}
