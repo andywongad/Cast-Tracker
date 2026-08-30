@@ -489,12 +489,17 @@ export default function ShowScreen() {
       {/* Poster, link pills, notifications, caught-up and the redeem link all moved into the
           top bar's ⋯ menu — they cost ~150px above the fold and are all occasional. Only the view
           switch stays inline, because it changes what the whole screen is. */}
-      {isRealityShow && (
+      {/* Scripted shows reach the board too now that it draws kinship, and the second button says
+          which board you are getting. The toggle stays available rather than clever about it: a
+          map is worth drawing for some shows and pointless for others — The Office is twenty
+          people in one room — and that is the viewer's call, not something to infer from a cast
+          count and then hide the door behind. */}
+      {(isRealityShow || show.type === 'DRAMA') && (
         <div style={{ display: 'inline-flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: 3, margin: '10px 0' }}>
           <button onClick={() => setGridMode(true)} style={{ height: 30, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer', background: gridMode ? 'var(--accent)' : 'transparent', color: gridMode ? 'var(--accent-text)' : 'var(--text-secondary)' }}>Grid</button>
           <button onClick={() => setGridMode(false)} style={{ height: 30, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', background: !gridMode ? 'var(--accent)' : 'transparent', color: !gridMode ? 'var(--accent-text)' : 'var(--text-secondary)' }}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ marginRight: 5 }}><circle cx="4" cy="4" r="2" fill="currentColor" /><circle cx="12" cy="4" r="2" fill="currentColor" /><circle cx="8" cy="12" r="2" fill="currentColor" /><path d="M5.5 5.3L6.7 10.3M10.5 5.3L9.3 10.3M6 4h4" stroke="currentColor" strokeWidth="1.2" /></svg>
-            Relationship map
+            {show.type === 'DRAMA' ? 'Family tree' : 'Relationship map'}
           </button>
         </div>
       )}

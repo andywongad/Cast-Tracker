@@ -58,11 +58,28 @@ export interface MapCell {
   c: number;
 }
 
+/**
+ * What one line on the relationship map means.
+ *
+ * `interested` is the dating board and the only kind that existed first: reality shows, where a
+ * link is a feeling, both ends are equal, and a reciprocated pair becomes a heart.
+ *
+ * The rest are kinship, for scripted shows. They are a different thing in two ways that matter to
+ * every consumer: `parent` has a direction — the source is the parent OF the target, which is why
+ * it keeps the arrowhead — and the others are symmetric, so a pair drawn both ways is one line
+ * rather than two.
+ *
+ * Deliberately a small closed set. "Uncle", "stepmother" and "the one who raised him" are all
+ * `other` with a written label, because a taxonomy that tries to name every family in television
+ * is a taxonomy nobody finishes.
+ */
+export type MapRelKind = 'interested' | 'parent' | 'sibling' | 'spouse' | 'other';
+
 export interface MapRelationship {
   id: string;
   targetId: string;
   label: string;
-  kind: 'interested';
+  kind: MapRelKind;
 }
 
 export interface CastMember {

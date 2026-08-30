@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "npm run test:sync && npm run test:dupes && npm run test:castdupes && npm run test:share && npm run test:auth && npm run test:recap && npm run test:airtime && npm run test:castvalue",
+    "test": "npm run test:sync && npm run test:dupes && npm run test:castdupes && npm run test:share && npm run test:auth && npm run test:recap && npm run test:airtime && npm run test:castvalue && npm run test:reledges",
     "test:sync": "esbuild src/lib/sync.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/sync.test.mjs && node .vite/sync.test.mjs",
     "test:dupes": "esbuild src/lib/duplicateShows.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/dupes.test.mjs && node .vite/dupes.test.mjs",
     "test:castdupes": "esbuild src/lib/duplicateCast.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/castdupes.test.mjs && node .vite/castdupes.test.mjs",
@@ -15,7 +15,8 @@
     "test:auth": "esbuild src/lib/auth.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/auth.test.mjs && node .vite/auth.test.mjs",
     "test:recap": "esbuild src/lib/recap.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/recap.test.mjs && node .vite/recap.test.mjs",
     "test:airtime": "esbuild src/lib/airTime.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/airtime.test.mjs && node .vite/airtime.test.mjs",
-    "test:castvalue": "esbuild src/lib/castValue.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/castvalue.test.mjs && node .vite/castvalue.test.mjs"
+    "test:castvalue": "esbuild src/lib/castValue.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/castvalue.test.mjs && node .vite/castvalue.test.mjs",
+    "test:reledges": "esbuild src/lib/relationshipEdges.test.ts --bundle --platform=node --format=esm --define:import.meta.env={} --log-level=warning --outfile=.vite/reledges.test.mjs && node .vite/reledges.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

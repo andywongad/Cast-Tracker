@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CastMember, MapCell, MapRelationship, Show } from '../types';
+import type { CastMember, MapCell, MapRelationship, MapRelKind, Show } from '../types';
 import { useStore } from '../hooks/useStore';
 import { bgStyle, genId, initials } from '../lib/utils';
 import { MAP_LINE, MAP_HEART } from '../lib/theme';
+import { buildEdges, parentIdsOf, KINSHIP_KINDS, REL_KINDS } from '../lib/relationshipEdges';
 
 const COLS = 6;
 const ROWS = 8;
@@ -56,7 +57,12 @@ function MapSizeToggle({ value, onChange }: { value: number; onChange: (n: numbe
   );
 }
 
-/** Dating-show split: women left, men right, everyone else centred. Falls back to the full width. */
+/**
+ * Dating-show split: women left, men right, everyone else centred. Falls back to the full width.
+ *
+ * Off on scripted shows. It is a layout for a format where the two sides are the premise; on a
+ * family tree it would put a mother and her son at opposite ends of the board.
+ */
 function colRange(c: CastMember, split: boolean): [number, number] {
   if (!split) return [0, COLS - 1];
   if (c.gender === 'Female') return [0, 2];
@@ -86,7 +92,7 @@ function firstFreeCell(occupied: Set<string>, colMin: number, colMax: number): M
  *
  * Returns the full map for rendering plus just the newly claimed cells, which the caller persists.
  */
-function resolveCells(cast: CastMember[], epKey: string): { byId: Record<string, MapCell>; toPersist: Record<string, MapCell> } {
+function resolveCells(cast: CastMember[], epKey: string, kinship: boolean): { byId: Record<string, MapCell>; toPersist: Record<string, MapCell> } {
   const byId: Record<string, MapCell> = {};
   const toPersist: Record<string, MapCell> = {};
   const occupied = new Set<string>();
@@ -97,11 +103,37 @@ function resolveCells(cast: CastMember[], epKey: string): { byId: Record<string,
     if (cell) { byId[c.id] = cell; occupied.add(cellKey(cell)); }
   });
 
-  const split = cast.some((c) => c.gender === 'Female') && cast.some((c) => c.gender === 'Male');
+  const split = !kinship && cast.some((c) => c.gender === 'Female') && cast.some((c) => c.gender === 'Male');
   cast.forEach((c) => {
     if (byId[c.id]) return;
-    const [lo, hi] = colRange(c, split);
-    const cell = firstFreeCell(occupied, lo, hi);
+    /**
+     * On a scripted board, someone whose parent is already placed starts under them rather than in
+     * the first free slot at the top — so a tree comes out looking like a tree without anyone
+     * having to drag.
+     *
+     * Deliberately only for newcomers. The board's rule is that a placed person never moves, which
+     * is what stops the layout reshuffling under someone mid-edit; a real generational tidy-up is a
+     * separate, explicit action and is not this.
+     */
+    let cell: MapCell | null = null;
+    if (kinship) {
+      const parents = parentIdsOf(c.id, cast, (m) => getEpRel(m, epKey))
+        .map((id) => byId[id])
+        .filter(Boolean);
+      if (parents.length) {
+        const below = { r: Math.max(...parents.map((p) => p.r)) + 1, c: Math.round(parents.reduce((n, p) => n + p.c, 0) / parents.length) };
+        for (let step = 0; step < COLS && !cell; step++) {
+          for (const col of [below.c + step, below.c - step]) {
+            if (col < 0 || col > COLS - 1) continue;
+            if (!occupied.has(`${below.r}:${col}`)) { cell = { r: below.r, c: col }; break; }
+          }
+        }
+      }
+    }
+    if (!cell) {
+      const [lo, hi] = colRange(c, split);
+      cell = firstFreeCell(occupied, lo, hi);
+    }
     occupied.add(cellKey(cell));
     byId[c.id] = cell;
     toPersist[c.id] = cell;
@@ -140,13 +172,24 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   const [dragRelate, setDragRelate] = useState<{ sourceId: string; x: number; y: number } | null>(null);
   const [lineDrag, setLineDrag] = useState<{ sourceId: string; relId: string; end: 'source' | 'target'; x: number; y: number } | null>(null);
 
+  /**
+   * Scripted shows get kinship, reality shows keep the dating board.
+   *
+   * The two are different tools that happen to share a canvas: on a dating show a line is a
+   * feeling that changes weekly, and on a scripted show it is a fact about a family that gets
+   * revealed. Everything below that branches, branches here.
+   */
+  const kinship = show.type === 'DRAMA';
+  /** A link drawn but not yet named — kinship has to be asked, it cannot be assumed. */
+  const [pendingKind, setPendingKind] = useState<{ sourceId: string; targetId: string } | null>(null);
+
   const mapEpisode = show.mapEpisode || episodeOptions[0] || 'Ep 1';
   const epKey = epKeyFor(currentSeason, mapEpisode);
   const visibleCast = useMemo(() => seasonCast.filter((c) => !c.hideFromMap), [seasonCast]);
   const hiddenCast = useMemo(() => seasonCast.filter((c) => c.hideFromMap), [seasonCast]);
 
   const rows = ROWS;
-  const { byId: cellById, toPersist } = useMemo(() => resolveCells(visibleCast, epKey), [visibleCast, epKey]);
+  const { byId: cellById, toPersist } = useMemo(() => resolveCells(visibleCast, epKey, kinship), [visibleCast, epKey, kinship]);
 
   // Write newly claimed cells straight away. Until a position is saved it would be recomputed on
   // the next render, which is exactly the shuffling this replaces. Settles after one pass: once
@@ -306,11 +349,23 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
     mutateCast((c) => { c.mapCellByEp = { ...(c.mapCellByEp || {}), [epKey]: cell }; }, castId);
   };
 
-  const createRelationship = (sourceId: string, targetId: string) => {
+  const createRelationship = (sourceId: string, targetId: string, kind: MapRelKind = 'interested') => {
     mutateCast((c) => {
       const list = getEpRel(c, epKey);
-      c.relByEp = { ...(c.relByEp || {}), [epKey]: [...list, { id: genId('r'), targetId, label: 'Interested', kind: 'interested' }] };
+      c.relByEp = { ...(c.relByEp || {}), [epKey]: [...list, { id: genId('r'), targetId, label: REL_KINDS[kind].label, kind }] };
     }, sourceId);
+  };
+
+  /**
+   * Record a kinship link, writing the reciprocal half for the symmetric kinds.
+   *
+   * Two halves rather than one, because the map reads relationships off whoever holds them and a
+   * sibling recorded only on one side would vanish the moment that person was hidden. buildEdges
+   * collapses the pair back into a single line, so the board looks the same either way.
+   */
+  const createKinship = (sourceId: string, targetId: string, kind: MapRelKind) => {
+    createRelationship(sourceId, targetId, kind);
+    if (REL_KINDS[kind].symmetric) createRelationship(targetId, sourceId, kind);
   };
 
   const deleteRelationship = (sourceId: string, relId: string) => {
@@ -318,6 +373,11 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
       const list = getEpRel(c, epKey);
       c.relByEp = { ...(c.relByEp || {}), [epKey]: list.filter((r) => r.id !== relId) };
     }, sourceId);
+  };
+
+  /** Removes a line and every record behind it — both halves, when the pair was merged. */
+  const deleteEdge = (e: { parts: { sourceId: string; relId: string }[] }) => {
+    e.parts.forEach((part) => deleteRelationship(part.sourceId, part.relId));
   };
 
   const finishMove = (castId: string, clientX: number, clientY: number) => {
@@ -374,7 +434,12 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
       document.removeEventListener('pointerup', onUp);
       if (decided === 'relate') {
         const targetId = nodeIdAtPoint(ev.clientX, ev.clientY);
-        if (targetId && targetId !== id) createRelationship(id, targetId);
+        // Reality keeps its one meaning and needs no question. Kinship has to be named, and
+        // guessing a default would fill family trees with whichever kind was cheapest to assume.
+        if (targetId && targetId !== id) {
+          if (kinship) setPendingKind({ sourceId: id, targetId });
+          else createRelationship(id, targetId);
+        }
         setDragRelate(null);
       } else if (decided === 'move') {
         finishMove(id, ev.clientX, ev.clientY);
@@ -415,22 +480,15 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
     }
   };
 
-  // Build line list, merging reciprocal pairs into hearts
-  const allRels: { sourceId: string; rel: MapRelationship }[] = [];
-  visibleCast.forEach((c) => getEpRel(c, epKey).forEach((rel) => allRels.push({ sourceId: c.id, rel })));
-  const consumed = new Set<string>();
-  const singleLines: { sourceId: string; rel: MapRelationship }[] = [];
-  const hearts: { aId: string; bId: string; relIds: [string, string] }[] = [];
-  allRels.forEach(({ sourceId, rel }) => {
-    if (consumed.has(rel.id)) return;
-    const reciprocal = allRels.find((o) => o.sourceId === rel.targetId && o.rel.targetId === sourceId && !consumed.has(o.rel.id));
-    if (reciprocal) {
-      consumed.add(rel.id); consumed.add(reciprocal.rel.id);
-      hearts.push({ aId: sourceId, bId: rel.targetId, relIds: [rel.id, reciprocal.rel.id] });
-    } else {
-      singleLines.push({ sourceId, rel });
-    }
-  });
+  /**
+   * Every line for this episode, with reciprocal pairs already collapsed. See lib/relationshipEdges.
+   *
+   * `hearts` and `singleLines` are kept as names because the render below is written in them: a
+   * mutual `interested` link is what draws a heart, and everything else is a line.
+   */
+  const edges = buildEdges(visibleCast, (c) => getEpRel(c, epKey));
+  const hearts = edges.filter((e) => e.kind === 'interested' && e.mutual);
+  const singleLines = edges.filter((e) => !(e.kind === 'interested' && e.mutual));
 
   const gapPct = 6;
   const shortenLine = (x1: number, y1: number, x2: number, y2: number) => {
@@ -465,19 +523,28 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   return (
     <div>
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Relationship map for {mapEpisode}</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>
+          {kinship ? 'Who\u2019s related to who' : 'Relationship map'} for {mapEpisode}
+        </div>
         <button onClick={onToggleHelp} aria-expanded={mapHelpOpen} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', background: 'none', padding: '2px 0', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, fontWeight: 700, marginBottom: mapHelpOpen ? 6 : 8 }}>
           <span>How to use the map</span>
           <svg width="11" height="11" viewBox="0 0 16 16" fill="none" style={{ transform: mapHelpOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }}><path d="M3 5.5L8 10.5L13 5.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
         {mapHelpOpen && (
           <ul style={{ margin: '0 0 8px', padding: '0 0 0 14px', fontSize: 14, color: 'var(--text-faint)', lineHeight: 1.4, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <li>Drag from one contestant to another to show interest — the line starts at the person who's interested</li>
-            <li>Press and hold a contestant to reposition them</li>
+            {/* The gesture is identical in both modes; what it means is not, so the wording is the
+                one thing that has to differ. */}
+            {kinship ? (
+              <li>Drag from one character to another to say how they&rsquo;re related — you pick which when you let go</li>
+            ) : (
+              <li>Drag from one contestant to another to show interest — the line starts at the person who&rsquo;s interested</li>
+            )}
+            <li>Press and hold {kinship ? 'a character' : 'a contestant'} to reposition them</li>
             <li>Tap the circles, or spread two fingers, to make the map bigger — pinch to fit it back on screen</li>
             {zoom > 1 && <li>Drag the background to move around the map</li>}
             <li>Drag a line's end to reconnect it, or drop it away from everyone to delete</li>
-            <li>Tap the &times; on a contestant to take them off the map — they move to “Not shown on map” below, where you can add them back</li>
+            {kinship && <li>Tap a line&rsquo;s label to remove it. What you record is per episode, so a reveal is just an edit on the episode where it happens</li>}
+            <li>Tap the &times; on {kinship ? 'a character' : 'a contestant'} to take them off the map — they move to “Not shown on map” below, where you can add them back</li>
           </ul>
         )}
       </div>
@@ -501,8 +568,20 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 14, color: 'var(--text-faint)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="15" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /></svg><span>interested in</span></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13.6s-5.6-3.4-5.6-7.3C2.4 3.9 4.2 2.3 6.3 2.3c1.1 0 2.1.5 2.9 1.4.7-.9 1.7-1.4 2.8-1.4 2.1 0 3.9 1.6 3.9 4 0 3.9-5.6 7.3-5.6 7.3z" fill={MAP_HEART} /></svg><span>mutual</span></div>
+          {/* A legend for the marks the board can actually make. On a scripted show there are no
+              hearts to explain and the arrow means something else entirely — it points from the
+              parent to the child, which is the one thing about a family tree worth stating. */}
+          {kinship ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="11" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /><path d="M11,1 L15,4 L11,7 Z" fill={MAP_LINE} /></svg><span>parent of</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="15" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /></svg><span>sibling, partner, related</span></div>
+            </>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="15" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /></svg><span>interested in</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13.6s-5.6-3.4-5.6-7.3C2.4 3.9 4.2 2.3 6.3 2.3c1.1 0 2.1.5 2.9 1.4.7-.9 1.7-1.4 2.8-1.4 2.1 0 3.9 1.6 3.9 4 0 3.9-5.6 7.3-5.6 7.3z" fill={MAP_HEART} /></svg><span>mutual</span></div>
+            </>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <MapSizeToggle value={zoom} onChange={setMapZoom} />
@@ -552,22 +631,28 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
               return <circle key={`${r}-${c}`} cx={p.x} cy={p.y} r={1.2} fill="var(--text-faint)" opacity={0} />;
             });
           })}
-          {singleLines.map(({ sourceId, rel }) => {
-            const a = posById[sourceId], b = posById[rel.targetId];
+          {singleLines.map((e) => {
+            const a = posById[e.aId], b = posById[e.bId];
             if (!a || !b) return null;
+            // A symmetric line has no "from", so it runs edge to edge with no arrowhead and is
+            // shortened at both ends rather than one.
             const short = shortenLine(a.x, a.y, b.x, b.y);
+            // shortenLine trims the far end, so running it backwards trims the near one.
+            const back = shortenLine(b.x, b.y, a.x, a.y);
+            const x1 = e.directed ? a.x : back.x2, y1 = e.directed ? a.y : back.y2;
+            const drag = e.parts[0];
             return (
-              <g key={rel.id}>
-                <line x1={a.x} y1={a.y} x2={short.x2} y2={short.y2} stroke="transparent" strokeWidth={4} vectorEffect="non-scaling-stroke" style={{ pointerEvents: 'auto', cursor: 'grab' }} onPointerDown={(e) => startLineEndDrag(sourceId, rel.id, 'target', e)} />
-                <line x1={a.x} y1={a.y} x2={short.x2} y2={short.y2} stroke={MAP_LINE} strokeWidth={1.5} vectorEffect="non-scaling-stroke" markerEnd="url(#relArrow)" style={{ pointerEvents: 'none' }} />
-                <circle cx={a.x} cy={a.y} r={2.4} fill={MAP_LINE} opacity={0.001} style={{ pointerEvents: 'auto', cursor: 'grab' }} onPointerDown={(e) => startLineEndDrag(sourceId, rel.id, 'source', e)} />
+              <g key={e.key}>
+                <line x1={x1} y1={y1} x2={short.x2} y2={short.y2} stroke="transparent" strokeWidth={4} vectorEffect="non-scaling-stroke" style={{ pointerEvents: 'auto', cursor: 'grab' }} onPointerDown={(ev) => startLineEndDrag(drag.sourceId, drag.relId, 'target', ev)} />
+                <line x1={x1} y1={y1} x2={short.x2} y2={short.y2} stroke={MAP_LINE} strokeWidth={1.5} vectorEffect="non-scaling-stroke" markerEnd={e.directed ? 'url(#relArrow)' : undefined} style={{ pointerEvents: 'none' }} />
+                <circle cx={a.x} cy={a.y} r={2.4} fill={MAP_LINE} opacity={0.001} style={{ pointerEvents: 'auto', cursor: 'grab' }} onPointerDown={(ev) => startLineEndDrag(drag.sourceId, drag.relId, 'source', ev)} />
               </g>
             );
           })}
-          {hearts.map((h) => {
-            const a = posById[h.aId], b = posById[h.bId];
+          {hearts.map((e) => {
+            const a = posById[e.aId], b = posById[e.bId];
             if (!a || !b) return null;
-            return <line key={h.relIds[0]} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={MAP_HEART} strokeWidth={1.5} vectorEffect="non-scaling-stroke" style={{ pointerEvents: 'none' }} />;
+            return <line key={e.key} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={MAP_HEART} strokeWidth={1.5} vectorEffect="non-scaling-stroke" style={{ pointerEvents: 'none' }} />;
           })}
           {lineDrag && (() => {
             const anchor = posById[lineDrag.end === 'target' ? lineDrag.sourceId : (show.cast.find((c) => c.id === lineDrag.sourceId)?.relByEp?.[epKey]?.find((r) => r.id === lineDrag.relId)?.targetId || '')];
@@ -578,16 +663,86 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           )}
         </svg>
 
-        {hearts.map((h) => {
-          const a = posById[h.aId], b = posById[h.bId];
+        {hearts.map((e) => {
+          const a = posById[e.aId], b = posById[e.bId];
           if (!a || !b) return null;
           const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
           return (
-            <div key={h.relIds[0]} onClick={() => { deleteRelationship(h.aId, h.relIds[0]); deleteRelationship(h.bId, h.relIds[1]); }} style={{ position: 'absolute', left: `${mx}%`, top: `${my}%`, transform: 'translate(-50%, -50%)', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>
+            <div key={e.key} onClick={() => deleteEdge(e)} style={{ position: 'absolute', left: `${mx}%`, top: `${my}%`, transform: 'translate(-50%, -50%)', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}>
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 13.6s-5.6-3.4-5.6-7.3C2.4 3.9 4.2 2.3 6.3 2.3c1.1 0 2.1.5 2.9 1.4.7-.9 1.7-1.4 2.8-1.4 2.1 0 3.9 1.6 3.9 4 0 3.9-5.6 7.3-5.6 7.3z" fill={MAP_HEART} /></svg>
             </div>
           );
         })}
+
+        {/* Kinship lines carry their word at the midpoint. A family tree of unlabelled strokes
+            says who is connected and not how, which is the only thing anyone opens it to learn.
+            The label is also the delete target, the way the heart is on the dating board. */}
+        {kinship && singleLines.map((e) => {
+          const a = posById[e.aId], b = posById[e.bId];
+          if (!a || !b) return null;
+          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+          return (
+            <button
+              key={`lbl-${e.key}`}
+              onClick={() => deleteEdge(e)}
+              aria-label={`${e.label} — remove`}
+              style={{
+                position: 'absolute', left: `${mx}%`, top: `${my}%`, transform: 'translate(-50%, -50%)',
+                zIndex: 3, border: 'none', cursor: 'pointer', font: 'inherit', fontSize: 10, fontWeight: 700,
+                padding: '2px 6px', borderRadius: 999, whiteSpace: 'nowrap',
+                background: 'var(--sheet)', color: 'var(--text-muted)', boxShadow: 'var(--shadow-card)',
+              }}
+            >
+              {e.label}
+            </button>
+          );
+        })}
+
+        {/* Naming the link, asked once at the moment it is drawn.
+
+            A sheet would be too much furniture for a two-tap decision and would cover the board
+            you are reading; a default would be worse, because whichever kind is cheapest to assume
+            is the one every tree would silently fill with. So: four words, over the map, dismissible
+            by choosing nothing. */}
+        {pendingKind && (() => {
+          const a = posById[pendingKind.sourceId], b = posById[pendingKind.targetId];
+          const source = visibleCast.find((c) => c.id === pendingKind.sourceId);
+          const target = visibleCast.find((c) => c.id === pendingKind.targetId);
+          if (!a || !b || !source || !target) return null;
+          return (
+            <div
+              role="dialog"
+              aria-label={`How is ${source.name} related to ${target.name}?`}
+              style={{
+                position: 'absolute', left: `${(a.x + b.x) / 2}%`, top: `${(a.y + b.y) / 2}%`,
+                transform: 'translate(-50%, -50%)', zIndex: 6, background: 'var(--sheet)',
+                borderRadius: 14, boxShadow: 'var(--shadow-lift)', padding: 10, width: 190,
+              }}
+            >
+              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.35, marginBottom: 8 }}>
+                <strong style={{ color: 'var(--text)' }}>{source.name}</strong> is the&hellip;
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {KINSHIP_KINDS.map((k) => (
+                  <button
+                    key={k}
+                    onClick={() => { createKinship(pendingKind.sourceId, pendingKind.targetId, k); setPendingKind(null); }}
+                    style={{ border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {/* "Parent of" reads as a sentence with the name above it; the rest are nouns. */}
+                    {k === 'parent' ? `parent of ${target.name.split(' ')[0]}` : REL_KINDS[k].label.toLowerCase()}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setPendingKind(null)}
+                style={{ marginTop: 8, border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-faint)' }}
+              >
+                Cancel
+              </button>
+            </div>
+          );
+        })()}
 
         {visibleCast.map((c) => {
           const p = posById[c.id];
