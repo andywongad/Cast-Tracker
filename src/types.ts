@@ -73,7 +73,15 @@ export interface MapCell {
  * `other` with a written label, because a taxonomy that tries to name every family in television
  * is a taxonomy nobody finishes.
  */
-export type MapRelKind = 'interested' | 'parent' | 'sibling' | 'spouse' | 'other';
+export type MapRelKind =
+  | 'interested'
+  // Family
+  | 'parent' | 'sibling' | 'spouse' | 'extended'
+  // Personal
+  | 'romantic' | 'friend' | 'frenemy'
+  // Work and school
+  | 'colleague' | 'roommate' | 'classmate'
+  | 'other';
 
 export interface MapRelationship {
   id: string;

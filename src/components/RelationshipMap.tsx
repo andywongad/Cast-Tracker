@@ -3,7 +3,7 @@ import type { CastMember, MapCell, MapRelationship, MapRelKind, Show } from '../
 import { useStore } from '../hooks/useStore';
 import { bgStyle, genId, initials } from '../lib/utils';
 import { MAP_LINE, MAP_HEART } from '../lib/theme';
-import { buildEdges, parentIdsOf, KINSHIP_KINDS, REL_KINDS } from '../lib/relationshipEdges';
+import { buildEdges, parentIdsOf, KIND_GROUPS, REL_KINDS } from '../lib/relationshipEdges';
 
 const COLS = 6;
 const ROWS = 8;
@@ -662,11 +662,13 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 14, color: 'var(--text-faint)' }}>
           {/* A legend for the marks the board can actually make. On a scripted show there are no
               hearts to explain and the arrow means something else entirely — it points from the
-              parent to the child, which is the one thing about a family tree worth stating. */}
+              parent to the child, which is the one thing about a family tree worth stating. The
+              other side is not enumerated: eleven kinds do not fit in a legend, and they all draw
+              the same plain line with their own word written on it. */}
           {kinship ? (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="11" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /><path d="M11,1 L15,4 L11,7 Z" fill={MAP_LINE} /></svg><span>parent of</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="15" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /></svg><span>sibling, partner, related</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="15" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /></svg><span>everything else</span></div>
             </>
           ) : (
             <>
@@ -855,29 +857,45 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           return (
             <MapPopover at={pendingKind.at} viewportRef={viewportRef} width={190} label={`How is ${source.name} related to ${target.name}?`}>
               <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.35, marginBottom: 8 }}>
-                <strong style={{ color: 'var(--text)' }}>{source.name}</strong> is the&hellip;
+                <strong style={{ color: 'var(--text)' }}>{source.name.split(' ')[0]}</strong> is{' '}
+                <strong style={{ color: 'var(--text)' }}>{target.name.split(' ')[0]}</strong>&rsquo;s&hellip;
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {KINSHIP_KINDS.map((k) => (
-                  <button
-                    key={k}
-                    onClick={() => {
-                      // `other` is the escape hatch, so it asks for the words rather than
-                      // inventing them. The rest already have the right word in their name.
-                      if (k === 'other') {
-                        setLabelEdit({ aId: pendingKind.sourceId, bId: pendingKind.targetId, value: '', create: 'other', at: pendingKind.at });
-                      } else {
-                        createKinship(pendingKind.sourceId, pendingKind.targetId, k);
-                      }
-                      setPendingKind(null);
-                    }}
-                    style={{ border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    {/* "Parent of" reads as a sentence with the name above it; the rest are nouns. */}
-                    {k === 'parent' ? `parent of ${target.name.split(' ')[0]}` : k === 'other' ? 'something else…' : REL_KINDS[k].label.toLowerCase()}
-                  </button>
+              {/* A native select rather than a custom menu: on a phone it opens the system picker,
+                  which is the one list control everybody can already drive, and it costs nothing in
+                  scroll handling inside a panel that is itself floating over a draggable board.
+
+                  Applied on change, with no Save. Choosing the word IS the decision, and a second
+                  tap to confirm it would make the common case slower than the chips it replaces. */}
+              <select
+                autoFocus
+                defaultValue=""
+                onChange={(ev) => {
+                  const k = ev.target.value as MapRelKind;
+                  if (!k) return;
+                  // `other` asks for the words rather than inventing them; the rest carry their own.
+                  if (k === 'other') {
+                    setLabelEdit({ aId: pendingKind.sourceId, bId: pendingKind.targetId, value: '', create: 'other', at: pendingKind.at });
+                  } else {
+                    createKinship(pendingKind.sourceId, pendingKind.targetId, k);
+                  }
+                  setPendingKind(null);
+                }}
+                className="ct-input"
+                style={{ height: 36, fontSize: 13 }}
+              >
+                <option value="" disabled>Choose&hellip;</option>
+                {KIND_GROUPS.map((g) => (
+                  <optgroup key={g.label} label={g.label}>
+                    {g.kinds.map((k) => (
+                      <option key={k} value={k}>
+                        {/* "Parent of" only reads as a sentence with the other name in it. */}
+                        {k === 'parent' ? `parent of ${target.name.split(' ')[0]}` : REL_KINDS[k].label.toLowerCase()}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
-              </div>
+                <option value="other">something else&hellip;</option>
+              </select>
               <button
                 onClick={() => setPendingKind(null)}
                 style={{ marginTop: 8, border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-faint)' }}

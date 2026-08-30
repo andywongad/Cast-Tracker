@@ -15,14 +15,47 @@ import type { CastMember, MapRelationship, MapRelKind } from '../types';
 /** How each kind behaves. `symmetric` decides merging; `directed` decides the arrowhead. */
 export const REL_KINDS: Record<MapRelKind, { label: string; symmetric: boolean; directed: boolean }> = {
   interested: { label: 'Interested', symmetric: true, directed: true },
+
+  /**
+   * `parent` is the only asymmetric relationship here, and that is not an accident of the list —
+   * it is the only one where the two people are not the same thing to each other. Everything else
+   * is a description both of them would give, which is why it merges into one line and carries no
+   * arrowhead. A new kind that fails that test needs `symmetric: false` and its own thought.
+   */
   parent: { label: 'Parent of', symmetric: false, directed: true },
   sibling: { label: 'Sibling', symmetric: true, directed: false },
-  spouse: { label: 'Partner', symmetric: true, directed: false },
+  spouse: { label: 'Married', symmetric: true, directed: false },
+  /** Cousins, in-laws, the aunt who turns up at Christmas — family without a precise word. */
+  extended: { label: 'Relative', symmetric: true, directed: false },
+
+  romantic: { label: 'Together', symmetric: true, directed: false },
+  friend: { label: 'Friend', symmetric: true, directed: false },
+  frenemy: { label: 'Frenemy', symmetric: true, directed: false },
+
+  /** "Works with" rather than "partner", which in a cop show means one thing and in a sitcom another. */
+  colleague: { label: 'Works with', symmetric: true, directed: false },
+  roommate: { label: 'Roommate', symmetric: true, directed: false },
+  classmate: { label: 'Classmate', symmetric: true, directed: false },
+
   other: { label: 'Related', symmetric: true, directed: false },
 };
 
-/** The kinds offered on a scripted show, in the order the picker lists them. */
-export const KINSHIP_KINDS: MapRelKind[] = ['parent', 'sibling', 'spouse', 'other'];
+/**
+ * How the picker groups them.
+ *
+ * Eleven options is past what a row of chips can hold in a panel this size, and past what anyone
+ * reads as a set — so they are grouped and put in a dropdown, where the headings do the work of
+ * telling you which half of the list to look in. `other` is deliberately outside the groups: it is
+ * the escape hatch, not a category.
+ */
+export const KIND_GROUPS: { label: string; kinds: MapRelKind[] }[] = [
+  { label: 'Family', kinds: ['parent', 'sibling', 'spouse', 'extended'] },
+  { label: 'Personal', kinds: ['romantic', 'friend', 'frenemy'] },
+  { label: 'Work & school', kinds: ['colleague', 'roommate', 'classmate'] },
+];
+
+/** Every kind the picker offers, groups first and the escape hatch last. */
+export const KINSHIP_KINDS: MapRelKind[] = [...KIND_GROUPS.flatMap((g) => g.kinds), 'other'];
 
 export interface Edge {
   /** Stable across renders: the id of the relationship record that anchors this line. */

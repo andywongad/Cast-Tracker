@@ -7,7 +7,7 @@
  * anything. The dating board shipped first and works; the cases below exist so adding kinship
  * cannot quietly change it.
  */
-import { buildEdges, parentIdsOf, REL_KINDS } from './relationshipEdges';
+import { buildEdges, parentIdsOf, KIND_GROUPS, KINSHIP_KINDS, REL_KINDS } from './relationshipEdges';
 import type { CastMember, MapRelationship } from '../types';
 
 const EP = '1_Ep 1';
@@ -96,6 +96,45 @@ console.log('parentIdsOf');
   check('finds both parents', parentIdsOf('robb', cast, relsFor).sort().join() === 'cat,ned');
   check('a parent has none of their own here', parentIdsOf('ned', cast, relsFor).length === 0);
   check('a sibling link is not a parent link', parentIdsOf('arya', [person('sansa', [rel('r3', 'arya', 'sibling')])], relsFor).length === 0);
+}
+
+/**
+ * The taxonomy grew from four kinds to eleven, and two invariants have to survive the next person
+ * who adds one. Every kind the picker offers must have metadata, or it draws an undefined label;
+ * and `parent` must remain the only asymmetric one, because that is what the arrowhead means and
+ * what stops the other ten from drawing themselves twice.
+ */
+console.log('the taxonomy');
+{
+  const missing = KINSHIP_KINDS.filter((k) => !REL_KINDS[k]);
+  check('every offered kind has metadata', missing.length === 0, missing.join());
+
+  const asymmetric = (Object.keys(REL_KINDS) as (keyof typeof REL_KINDS)[]).filter((k) => !REL_KINDS[k].symmetric);
+  check('parent is the only asymmetric kind', asymmetric.join() === 'parent', asymmetric.join());
+
+  const arrowed = (Object.keys(REL_KINDS) as (keyof typeof REL_KINDS)[]).filter((k) => REL_KINDS[k].directed && k !== 'interested');
+  check('and the only kinship kind that draws an arrow', arrowed.join() === 'parent', arrowed.join());
+
+  const grouped = KIND_GROUPS.flatMap((g) => g.kinds);
+  check('no kind is listed in two groups', new Set(grouped).size === grouped.length);
+  check('"other" is outside the groups, as the escape hatch', !grouped.includes('other') && KINSHIP_KINDS.includes('other'));
+
+  const labels = KINSHIP_KINDS.map((k) => REL_KINDS[k].label);
+  check('no two kinds share a label', new Set(labels).size === labels.length, labels.join());
+}
+
+/** Every symmetric kind has to collapse, not just the two that existed first. */
+console.log('every symmetric kind merges');
+{
+  const notMerged = KINSHIP_KINDS.filter((k) => {
+    if (!REL_KINDS[k].symmetric) return false;
+    const edges = buildEdges([
+      person('a', [rel('r1', 'b', k)]),
+      person('b', [rel('r2', 'a', k)]),
+    ], relsFor);
+    return edges.length !== 1 || !edges[0].mutual;
+  });
+  check('recorded from both ends, each draws one line', notMerged.length === 0, notMerged.join());
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
