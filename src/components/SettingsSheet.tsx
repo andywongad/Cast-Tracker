@@ -134,11 +134,12 @@ export default function SettingsSheet() {
                 tappable, and a full-strength button would keep asking for attention it no longer
                 needs. Both were the same grey block as Export, Import and Feedback. */}
             {session ? (
+              <>
               <button
                 onClick={openAuth}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
-                  padding: '12px 14px', marginBottom: 22, border: 'none', borderRadius: 14,
+                  padding: '12px 14px', marginBottom: 6, border: 'none', borderRadius: 14,
                   background: 'var(--surface)', cursor: 'pointer',
                 }}
               >
@@ -158,6 +159,27 @@ export default function SettingsSheet() {
                 </div>
                 <span aria-hidden="true" style={{ flex: 'none', color: 'var(--icon-muted)', fontSize: 18, lineHeight: 1 }}>&rsaquo;</span>
               </button>
+              {/* The way back when a device has stopped receiving.
+
+                  A pull only ever asks for what is newer than the last row this device saw, which
+                  is right until something is missed — after that the mark has stepped past it and
+                  no refresh, reinstall or sign-out will ask for it again. This forgets the mark and
+                  pulls the whole account. It cannot lose anything: the merge is the same per-record
+                  last-write-wins as every other pull, so it costs one larger request and nothing
+                  else. */}
+              <button
+                onClick={() => { void sync.resync(); }}
+                disabled={sync.state === 'syncing'}
+                style={{
+                  border: 'none', background: 'none', padding: '0 2px', marginBottom: 22,
+                  cursor: sync.state === 'syncing' ? 'default' : 'pointer', textAlign: 'left',
+                  fontSize: 13, fontWeight: 700,
+                  color: sync.state === 'syncing' ? 'var(--text-faint)' : 'var(--accent-soft)',
+                }}
+              >
+                {sync.state === 'syncing' ? 'Syncing\u2026' : 'Missing something? Sync everything again'}
+              </button>
+              </>
             ) : (
               <>
                 <button onClick={openAuth} className="ct-btn-primary ct-btn-primary-calm" style={{ width: '100%', height: 46, marginBottom: 6 }}>

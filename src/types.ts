@@ -78,7 +78,7 @@ export type MapRelKind =
   // Family
   | 'parent' | 'sibling' | 'spouse' | 'extended'
   // Personal
-  | 'romantic' | 'friend' | 'frenemy'
+  | 'romantic' | 'friend' | 'frenemy' | 'enemy'
   // Work and school
   | 'colleague' | 'roommate' | 'classmate'
   | 'other';

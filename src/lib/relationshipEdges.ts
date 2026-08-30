@@ -24,16 +24,34 @@ export const REL_KINDS: Record<MapRelKind, { label: string; symmetric: boolean; 
    */
   parent: { label: 'Parent of', symmetric: false, directed: true },
   sibling: { label: 'Sibling', symmetric: true, directed: false },
-  spouse: { label: 'Married', symmetric: true, directed: false },
+  spouse: { label: 'Spouse', symmetric: true, directed: false },
   /** Cousins, in-laws, the aunt who turns up at Christmas — family without a precise word. */
   extended: { label: 'Relative', symmetric: true, directed: false },
 
-  romantic: { label: 'Together', symmetric: true, directed: false },
+  /**
+   * "Partner" is the natural noun and it is safe to use here only because of its neighbours:
+   * `spouse` and `colleague` both say their own word plainly, so nothing is left for this one to
+   * be confused with. Alone in the list it would have been the ambiguous option.
+   */
+  romantic: { label: 'Partner', symmetric: true, directed: false },
   friend: { label: 'Friend', symmetric: true, directed: false },
   frenemy: { label: 'Frenemy', symmetric: true, directed: false },
+  /**
+   * "Enemy" rather than "foe", which reads as a fantasy show even on a fantasy show — and which
+   * would sit oddly next to `frenemy`, a word built out of this one.
+   *
+   * Symmetric, like friend and frenemy, which is a simplification worth naming: television is full
+   * of one-sided rivalries where the other party has not noticed. That is what the free-text kind
+   * is for, and the alternative — a second directed kind — would cost the invariant that `parent`
+   * is the only relationship where the two people are not the same thing to each other.
+   */
+  enemy: { label: 'Enemy', symmetric: true, directed: false },
 
-  /** "Works with" rather than "partner", which in a cop show means one thing and in a sitcom another. */
-  colleague: { label: 'Works with', symmetric: true, directed: false },
+  /**
+   * "Colleague", not "partner" — which in a cop show means one thing and in a sitcom another, and
+   * which the romantic kind above has now claimed outright.
+   */
+  colleague: { label: 'Colleague', symmetric: true, directed: false },
   roommate: { label: 'Roommate', symmetric: true, directed: false },
   classmate: { label: 'Classmate', symmetric: true, directed: false },
 
@@ -50,7 +68,7 @@ export const REL_KINDS: Record<MapRelKind, { label: string; symmetric: boolean; 
  */
 export const KIND_GROUPS: { label: string; kinds: MapRelKind[] }[] = [
   { label: 'Family', kinds: ['parent', 'sibling', 'spouse', 'extended'] },
-  { label: 'Personal', kinds: ['romantic', 'friend', 'frenemy'] },
+  { label: 'Personal', kinds: ['romantic', 'friend', 'frenemy', 'enemy'] },
   { label: 'Work & school', kinds: ['colleague', 'roommate', 'classmate'] },
 ];
 

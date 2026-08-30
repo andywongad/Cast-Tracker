@@ -14,7 +14,7 @@
  * remote edit overwriting a newer local one, and a stale delete destroying a record that was
  * edited afterwards.
  */
-import { stampEdits, applyRemote, readTombstones, collectPush } from './sync';
+import { stampEdits, applyRemote, readTombstones, collectPush, cursorFor, saveCursor, clearCursor } from './sync';
 import type { AppData, CastMember } from '../types';
 
 const store: Record<string, string> = {};
@@ -148,6 +148,36 @@ console.log('collectPush — duplicate ids');
   const { cast } = collectPush(dup, 'u1');
   check('duplicate record ids collapse to one row', cast.length === 1, `got ${cast.length}`);
   check('the newer edit is the one sent', (cast[0].payload as any).nickname === 'second');
+}
+
+/**
+ * The cursor is a high-water mark, and its failure mode is silence: a row that falls behind it is
+ * never asked for again, so the loss shows up as work that simply never arrived on the other
+ * device — surviving refreshes, reinstalls and, until clearCursor existed, signing out.
+ */
+console.log('the sync cursor');
+{
+  const A = 'user-a', B = 'user-b';
+  const T1 = '2026-08-30T05:00:00.000Z';
+
+  clearCursor();
+  check('with no mark, a pull starts from the beginning', cursorFor(A) === new Date(0).toISOString());
+
+  saveCursor(A, T1);
+  check('a saved mark is resumed from', cursorFor(A) === T1);
+
+  // The mark belongs to an account, not a device: resuming someone else's would skip every row
+  // written before it.
+  check('another account does not inherit it', cursorFor(B) === new Date(0).toISOString());
+
+  clearCursor();
+  check('clearing sends the next pull back to the beginning', cursorFor(A) === new Date(0).toISOString());
+
+  // The recovery path, end to end: a device that has stepped past rows can ask for everything.
+  saveCursor(A, T1);
+  clearCursor();
+  saveCursor(A, '2026-08-30T06:00:00.000Z');
+  check('and a later mark still saves normally afterwards', cursorFor(A) === '2026-08-30T06:00:00.000Z');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

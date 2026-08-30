@@ -57,6 +57,25 @@ export function cursorFor(userId: string): string {
   return c && c.userId === userId ? c.serverAt : new Date(0).toISOString();
 }
 
+/**
+ * Forget where we had got to, so the next pull starts from the beginning.
+ *
+ * The escape hatch for a cursor that has moved past rows this device never applied. Nothing else
+ * can recover them: a pull only ever asks for what is newer than the mark, so a skipped row is
+ * invisible from then on and stays invisible through a refresh, a reinstall, and — until this
+ * existed — a sign-out, because the mark is keyed to the user and outlives the session.
+ *
+ * Safe to call at any time. A full re-pull merges by the same per-record last-write-wins rule as
+ * any other pull, so nothing local is lost; it just costs one larger request.
+ */
+export function clearCursor() {
+  try {
+    localStorage.removeItem(CURSOR_KEY);
+  } catch {
+    // A device that cannot write storage cannot have a stale cursor to clear either.
+  }
+}
+
 export function saveCursor(userId: string, serverAt: string) {
   try {
     localStorage.setItem(CURSOR_KEY, JSON.stringify({ userId, serverAt } satisfies Cursor));

@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from './useAuth';
 import { useStore } from './useStore';
-import { applyRemote, pull, push, saveCursor } from '../lib/sync';
+import { applyRemote, clearCursor, pull, push, saveCursor } from '../lib/sync';
 import type { AppData } from '../types';
 import { applyResolutions, findDuplicateGroups } from '../lib/duplicateShows';
 import { findCastDuplicates, mergeDuplicateCast } from '../lib/duplicateCast';
@@ -127,10 +127,25 @@ function useSyncEngine() {
         updateData((d) => { mergeDuplicateCast(d); });
       }
 
-      // Advance past our own writes too, or the next pull hands them straight back.
+      /**
+       * The cursor is NOT advanced past our own writes, and that is deliberate.
+       *
+       * It used to be, to stop a loop: pushing stamps a new `server_at` on every row, the next
+       * pull asks for everything newer and gets those same rows back, merging them counted as a
+       * change, which scheduled another sync, which pushed again. That loop is closed further up
+       * now, by the guard that only assigns the merge when it actually differs — our own rows come
+       * back once, merge to a no-op, and nothing re-triggers.
+       *
+       * Advancing here was quietly losing data. Anything the other device wrote between this
+       * device's pull and its push is too new for the pull and behind the mark after the push: it
+       * falls in a hole and is never asked for again. That is why the symptom survived a refresh —
+       * a missed row is not retried, the high-water mark has already stepped over it.
+       *
+       * The cost of not advancing is one round of our own rows on the next pull. The cost of
+       * advancing was an edit that silently never arrived.
+       */
       const snapshot = dataRef.current;
-      const written = await push(snapshot, userId);
-      if (written.newest) saveCursor(userId, written.newest);
+      await push(snapshot, userId);
       // What was sent, not when it was sent: the flush below compares identities, and a timestamp
       // could not tell an edit made during the request from one made before it.
       pushed.current = snapshot;
@@ -201,7 +216,34 @@ function useSyncEngine() {
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [data, userId, run]);
 
-  return { state, lastSyncedAt, error, syncNow: run };
+  /**
+   * Start again from the beginning of the account's history.
+   *
+   * For the case the fix above prevents but cannot undo: rows already stepped over are invisible
+   * to every future pull, so a device that has lost some needs a way to ask for everything. Also
+   * the honest answer to "it isn't syncing and I don't know why" — it costs one larger request and
+   * cannot lose anything, because the merge rule is the same either way.
+   */
+  const resync = useCallback(async () => {
+    clearCursor();
+    await run();
+  }, [run]);
+
+  /**
+   * Signing out clears the mark as well.
+   *
+   * Signing out and back in is what everyone tries first, and until now it did nothing at all for
+   * sync: the cursor is keyed to the user id, so the same person signing back in resumed from the
+   * identical high-water mark. Making the obvious remedy actually work is worth the one extra
+   * pull it costs.
+   */
+  const wasSignedIn = useRef<string | null>(null);
+  useEffect(() => {
+    if (userId) { wasSignedIn.current = userId; return; }
+    if (wasSignedIn.current) { clearCursor(); wasSignedIn.current = null; }
+  }, [userId]);
+
+  return { state, lastSyncedAt, error, syncNow: run, resync };
 }
 
 interface SyncValue {
@@ -209,6 +251,8 @@ interface SyncValue {
   lastSyncedAt: number | null;
   error: string;
   syncNow: () => Promise<void>;
+  /** Clear the cursor and pull the whole account again. */
+  resync: () => Promise<void>;
 }
 
 const SyncContext = createContext<SyncValue | null>(null);
@@ -220,12 +264,12 @@ const SyncContext = createContext<SyncValue | null>(null);
  * the engine lives here and everything else reads it.
  */
 export function SyncProvider({ children }: { children: React.ReactNode }) {
-  const { state, lastSyncedAt, error, syncNow } = useSyncEngine();
-  const value = useMemo(() => ({ state, lastSyncedAt, error, syncNow }), [state, lastSyncedAt, error, syncNow]);
+  const { state, lastSyncedAt, error, syncNow, resync } = useSyncEngine();
+  const value = useMemo(() => ({ state, lastSyncedAt, error, syncNow, resync }), [state, lastSyncedAt, error, syncNow, resync]);
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
 }
 
 /** Sync status, or nulls where sync isn't configured. Safe to call anywhere. */
 export function useSync(): SyncValue {
-  return useContext(SyncContext) ?? { state: 'off', lastSyncedAt: null, error: '', syncNow: async () => {} };
+  return useContext(SyncContext) ?? { state: 'off', lastSyncedAt: null, error: '', syncNow: async () => {}, resync: async () => {} };
 }
