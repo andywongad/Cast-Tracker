@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CastMember, MapCell, MapRelationship, MapRelKind, Show } from '../types';
 import { useStore } from '../hooks/useStore';
 import { bgStyle, genId, initials } from '../lib/utils';
@@ -63,6 +63,55 @@ function MapSizeToggle({ value, onChange }: { value: number; onChange: (n: numbe
  * Off on scripted shows. It is a layout for a format where the two sides are the premise; on a
  * family tree it would put a mother and her son at opposite ends of the board.
  */
+/**
+ * A small panel anchored near a point on the board, kept inside it.
+ *
+ * Two things it fixes, both from where these panels used to live. They were children of the board
+ * itself, which is `scale()`d — so at the larger size a panel rendered double-size — and they were
+ * placed at the midpoint between two faces with a -50% translate, so a link drawn near an edge put
+ * half the panel outside the board's `overflow: hidden`, with no way to reach the buttons on that
+ * half. As a child of the viewport it neither scales nor gets clipped.
+ *
+ * Measured rather than estimated: the two panels differ in height, and a guessed height would be
+ * wrong for one of them against the bottom edge. Hidden for its first paint only, so nothing is
+ * ever seen at the unclamped position.
+ */
+function MapPopover({ at, viewportRef, label, width, children }: {
+  at: { x: number; y: number };
+  viewportRef: React.RefObject<HTMLDivElement>;
+  label: string;
+  width: number;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current, vp = viewportRef.current;
+    if (!el || !vp) return;
+    const M = 8;
+    const w = el.offsetWidth, h = el.offsetHeight;
+    // Math.max on the upper bound keeps the panel on screen even when it is taller than the board.
+    const clamp = (v: number, max: number) => Math.min(Math.max(v, M), Math.max(M, max - M));
+    setPos({ left: clamp(at.x - w / 2, vp.clientWidth - w), top: clamp(at.y - h / 2, vp.clientHeight - h) });
+  }, [at.x, at.y, viewportRef]);
+
+  return (
+    <div
+      ref={ref}
+      role="dialog"
+      aria-label={label}
+      style={{
+        position: 'absolute', left: pos?.left ?? at.x, top: pos?.top ?? at.y, width,
+        visibility: pos ? 'visible' : 'hidden', zIndex: 8,
+        background: 'var(--sheet)', borderRadius: 14, boxShadow: 'var(--shadow-lift)', padding: 10,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function colRange(c: CastMember, split: boolean): [number, number] {
   if (!split) return [0, COLS - 1];
   if (c.gender === 'Female') return [0, 2];
@@ -181,7 +230,19 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
    */
   const kinship = show.type === 'DRAMA';
   /** A link drawn but not yet named — kinship has to be asked, it cannot be assumed. */
-  const [pendingKind, setPendingKind] = useState<{ sourceId: string; targetId: string } | null>(null);
+  const [pendingKind, setPendingKind] = useState<{ sourceId: string; targetId: string; at: { x: number; y: number } } | null>(null);
+  /**
+   * Writing the words on a line, either while creating one or after the fact.
+   *
+   * Four kinds cannot describe a family. "Half-sister", "raised him", "her late husband's
+   * brother" are all real and none of them is a checkbox, so `other` opens this instead of
+   * inventing a label — and any line can be reopened here, because the right word for a
+   * relationship is often only obvious two episodes later.
+   */
+  const [labelEdit, setLabelEdit] = useState<
+    | { aId: string; bId: string; value: string; at: { x: number; y: number }; create?: MapRelKind; parts?: { sourceId: string; relId: string }[] }
+    | null
+  >(null);
 
   const mapEpisode = show.mapEpisode || episodeOptions[0] || 'Ep 1';
   const epKey = epKeyFor(currentSeason, mapEpisode);
@@ -331,6 +392,18 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
     const r = el.getBoundingClientRect();
     return { x: Math.min(100, Math.max(0, ((clientX - r.left) / r.width) * 100)), y: Math.min(100, Math.max(0, ((clientY - r.top) / r.height) * 100)) };
   };
+  /**
+   * Where a panel should open, in the viewport's own pixels.
+   *
+   * Not board percentages: a panel lives outside the scaled container now, so it has to be placed
+   * against the box it is clamped inside. Frozen at open time — panning with a panel open is not a
+   * gesture anyone makes, and chasing the board would cost a re-render per frame.
+   */
+  const viewportPoint = (clientX: number, clientY: number) => {
+    const r = viewportRef.current?.getBoundingClientRect();
+    return r ? { x: clientX - r.left, y: clientY - r.top } : { x: 0, y: 0 };
+  };
+
   const nodeIdAtPoint = (x: number, y: number): string | null => {
     const el = document.elementFromPoint(x, y);
     const nodeEl = el?.closest('[data-node-id]');
@@ -349,10 +422,10 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
     mutateCast((c) => { c.mapCellByEp = { ...(c.mapCellByEp || {}), [epKey]: cell }; }, castId);
   };
 
-  const createRelationship = (sourceId: string, targetId: string, kind: MapRelKind = 'interested') => {
+  const createRelationship = (sourceId: string, targetId: string, kind: MapRelKind = 'interested', label?: string) => {
     mutateCast((c) => {
       const list = getEpRel(c, epKey);
-      c.relByEp = { ...(c.relByEp || {}), [epKey]: [...list, { id: genId('r'), targetId, label: REL_KINDS[kind].label, kind }] };
+      c.relByEp = { ...(c.relByEp || {}), [epKey]: [...list, { id: genId('r'), targetId, label: label?.trim() || REL_KINDS[kind].label, kind }] };
     }, sourceId);
   };
 
@@ -363,9 +436,27 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
    * sibling recorded only on one side would vanish the moment that person was hidden. buildEdges
    * collapses the pair back into a single line, so the board looks the same either way.
    */
-  const createKinship = (sourceId: string, targetId: string, kind: MapRelKind) => {
-    createRelationship(sourceId, targetId, kind);
-    if (REL_KINDS[kind].symmetric) createRelationship(targetId, sourceId, kind);
+  const createKinship = (sourceId: string, targetId: string, kind: MapRelKind, label?: string) => {
+    createRelationship(sourceId, targetId, kind, label);
+    if (REL_KINDS[kind].symmetric) createRelationship(targetId, sourceId, kind, label);
+  };
+
+  /**
+   * Rename a line, writing the same words to every record behind it.
+   *
+   * Both halves of a merged pair, or the two sides drift and which one you see depends on which
+   * person happens to be listed first — a bug that would only show up after hiding someone.
+   */
+  const setEdgeLabel = (parts: { sourceId: string; relId: string }[], label: string) => {
+    const text = label.trim();
+    parts.forEach(({ sourceId, relId }) => {
+      mutateCast((c) => {
+        c.relByEp = {
+          ...(c.relByEp || {}),
+          [epKey]: getEpRel(c, epKey).map((r) => (r.id === relId ? { ...r, label: text || REL_KINDS[r.kind].label } : r)),
+        };
+      }, sourceId);
+    });
   };
 
   const deleteRelationship = (sourceId: string, relId: string) => {
@@ -437,7 +528,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
         // Reality keeps its one meaning and needs no question. Kinship has to be named, and
         // guessing a default would fill family trees with whichever kind was cheapest to assume.
         if (targetId && targetId !== id) {
-          if (kinship) setPendingKind({ sourceId: id, targetId });
+          if (kinship) setPendingKind({ sourceId: id, targetId, at: viewportPoint(ev.clientX, ev.clientY) });
           else createRelationship(id, targetId);
         }
         setDragRelate(null);
@@ -543,7 +634,8 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
             <li>Tap the circles, or spread two fingers, to make the map bigger — pinch to fit it back on screen</li>
             {zoom > 1 && <li>Drag the background to move around the map</li>}
             <li>Drag a line's end to reconnect it, or drop it away from everyone to delete</li>
-            {kinship && <li>Tap a line&rsquo;s label to remove it. What you record is per episode, so a reveal is just an edit on the episode where it happens</li>}
+            {kinship && <li>Pick &ldquo;something else&rdquo; to write your own description — &ldquo;half-sister&rdquo;, &ldquo;raised him&rdquo;. Tap any line&rsquo;s label to reword or remove it</li>}
+            {kinship && <li>What you record is per episode, so a reveal is just an edit on the episode where it happens</li>}
             <li>Tap the &times; on {kinship ? 'a character' : 'a contestant'} to take them off the map — they move to “Not shown on map” below, where you can add them back</li>
           </ul>
         )}
@@ -684,8 +776,8 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           return (
             <button
               key={`lbl-${e.key}`}
-              onClick={() => deleteEdge(e)}
-              aria-label={`${e.label} — remove`}
+              onClick={(ev) => setLabelEdit({ aId: e.aId, bId: e.bId, value: e.label, parts: e.parts, at: viewportPoint(ev.clientX, ev.clientY) })}
+              aria-label={`${e.label} — rename or remove`}
               style={{
                 position: 'absolute', left: `${mx}%`, top: `${my}%`, transform: 'translate(-50%, -50%)',
                 zIndex: 3, border: 'none', cursor: 'pointer', font: 'inherit', fontSize: 10, fontWeight: 700,
@@ -697,52 +789,6 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
             </button>
           );
         })}
-
-        {/* Naming the link, asked once at the moment it is drawn.
-
-            A sheet would be too much furniture for a two-tap decision and would cover the board
-            you are reading; a default would be worse, because whichever kind is cheapest to assume
-            is the one every tree would silently fill with. So: four words, over the map, dismissible
-            by choosing nothing. */}
-        {pendingKind && (() => {
-          const a = posById[pendingKind.sourceId], b = posById[pendingKind.targetId];
-          const source = visibleCast.find((c) => c.id === pendingKind.sourceId);
-          const target = visibleCast.find((c) => c.id === pendingKind.targetId);
-          if (!a || !b || !source || !target) return null;
-          return (
-            <div
-              role="dialog"
-              aria-label={`How is ${source.name} related to ${target.name}?`}
-              style={{
-                position: 'absolute', left: `${(a.x + b.x) / 2}%`, top: `${(a.y + b.y) / 2}%`,
-                transform: 'translate(-50%, -50%)', zIndex: 6, background: 'var(--sheet)',
-                borderRadius: 14, boxShadow: 'var(--shadow-lift)', padding: 10, width: 190,
-              }}
-            >
-              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.35, marginBottom: 8 }}>
-                <strong style={{ color: 'var(--text)' }}>{source.name}</strong> is the&hellip;
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {KINSHIP_KINDS.map((k) => (
-                  <button
-                    key={k}
-                    onClick={() => { createKinship(pendingKind.sourceId, pendingKind.targetId, k); setPendingKind(null); }}
-                    style={{ border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    {/* "Parent of" reads as a sentence with the name above it; the rest are nouns. */}
-                    {k === 'parent' ? `parent of ${target.name.split(' ')[0]}` : REL_KINDS[k].label.toLowerCase()}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setPendingKind(null)}
-                style={{ marginTop: 8, border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-faint)' }}
-              >
-                Cancel
-              </button>
-            </div>
-          );
-        })()}
 
         {visibleCast.map((c) => {
           const p = posById[c.id];
@@ -795,6 +841,96 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           );
         })}
       </div>
+
+        {/* Naming the link, asked once at the moment it is drawn.
+
+            A sheet would be too much furniture for a two-tap decision and would cover the board you
+            are reading; a default would be worse, because whichever kind is cheapest to assume is
+            the one every tree would silently fill with. So: four words, over the map, dismissible
+            by choosing nothing. */}
+        {pendingKind && (() => {
+          const source = visibleCast.find((c) => c.id === pendingKind.sourceId);
+          const target = visibleCast.find((c) => c.id === pendingKind.targetId);
+          if (!source || !target) return null;
+          return (
+            <MapPopover at={pendingKind.at} viewportRef={viewportRef} width={190} label={`How is ${source.name} related to ${target.name}?`}>
+              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.35, marginBottom: 8 }}>
+                <strong style={{ color: 'var(--text)' }}>{source.name}</strong> is the&hellip;
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {KINSHIP_KINDS.map((k) => (
+                  <button
+                    key={k}
+                    onClick={() => {
+                      // `other` is the escape hatch, so it asks for the words rather than
+                      // inventing them. The rest already have the right word in their name.
+                      if (k === 'other') {
+                        setLabelEdit({ aId: pendingKind.sourceId, bId: pendingKind.targetId, value: '', create: 'other', at: pendingKind.at });
+                      } else {
+                        createKinship(pendingKind.sourceId, pendingKind.targetId, k);
+                      }
+                      setPendingKind(null);
+                    }}
+                    style={{ border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {/* "Parent of" reads as a sentence with the name above it; the rest are nouns. */}
+                    {k === 'parent' ? `parent of ${target.name.split(' ')[0]}` : k === 'other' ? 'something else…' : REL_KINDS[k].label.toLowerCase()}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setPendingKind(null)}
+                style={{ marginTop: 8, border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-faint)' }}
+              >
+                Cancel
+              </button>
+            </MapPopover>
+          );
+        })()}
+
+        {/* Writing the words. Same place and shape as the kind picker, because it is the second
+            half of the same decision — and it carries Remove, so a line drawn by accident has a
+            way out that does not depend on tapping its label exactly. */}
+        {labelEdit && (() => {
+          const source = visibleCast.find((c) => c.id === labelEdit.aId);
+          const target = visibleCast.find((c) => c.id === labelEdit.bId);
+          if (!source || !target) return null;
+          const commit = () => {
+            if (labelEdit.create) createKinship(labelEdit.aId, labelEdit.bId, labelEdit.create, labelEdit.value);
+            else if (labelEdit.parts) setEdgeLabel(labelEdit.parts, labelEdit.value);
+            setLabelEdit(null);
+          };
+          return (
+            <MapPopover at={labelEdit.at} viewportRef={viewportRef} width={210} label={`How is ${source.name} related to ${target.name}?`}>
+              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.35, marginBottom: 8 }}>
+                <strong style={{ color: 'var(--text)' }}>{source.name.split(' ')[0]}</strong> is{' '}
+                <strong style={{ color: 'var(--text)' }}>{target.name.split(' ')[0]}</strong>&rsquo;s&hellip;
+              </div>
+              <input
+                autoFocus
+                value={labelEdit.value}
+                onChange={(ev) => setLabelEdit((st) => (st ? { ...st, value: ev.target.value } : st))}
+                onKeyDown={(ev) => { if (ev.key === 'Enter') commit(); if (ev.key === 'Escape') setLabelEdit(null); }}
+                placeholder="half-sister, mentor, ex&hellip;"
+                maxLength={40}
+                className="ct-input"
+                style={{ height: 34, fontSize: 13 }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                <button onClick={commit} className="ct-btn-primary" style={{ height: 30, padding: '0 12px', fontSize: 12.5, flex: 'none' }}>Save</button>
+                <button onClick={() => setLabelEdit(null)} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--text-faint)' }}>Cancel</button>
+                {labelEdit.parts && (
+                  <button
+                    onClick={() => { deleteEdge({ parts: labelEdit.parts! }); setLabelEdit(null); }}
+                    style={{ marginLeft: 'auto', border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--danger)' }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </MapPopover>
+          );
+        })()}
       </div>
 
       {hiddenCast.length > 0 && (
