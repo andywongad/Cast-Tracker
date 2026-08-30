@@ -25,8 +25,16 @@ function coerceCast(raw: unknown): CastMember[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((c): c is CastMember => !!c && typeof c === 'object' && typeof (c as CastMember).id === 'string')
-    .map((c) => ({
+    .map((c, i) => ({
       ...c,
+      /**
+       * Position, filled in for anything written before the field existed.
+       *
+       * Taken from where the record already sits, so nothing moves on the device doing the
+       * backfill — it only writes down an order that was previously implicit, so that it can
+       * travel. `?? i` rather than `|| i`, because 0 is a real position.
+       */
+      order: c.order ?? i,
       // A record with no name white-screens the character sheet, which calls c.name.trim()
       // unguarded when building the AKA list. Pass 1 coerced the arrays and missed this.
       name: typeof c.name === 'string' ? c.name : '',

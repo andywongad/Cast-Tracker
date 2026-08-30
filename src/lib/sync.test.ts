@@ -155,6 +155,49 @@ console.log('collectPush — duplicate ids');
  * never asked for again, so the loss shows up as work that simply never arrived on the other
  * device — surviving refreshes, reinstalls and, until clearCursor existed, signing out.
  */
+/**
+ * Position has to travel, or the same library reads differently on two devices: whoever loaded the
+ * credits sees the leads at the top and whoever received them over sync sees them under the
+ * extras, in whatever order the rows arrived. This is the reported symptom — Walter alone at the
+ * top, Jesse, Hank and Skyler at the bottom — pinned down.
+ */
+console.log('arriving records keep their position');
+{
+  const remote = (id: string, order: number | undefined, at = '2026-08-30T06:00:00.000Z') => ({
+    show_id: 'sh1', record_id: id, payload: { id, name: id, ...(order === undefined ? {} : { order }) },
+    edited_at: at, server_at: at, deleted_at: null,
+  });
+
+  // Walter is already here at position 0; the other three arrive over sync.
+  const local = data([member('walter', { order: 0 } as Partial<CastMember>)]);
+  const merged = applyRemote(local, [
+    remote('hank', 3), remote('skyler', 1), remote('jesse', 2),
+  ] as any);
+  check('they land in their own order, not arrival order',
+    merged.shows[0].cast.map((c) => c.id).join() === 'walter,skyler,jesse,hank',
+    merged.shows[0].cast.map((c) => c.id).join());
+}
+{
+  // Anything written before `order` existed still has to go somewhere sane.
+  const local = data([member('walter', { order: 0 } as Partial<CastMember>), member('nameless')]);
+  const merged = applyRemote(local, [{
+    show_id: 'sh1', record_id: 'skyler', payload: { id: 'skyler', name: 'skyler', order: 1 },
+    edited_at: '2026-08-30T06:00:00.000Z', server_at: '2026-08-30T06:00:00.000Z', deleted_at: null,
+  }] as any);
+  check('a positioned arrival sorts above an unpositioned local record',
+    merged.shows[0].cast.map((c) => c.id).join() === 'walter,skyler,nameless',
+    merged.shows[0].cast.map((c) => c.id).join());
+}
+{
+  const local = data([member('walter', { order: 0 } as Partial<CastMember>)]);
+  const merged = applyRemote(local, [{
+    show_id: 'sh1', record_id: 'mystery', payload: { id: 'mystery', name: 'mystery' },
+    edited_at: '2026-08-30T06:00:00.000Z', server_at: '2026-08-30T06:00:00.000Z', deleted_at: null,
+  }] as any);
+  check('an arrival with no position is appended, as before',
+    merged.shows[0].cast.map((c) => c.id).join() === 'walter,mystery');
+}
+
 console.log('the sync cursor');
 {
   const A = 'user-a', B = 'user-b';

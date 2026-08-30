@@ -337,6 +337,27 @@ export async function pull(userId: string): Promise<{ rows: RemoteRow[]; newest:
  * The comparison is on `edited_at`, not on arrival: a device that was offline all day must not win
  * simply because it reconnected last.
  */
+/**
+ * Put an arriving record where the device that sent it had it, rather than on the end.
+ *
+ * Appending is what made the same library read differently on two devices: whoever loaded Breaking
+ * Bad's credits saw Walter, Jesse, Hank and Skyler at the top, and whoever received them over sync
+ * saw them underneath every extra, in the order the rows happened to arrive. Nothing was lost and
+ * it looked broken, which is the worst combination.
+ *
+ * Falls back to appending when the record carries no position — which is anything written before
+ * `order` existed and not yet loaded by a device that would backfill it. That is the old
+ * behaviour, so a mixed library is never worse than it was.
+ */
+function insertByOrder(cast: CastMember[], incoming: CastMember) {
+  if (typeof incoming.order !== 'number') { cast.push(incoming); return; }
+  // The first record that belongs after this one. Records with no position are treated as coming
+  // later, so a positioned arrival slots above them rather than being stranded at the bottom.
+  const at = cast.findIndex((c) => typeof c.order !== 'number' || c.order > incoming.order!);
+  if (at === -1) cast.push(incoming);
+  else cast.splice(at, 0, incoming);
+}
+
 export function applyRemote(local: AppData, rows: RemoteRow[]): AppData {
   const shows = local.shows.map((s) => ({ ...s, cast: [...s.cast] }));
   const byId = new Map(shows.map((s) => [s.id, s]));
@@ -371,7 +392,7 @@ export function applyRemote(local: AppData, rows: RemoteRow[]): AppData {
       continue;
     }
     const incoming = { ...(row.payload as unknown as CastMember), id: row.record_id, editedAt };
-    if (i === -1) show.cast.push(incoming);
+    if (i === -1) insertByOrder(show.cast, incoming);
     else if ((show.cast[i].editedAt ?? 0) < editedAt) show.cast[i] = incoming;
   }
 

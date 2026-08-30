@@ -132,6 +132,19 @@ export interface CastMember {
   /** Which optional fields the user has switched on for this member — kept even when left blank. */
   shownFields?: string[];
   /**
+   * Where this person sits in the show's cast, and the only thing that says so across devices.
+   *
+   * Position used to be the array's order and nothing else, which is fine on one device and
+   * meaningless on two: a record arriving over sync was appended, so the same library showed the
+   * leads at the top on the device that loaded them and at the bottom on the device that received
+   * them. Nothing was lost, but Walter White ended up below the extras.
+   *
+   * Assigned at the position a record is added — which for an auto-load is TMDb's billing order,
+   * the reason the leads come first at all — and backfilled from array position on load for every
+   * record written before this field existed. Lower is earlier.
+   */
+  order?: number;
+  /**
    * The user set `firstEp` deliberately, rather than it being stamped by an episode import.
    *
    * Both bits of information are needed and neither can be inferred from the other. `firstEp`

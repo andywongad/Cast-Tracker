@@ -71,6 +71,9 @@ export function personToCastMember(
     ...(opts.auto ? { auto: true as const } : {}),
     id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6),
     color: colorForIndex(opts.castLength),
+    // The position it is being appended to. For an auto-load that is TMDb's billing order, which
+    // is what puts the leads at the top; two devices loading the same episode agree on it.
+    order: opts.castLength,
     name: personLabel(p, opts.isDrama),
     native: '', nickname: '', otherNames: [], desc: '', photo: p.photo || null, notes: '',
     gender: '', age: '', hometown: '', occupation: '', social: '', socialPlatform: 'Instagram',
