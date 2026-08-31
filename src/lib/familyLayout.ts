@@ -1,7 +1,10 @@
-import type { MapCell, MapRelKind } from '../../types';
+import type { MapCell, MapRelKind } from '../types';
 
 /**
  * Arranging a family tree into generations, one family at a time.
+ *
+ * Driven by the "Tidy the tree" action on the relationship map, and by nothing else — it reads the
+ * links already on the board and moves people, so it must never run on its own.
  *
  * The board's standing rule is that a person keeps the cell they were given and nobody the user
  * has placed is ever moved — which is what stops the layout reshuffling under someone mid-edit.
@@ -23,7 +26,7 @@ import type { MapCell, MapRelKind } from '../../types';
  * side is the shape a printed family tree takes, and it does not fit here. Stacking them keeps
  * every family readable at the cost of scrolling, which is the right trade on a phone.
  *
- * Pure and I/O-free so the arrangement can be tested directly, which it is in familyTree.test.ts.
+ * Pure and I/O-free so the arrangement can be tested directly, which it is in familyLayout.test.ts.
  */
 
 export interface LayoutPerson {

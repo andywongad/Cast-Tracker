@@ -25,9 +25,6 @@
     "api/recap.ts": {
       "maxDuration": 60
     },
-    "api/family-tree.ts": {
-      "maxDuration": 300
-    },
     "api/check-episodes.ts": {
       "maxDuration": 300
     }

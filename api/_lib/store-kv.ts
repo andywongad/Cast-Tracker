@@ -1,13 +1,12 @@
 import { kv } from '@vercel/kv';
 import type { Enrichment, EnrichmentStore, StoredEnrichment } from '../../src/lib/enrichment/types.js';
 import type { Recap, RecapStore, StoredRecap } from '../../src/lib/recap/types.js';
-import type { FamilyTree, FamilyTreeStore, StoredFamilyTree } from '../../src/lib/familyTree/types.js';
 
 /**
  * Redis-backed implementation of EnrichmentStore.
  *
- * This is the only file that knows where generated content physically lives — bios, recaps and
- * family trees alike. Swapping Redis for Postgres later means writing one more file that satisfies the same
+ * This is the only file that knows where generated content physically lives — bios and recaps
+ * both. Swapping Redis for Postgres later means writing one more file that satisfies the same
  * interfaces — the key derivation, the source fetches, the Claude calls and the handlers all stay
  * untouched.
  *
@@ -31,16 +30,6 @@ export const REFUSAL_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
  * season fills in over weeks — a season that was unrecappable in March is often fine by May.
  */
 export const NO_RECAP_SOURCE_TTL_SECONDS = 60 * 60 * 24 * 3; // 3 days
-
-/**
- * A show whose article never says how anyone is related.
- *
- * The longest of the three negative TTLs, because it is the most settled fact of the three: a
- * season's overviews fill in week by week as it airs, but an article that has no relationship
- * prose in it is describing a show that does not have a family tree to find — a procedural, a
- * panel show, an anthology — and that does not change on a fortnight's notice.
- */
-export const NO_TREE_SOURCE_TTL_SECONDS = 60 * 60 * 24 * 14; // 14 days
 
 function isEnrichment(v: unknown): v is Enrichment {
   if (!v || typeof v !== 'object') return false;
@@ -176,77 +165,6 @@ export const kvRecapStore: RecapStore = {
       );
     } catch (err) {
       console.error('recap negative-cache write failed', err);
-    }
-  },
-};
-
-function isFamilyTree(v: unknown): v is FamilyTree {
-  if (!v || typeof v !== 'object') return false;
-  const t = v as Record<string, unknown>;
-  return Array.isArray(t.edges) && Array.isArray(t.names) && typeof t.asOfEpisode === 'number';
-}
-
-/**
- * Anything already in Redis was written by an earlier version of this code, so validate rather
- * than trust. A shape that no longer parses is a miss, which regenerates — the safe direction.
- *
- * `names` matters more here than the other two stores' fields do: the edges are indices into it,
- * so a row that lost its cast list is not a degraded tree but a meaningless one.
- */
-function coerceTree(raw: unknown): StoredFamilyTree | null {
-  if (raw == null) return null;
-
-  let value: unknown = raw;
-  if (typeof raw === 'string') {
-    try {
-      value = JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  }
-
-  if (!value || typeof value !== 'object') return null;
-  const v = value as Record<string, unknown>;
-
-  if (v.status === 'ready' && isFamilyTree(v.data)) return { status: 'ready', data: v.data };
-  if (v.status === 'unavailable' && typeof v.reason === 'string') {
-    return { status: 'unavailable', reason: v.reason, at: typeof v.at === 'string' ? v.at : '' };
-  }
-  return null;
-}
-
-export const kvTreeStore: FamilyTreeStore = {
-  async get(key) {
-    try {
-      return coerceTree(await kv.get<unknown>(key));
-    } catch (err) {
-      console.error('tree cache read failed', err);
-      return null; // Treated as a miss — regenerate rather than fail the request.
-    }
-  },
-
-  async putReady(key, data) {
-    try {
-      /**
-       * No TTL. The key names an episode, and what one episode established about who is whose
-       * family is finished the moment it airs. A later episode that complicates it is a different
-       * key, not an edit to this one — which is the same reason the recap store keeps its rows.
-       */
-      await kv.set(key, { status: 'ready', data } satisfies StoredFamilyTree);
-    } catch (err) {
-      console.error('tree cache write failed', err);
-    }
-  },
-
-  async putUnavailable(key, reason, ttlSeconds) {
-    try {
-      await kv.set(
-        key,
-        { status: 'unavailable', reason, at: new Date().toISOString() } satisfies StoredFamilyTree,
-        { ex: ttlSeconds },
-      );
-    } catch (err) {
-      console.error('tree negative-cache write failed', err);
     }
   },
 };
