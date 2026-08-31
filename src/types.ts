@@ -88,6 +88,19 @@ export interface MapRelationship {
   targetId: string;
   label: string;
   kind: MapRelKind;
+  /**
+   * Drawn by a seeded family tree rather than by the user.
+   *
+   * Provenance only, and the same contract as `CastMember.auto` one field over: it never becomes
+   * false, and it does not mean "disposable" on its own. What it buys is the ability to replace a
+   * seed — a better source, a re-run at a later episode — without touching a single line the user
+   * drew or renamed. Relabelling a seeded link clears the flag, because at that point the words
+   * are theirs.
+   *
+   * Absent on every relationship written before this existed, which reads as "the user's" — the
+   * safe default for anything already on someone's device.
+   */
+  auto?: true;
 }
 
 export interface CastMember {

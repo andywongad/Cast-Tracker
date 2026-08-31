@@ -1,9 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CastMember, MapCell, MapRelationship, MapRelKind, Show } from '../types';
 import { useStore } from '../hooks/useStore';
-import { bgStyle, genId, initials } from '../lib/utils';
+import { bgStyle, epNumFromLabel, genId, initials } from '../lib/utils';
 import { MAP_LINE, MAP_HEART } from '../lib/theme';
 import { buildEdges, parentIdsOf, resolveKindOption, KIND_GROUPS, REL_KINDS } from '../lib/relationshipEdges';
+import { fetchFamilyTree, type FamilyTreeState } from '../lib/familyTree/client';
+import { planSeed } from '../lib/familyTree/seed';
 
 const COLS = 6;
 const ROWS = 8;
@@ -231,6 +233,9 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   const kinship = show.type === 'DRAMA';
   /** A link drawn but not yet named — kinship has to be asked, it cannot be assumed. */
   const [pendingKind, setPendingKind] = useState<{ sourceId: string; targetId: string; at: { x: number; y: number } } | null>(null);
+  /** The suggested family tree, and the one line of feedback the request earns. */
+  const [treeState, setTreeState] = useState<FamilyTreeState>({ status: 'idle' });
+  const [seedNote, setSeedNote] = useState('');
   /**
    * Writing the words on a line, either while creating one or after the fact.
    *
@@ -453,7 +458,14 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
       mutateCast((c) => {
         c.relByEp = {
           ...(c.relByEp || {}),
-          [epKey]: getEpRel(c, epKey).map((r) => (r.id === relId ? { ...r, label: text || REL_KINDS[r.kind].label } : r)),
+          [epKey]: getEpRel(c, epKey).map((r) => {
+            if (r.id !== relId) return r;
+            // Writing your own words over a suggestion makes the line yours, so `auto` comes off
+            // and a later redraw will leave it alone. Dropped by omission rather than set to
+            // undefined, so the record that reaches storage and sync has no key at all.
+            const { auto: _seeded, ...rest } = r;
+            return { ...rest, label: text || REL_KINDS[r.kind].label };
+          }),
         };
       }, sourceId);
     });
@@ -587,6 +599,93 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
     return { x2: x2 - (dx / len) * gapPct, y2: y2 - (dy / len) * gapPct };
   };
 
+  /**
+   * Ask for a family tree and draw whatever comes back.
+   *
+   * A sibling of importPrevLines below: both fill a board from somewhere other than the user's own
+   * dragging, and neither is offered once there is work here to run over. The difference is where
+   * the lines come from — the previous episode's are theirs, these are a suggestion — which is why
+   * every record written here is marked `auto` and theirs are not, and why this one can be asked
+   * again while that one cannot.
+   *
+   * The whole plan is applied in one updateData so a half-drawn tree is not a state anyone can
+   * land in, and so the change is one entry in whatever the sync layer sees.
+   */
+  const seedFamilyTree = async () => {
+    if (treeState.status === 'loading') return;
+    setTreeState({ status: 'loading' });
+    setSeedNote('');
+
+    const result = await fetchFamilyTree({
+      showTmdbId: show.tmdbId ?? null,
+      showTitle: show.title,
+      season: currentSeason,
+      asOfEpisode: epNumFromLabel(mapEpisode),
+    });
+    setTreeState(result);
+
+    if (result.status === 'unavailable') {
+      setSeedNote(`No family tree to be found for ${mapEpisode} — draw your own below.`);
+      return;
+    }
+    if (result.status !== 'ready') {
+      setSeedNote('Couldn\u2019t draw a tree just now. Try again in a moment.');
+      return;
+    }
+
+    // Only the user's own lines count as "already linked". A previous suggestion does not get to
+    // block the next one — it is about to be replaced.
+    const plan = planSeed(result.data, visibleCast, (c) => getEpRel(c, epKey).filter((r) => !r.auto));
+    if (!plan.writes.length) {
+      /**
+       * Two different nothings, and saying the wrong one sends someone looking in the wrong place.
+       * A tree came back either way; whether it could be applied depends on whether its names found
+       * this library's records, which is a different problem from a board that is already complete.
+       */
+      setSeedNote(
+        plan.matched < 2
+          ? `Couldn\u2019t match ${show.title}\u2019s characters to the names on your board.`
+          : 'Nothing to add — the links this episode supports are already drawn.',
+      );
+      return;
+    }
+
+    updateData((d) => {
+      const s = d.shows.find((x) => x.id === show.id);
+      if (!s) return;
+      /**
+       * Clear the previous suggestion first, so a redraw replaces rather than accumulates.
+       *
+       * Only the `auto` ones. This is the entire reason that flag exists: without it, redrawing at
+       * a later episode would either duplicate every line or force a choice between keeping the
+       * user's work and refreshing the seed. A link the user relabelled has already lost the flag
+       * and survives here, which is the point.
+       *
+       * A seeded link the user deleted does come back on a redraw. That is the honest reading of a
+       * button that says it will redraw the tree.
+       */
+      s.cast.forEach((c) => {
+        const list = getEpRel(c, epKey);
+        if (list.some((r) => r.auto)) {
+          c.relByEp = { ...(c.relByEp || {}), [epKey]: list.filter((r) => !r.auto) };
+        }
+      });
+      for (const w of plan.writes) {
+        const c = s.cast.find((x) => x.id === w.castId);
+        if (!c) continue;
+        const list = getEpRel(c, epKey);
+        c.relByEp = {
+          ...(c.relByEp || {}),
+          [epKey]: [...list, { id: genId('r'), targetId: w.targetId, label: w.label, kind: w.kind, auto: true as const }],
+        };
+      }
+    });
+
+    // plan.links, not plan.writes.length: the symmetric kinds store two rows and draw one line, and
+    // the number worth telling someone is the one they can count on the board.
+    setSeedNote(`Drew ${plan.links} ${plan.links === 1 ? 'link' : 'links'} from ${mapEpisode}. Adjust anything that\u2019s wrong.`);
+  };
+
   const importPrevLines = () => {
     const idx = episodeOptions.indexOf(mapEpisode);
     if (idx <= 0) return;
@@ -610,6 +709,20 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
   const prevKey = prevIdx >= 0 ? epKeyFor(currentSeason, episodeOptions[prevIdx]) : null;
   const hasImportable = !!prevKey && show.cast.some((c) => (c.relByEp?.[prevKey!] || []).length > 0) && !show.cast.some((c) => (c.relByEp?.[epKey] || []).length > 0);
   const hasLines = show.cast.some((c) => (c.relByEp?.[epKey] || []).length > 0);
+  /**
+   * Offered while nothing on this board is the user's own, and on the same reasoning as
+   * hasImportable: a suggestion is a way to start, not a thing to run over work already done.
+   *
+   * "The user's own" rather than "empty", because a board holding only a previous suggestion is
+   * still a board nobody has invested in — and being able to ask again from a later episode is the
+   * whole point of a map that is stored per episode. One line they drew themselves ends the offer.
+   *
+   * A show with no TMDb id has no episode credits to build a closed cast list from, so there is
+   * nothing to ask for.
+   */
+  const userLines = show.cast.some((c) => (c.relByEp?.[epKey] || []).some((r) => !r.auto));
+  const seededLines = show.cast.some((c) => (c.relByEp?.[epKey] || []).some((r) => r.auto));
+  const canSeedTree = kinship && !userLines && !!show.tmdbId && visibleCast.length > 1;
 
   return (
     <div>
@@ -636,6 +749,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
             <li>Drag a line's end to reconnect it, or drop it away from everyone to delete</li>
             {kinship && <li>Pick &ldquo;something else&rdquo; to write your own description — &ldquo;half-sister&rdquo;, &ldquo;raised him&rdquo;. Tap any line&rsquo;s label to reword or remove it</li>}
             {kinship && <li>What you record is per episode, so a reveal is just an edit on the episode where it happens</li>}
+            {canSeedTree && <li>&ldquo;Suggest a family tree&rdquo; fills the board in from what this episode establishes — a starting point to correct, not an answer</li>}
             <li>Tap the &times; on {kinship ? 'a character' : 'a contestant'} to take them off the map — they move to “Not shown on map” below, where you can add them back</li>
           </ul>
         )}
@@ -679,6 +793,15 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <MapSizeToggle value={zoom} onChange={setMapZoom} />
+          {canSeedTree && (
+            <button
+              onClick={seedFamilyTree}
+              disabled={treeState.status === 'loading'}
+              style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: treeState.status === 'loading' ? 'default' : 'pointer', whiteSpace: 'nowrap', opacity: treeState.status === 'loading' ? 0.6 : 1 }}
+            >
+              {treeState.status === 'loading' ? 'Drawing\u2026' : seededLines ? 'Redraw the family tree' : 'Suggest a family tree'}
+            </button>
+          )}
           {hasImportable && <button onClick={importPrevLines} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Import from {episodeOptions[prevIdx]}</button>}
           {hasLines && (
             <>
@@ -688,6 +811,15 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           )}
         </div>
       </div>
+      {/* One line, under the toolbar and above the board, because every outcome of asking for a
+          tree is worth a sentence — including "there wasn't one", which is the common answer and
+          reads as a broken button if nothing is said. Cleared on the next request. */}
+      {seedNote && (
+        <div style={{ fontSize: 13, color: 'var(--text-faint)', margin: '0 0 8px', lineHeight: 1.35 }}>
+          {seedNote}
+        </div>
+      )}
+
       <div
         ref={viewportRef}
         onPointerDown={onViewportDown}
