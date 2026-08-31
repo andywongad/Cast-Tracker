@@ -6,6 +6,7 @@ import { MAP_LINE, MAP_HEART } from '../lib/theme';
 import { buildEdges, parentIdsOf, resolveKindOption, KIND_GROUPS, REL_KINDS } from '../lib/relationshipEdges';
 import { fetchFamilyTree, type FamilyTreeState } from '../lib/familyTree/client';
 import { planSeed } from '../lib/familyTree/seed';
+import { layoutTree } from '../lib/familyTree/layout';
 
 const COLS = 6;
 const ROWS = 8;
@@ -679,11 +680,46 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           [epKey]: [...list, { id: genId('r'), targetId: w.targetId, label: w.label, kind: w.kind, auto: true as const }],
         };
       }
+      // Arrange in the same write, so a seeded tree is never briefly drawn as a knot. Safe to move
+      // people here without asking: everything on this board was written a few lines above.
+      arrangeInto(d);
     });
 
     // plan.links, not plan.writes.length: the symmetric kinds store two rows and draw one line, and
     // the number worth telling someone is the one they can count on the board.
     setSeedNote(`Drew ${plan.links} ${plan.links === 1 ? 'link' : 'links'} from ${mapEpisode}. Adjust anything that\u2019s wrong.`);
+  };
+
+  /**
+   * Arrange the board into generations, families first and strangers last.
+   *
+   * The one place that deliberately breaks the board's "a placed person never moves" rule, which
+   * is why it only ever runs from an explicit action — the tidy button, or immediately after a
+   * seed, where every line on the board was just written by us anyway.
+   *
+   * Reads the relationships out of the draft rather than from `edges` above, because after a seed
+   * the component has not re-rendered yet and `edges` still describes the board as it was.
+   */
+  const arrangeInto = (d: { shows: Show[] }) => {
+    const s = d.shows.find((x) => x.id === show.id);
+    if (!s) return;
+    const onBoard = s.cast.filter((c) => !c.hideFromMap);
+    const links = onBoard.flatMap((c) =>
+      getEpRel(c, epKey)
+        .filter((r) => onBoard.some((o) => o.id === r.targetId))
+        .map((r) => ({ aId: c.id, bId: r.targetId, kind: r.kind })),
+    );
+    const cells = layoutTree(onBoard.map((c) => ({ id: c.id, name: c.name })), links, { cols: COLS, topRow: DEFAULT_TOP_ROW });
+    for (const c of onBoard) {
+      const cell = cells[c.id];
+      if (cell) c.mapCellByEp = { ...(c.mapCellByEp || {}), [epKey]: cell };
+    }
+  };
+
+  /** Tidy on demand, for a tree drawn by hand rather than seeded. */
+  const tidyTree = () => {
+    updateData(arrangeInto);
+    setSeedNote('Arranged by generation — drag anyone you\u2019d rather have elsewhere.');
   };
 
   const importPrevLines = () => {
@@ -750,6 +786,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
             {kinship && <li>Pick &ldquo;something else&rdquo; to write your own description — &ldquo;half-sister&rdquo;, &ldquo;raised him&rdquo;. Tap any line&rsquo;s label to reword or remove it</li>}
             {kinship && <li>What you record is per episode, so a reveal is just an edit on the episode where it happens</li>}
             {canSeedTree && <li>&ldquo;Suggest a family tree&rdquo; fills the board in from what this episode establishes — a starting point to correct, not an answer</li>}
+            {kinship && hasLines && <li>&ldquo;Tidy the tree&rdquo; stacks each family by generation — grandparents at the top, then parents and their siblings, then children and cousins — and moves anyone with no relatives to the bottom</li>}
             <li>Tap the &times; on {kinship ? 'a character' : 'a contestant'} to take them off the map — they move to “Not shown on map” below, where you can add them back</li>
           </ul>
         )}
@@ -800,6 +837,14 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
               style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: treeState.status === 'loading' ? 'default' : 'pointer', whiteSpace: 'nowrap', opacity: treeState.status === 'loading' ? 0.6 : 1 }}
             >
               {treeState.status === 'loading' ? 'Drawing\u2026' : seededLines ? 'Redraw the family tree' : 'Suggest a family tree'}
+            </button>
+          )}
+          {kinship && hasLines && (
+            <button
+              onClick={tidyTree}
+              style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              Tidy the tree
             </button>
           )}
           {hasImportable && <button onClick={importPrevLines} style={{ flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-soft)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '7px 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Import from {episodeOptions[prevIdx]}</button>}

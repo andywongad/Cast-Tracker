@@ -18,8 +18,16 @@
  * either would mean that tuning one prompt threw away everything the others had already paid for.
  */
 
-/** Bump when the tree prompt, its schema, the verifier's rules, or the source narrowing changes. */
-export const TREE_KEY_VERSION = 'v1';
+/**
+ * Bump when the tree prompt, its schema, the verifier's rules, the source narrowing, or the model
+ * settings change — anything that would make today's generation differ from the one in the cache.
+ *
+ * v2: generation moved from effort `high` to `medium`. Without this bump every show generated
+ * under v1 would keep serving its old tree forever, which is the failure the version exists to
+ * prevent — and the reason a measured improvement would have been invisible on exactly the shows
+ * people had already looked at.
+ */
+export const TREE_KEY_VERSION = 'v2';
 
 export interface TreeTarget {
   showTmdbId: number;

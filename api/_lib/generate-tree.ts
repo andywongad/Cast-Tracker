@@ -161,10 +161,22 @@ export async function generateTree(input: {
         max_tokens: MAX_TOKENS,
         system: SYSTEM,
         messages: [{ role: 'user', content: userContent }],
-        // `high` rather than the recap's `medium`: this is the one generation where the model has
-        // to actively withhold what it knows, across a whole cast at once, and the cost is paid
-        // once per show rather than once per reader.
-        output_config: { effort: 'high', format: { type: 'json_schema', schema: SCHEMA } },
+        /**
+         * `medium`, measured rather than assumed.
+         *
+         * This sat at `high` on the theory that withholding what the model already knows about a
+         * famous show is the hardest thing asked of any generation here, and that the extra
+         * deliberation was what bought the restraint. Run against Game of Thrones episode one —
+         * whose source text contains the sentence revealing Joffrey's real father, the season-one
+         * twist — `medium` declined to use it just as `high` did, while costing 15% less and
+         * finishing 9 seconds sooner. It also found one true link `high` missed across three runs.
+         *
+         * So the restraint is not bought by effort. It comes from the model and from the evidence
+         * rule in verify.ts, which is the useful thing to know before anyone tunes this again:
+         * Haiku, tested identically, asserted the twist outright. The floor here is the model
+         * choice, not the effort level.
+         */
+        output_config: { effort: 'medium', format: { type: 'json_schema', schema: SCHEMA } },
       })
       .finalMessage();
   } catch (err) {
@@ -196,6 +208,19 @@ export async function generateTree(input: {
     console.error('Structured output was not valid JSON', textBlock.text.slice(0, 200));
     return { ok: false, reason: 'unparseable', permanent: false };
   }
+
+  /**
+   * What the call cost, per generation.
+   *
+   * Logged for the same reason the verifier's drops are: this is a paid call behind a daily cap,
+   * and the only way to know whether the cap is set anywhere near reality is to have the real
+   * numbers in the log rather than an estimate in someone's head. `thinking` is billed as output
+   * and is invisible in the response body, so output_tokens is the only place it shows up.
+   */
+  console.info(
+    `tree ${input.showTitle} s${input.season}e${input.asOfEpisode}: ` +
+      `${message.usage.input_tokens} in, ${message.usage.output_tokens} out`,
+  );
 
   const proposed = (parsed as { edges?: unknown } | null)?.edges;
   const { edges, report } = verifyTree(proposed, {
