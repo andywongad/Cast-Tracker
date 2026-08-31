@@ -3,7 +3,7 @@ import type { CastMember, MapCell, MapRelationship, MapRelKind, Show } from '../
 import { useStore } from '../hooks/useStore';
 import { bgStyle, genId, initials } from '../lib/utils';
 import { MAP_LINE, MAP_HEART } from '../lib/theme';
-import { buildEdges, parentIdsOf, KIND_GROUPS, REL_KINDS } from '../lib/relationshipEdges';
+import { buildEdges, parentIdsOf, resolveKindOption, KIND_GROUPS, REL_KINDS } from '../lib/relationshipEdges';
 
 const COLS = 6;
 const ROWS = 8;
@@ -870,13 +870,16 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
                 autoFocus
                 defaultValue=""
                 onChange={(ev) => {
-                  const k = ev.target.value as MapRelKind;
-                  if (!k) return;
+                  const picked = ev.target.value;
+                  if (!picked) return;
                   // `other` asks for the words rather than inventing them; the rest carry their own.
-                  if (k === 'other') {
+                  if (picked === 'other') {
                     setLabelEdit({ aId: pendingKind.sourceId, bId: pendingKind.targetId, value: '', create: 'other', at: pendingKind.at });
                   } else {
-                    createKinship(pendingKind.sourceId, pendingKind.targetId, k);
+                    // Not necessarily the two people in the order they were dragged: "child of"
+                    // records the same `parent` link from the other end, so it comes back swapped.
+                    const r = resolveKindOption(picked, pendingKind.sourceId, pendingKind.targetId);
+                    createKinship(r.sourceId, r.targetId, r.kind);
                   }
                   setPendingKind(null);
                 }}
@@ -886,10 +889,10 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
                 <option value="" disabled>Choose&hellip;</option>
                 {KIND_GROUPS.map((g) => (
                   <optgroup key={g.label} label={g.label}>
-                    {g.kinds.map((k) => (
-                      <option key={k} value={k}>
-                        {/* "Parent of" only reads as a sentence with the other name in it. */}
-                        {k === 'parent' ? `parent of ${target.name.split(' ')[0]}` : REL_KINDS[k].label.toLowerCase()}
+                    {g.options.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {/* The directed pair spell out the other name; the rest are bare nouns. */}
+                        {o.word ? o.word(target.name.split(' ')[0]) : REL_KINDS[o.kind].label.toLowerCase()}
                       </option>
                     ))}
                   </optgroup>

@@ -7,7 +7,7 @@
  * anything. The dating board shipped first and works; the cases below exist so adding kinship
  * cannot quietly change it.
  */
-import { buildEdges, parentIdsOf, KIND_GROUPS, KINSHIP_KINDS, REL_KINDS } from './relationshipEdges';
+import { buildEdges, parentIdsOf, resolveKindOption, KIND_GROUPS, KIND_OPTIONS, KINSHIP_KINDS, REL_KINDS } from './relationshipEdges';
 import type { CastMember, MapRelationship } from '../types';
 
 const EP = '1_Ep 1';
@@ -99,6 +99,41 @@ console.log('parentIdsOf');
 }
 
 /**
+ * "Child of" is the same fact as "parent of", said from the other end — so it has to produce the
+ * same single record and the same single line, whichever end the user happened to drag from. The
+ * cases below are the ones that would let an inverse kind sneak back in: a swapped pair that draws
+ * twice, or an arrow that points at the parent.
+ */
+console.log('child of');
+{
+  const r = resolveKindOption('child', 'robb', 'ned');
+  check('the record lands on the parent, not the child', r.sourceId === 'ned' && r.targetId === 'robb', `${r.sourceId}->${r.targetId}`);
+  check('and it is a parent link, not a kind of its own', r.kind === 'parent');
+
+  const plain = resolveKindOption('sibling', 'sansa', 'arya');
+  check('an uninverted option is left exactly as drawn', plain.sourceId === 'sansa' && plain.targetId === 'arya' && plain.kind === 'sibling');
+
+  // What the picker cannot send, but `createRelationship` would crash on if it ever did.
+  check('an unrecognised option falls back to "other"', resolveKindOption('stepmother', 'a', 'b').kind === 'other');
+}
+{
+  // Drawn from Robb, saying "child of Ned". Identical to Ned saying "parent of Robb".
+  const r = resolveKindOption('child', 'robb', 'ned');
+  const drawn = buildEdges([person('ned', [rel('r1', 'robb', r.kind)]), person('robb')], relsFor);
+  check('one line, pointing from the parent down to the child', drawn.length === 1 && drawn[0].aId === 'ned' && drawn[0].bId === 'robb');
+  check('and it still carries the arrowhead', drawn[0]?.directed === true);
+
+  // The whole reason `child` is not a kind. Both drags describe one fact, so both must write the
+  // identical record — an inverse kind would instead leave two, and buildEdges would draw both.
+  const fromParent = resolveKindOption('parent', 'ned', 'robb');
+  check('drawn from either end, it is the same record',
+    fromParent.sourceId === r.sourceId && fromParent.targetId === r.targetId && fromParent.kind === r.kind);
+
+  check('a child link places the child under the parent, as a parent link does',
+    parentIdsOf('robb', [person('ned', [rel('r1', 'robb', r.kind)]), person('robb')], relsFor).join() === 'ned');
+}
+
+/**
  * The taxonomy grew from four kinds to eleven, and two invariants have to survive the next person
  * who adds one. Every kind the picker offers must have metadata, or it draws an undefined label;
  * and `parent` must remain the only asymmetric one, because that is what the arrowhead means and
@@ -115,9 +150,21 @@ console.log('the taxonomy');
   const arrowed = (Object.keys(REL_KINDS) as (keyof typeof REL_KINDS)[]).filter((k) => REL_KINDS[k].directed && k !== 'interested');
   check('and the only kinship kind that draws an arrow', arrowed.join() === 'parent', arrowed.join());
 
-  const grouped = KIND_GROUPS.flatMap((g) => g.kinds);
-  check('no kind is listed in two groups', new Set(grouped).size === grouped.length);
+  const values = KIND_OPTIONS.map((o) => o.value);
+  check('no option is offered twice', new Set(values).size === values.length, values.join());
+
+  const grouped = KIND_GROUPS.flatMap((g) => g.options.map((o) => o.value));
   check('"other" is outside the groups, as the escape hatch', !grouped.includes('other') && KINSHIP_KINDS.includes('other'));
+
+  /**
+   * One fact, one kind. `parent` is allowed to back two options because they are the same link
+   * read from opposite ends; a second kind sharing an option would be a genuine duplicate.
+   */
+  const inverted = KIND_OPTIONS.filter((o) => o.invert);
+  check('only "child of" is inverted', inverted.map((o) => o.value).join() === 'child', inverted.map((o) => o.value).join());
+  check('and it is an inverted parent', inverted[0]?.kind === 'parent');
+  const uninverted = KIND_OPTIONS.filter((o) => !o.invert).map((o) => o.kind);
+  check('every other option is its own kind, once', new Set(uninverted).size === uninverted.length, uninverted.join());
 
   const labels = KINSHIP_KINDS.map((k) => REL_KINDS[k].label);
   check('no two kinds share a label', new Set(labels).size === labels.length, labels.join());

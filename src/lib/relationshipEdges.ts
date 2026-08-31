@@ -21,6 +21,9 @@ export const REL_KINDS: Record<MapRelKind, { label: string; symmetric: boolean; 
    * it is the only one where the two people are not the same thing to each other. Everything else
    * is a description both of them would give, which is why it merges into one line and carries no
    * arrowhead. A new kind that fails that test needs `symmetric: false` and its own thought.
+   *
+   * It is also both directions at once: the picker's "child of" writes this kind with the two
+   * people swapped, rather than adding an inverse kind. See `KindOption`.
    */
   parent: { label: 'Parent of', symmetric: false, directed: true },
   sibling: { label: 'Sibling', symmetric: true, directed: false },
@@ -59,21 +62,98 @@ export const REL_KINDS: Record<MapRelKind, { label: string; symmetric: boolean; 
 };
 
 /**
+ * One entry in the picker, which is not quite the same list as the kinds.
+ *
+ * "Child of" is what forces the distinction. It is deliberately not a new kind: a `child` kind
+ * would give the board two ways to write down one fact, so a mother recorded as the parent of her
+ * son and that son recorded as her child would draw two lines saying the same thing — the exact
+ * doubling this module exists to prevent — and it would cost the invariant that `parent` is the
+ * only asymmetric kind, which is what the arrowhead means. So "child of" is `parent` written from
+ * the other end: one kind, one line, one arrowhead, and a record every older client already reads.
+ */
+export interface KindOption {
+  /** What the picker hands back. A kind's own name, except for `child`. */
+  value: string;
+  kind: MapRelKind;
+  /** Record it on the target rather than the source — the same fact, said from the other end. */
+  invert?: boolean;
+  /**
+   * How the option reads inside "{source} is {target}'s …", given the other person's first name.
+   *
+   * Only the directed pair needs one. "Parent of" does not finish as a sentence without a name
+   * after it, and now that "child of" sits directly beneath it the two are read against each
+   * other, which is the plainest statement of direction the picker can make — so both say the name
+   * out loud. Every other option is a bare noun and falls back to its kind's label.
+   */
+  word?: (other: string) => string;
+}
+
+/**
  * How the picker groups them.
  *
- * Eleven options is past what a row of chips can hold in a panel this size, and past what anyone
+ * A dozen options is past what a row of chips can hold in a panel this size, and past what anyone
  * reads as a set — so they are grouped and put in a dropdown, where the headings do the work of
  * telling you which half of the list to look in. `other` is deliberately outside the groups: it is
  * the escape hatch, not a category.
  */
-export const KIND_GROUPS: { label: string; kinds: MapRelKind[] }[] = [
-  { label: 'Family', kinds: ['parent', 'sibling', 'spouse', 'extended'] },
-  { label: 'Personal', kinds: ['romantic', 'friend', 'frenemy', 'enemy'] },
-  { label: 'Work & school', kinds: ['colleague', 'roommate', 'classmate'] },
+export const KIND_GROUPS: { label: string; options: KindOption[] }[] = [
+  {
+    label: 'Family',
+    options: [
+      { value: 'parent', kind: 'parent', word: (o) => `parent of ${o}` },
+      { value: 'child', kind: 'parent', invert: true, word: (o) => `child of ${o}` },
+      { value: 'sibling', kind: 'sibling' },
+      { value: 'spouse', kind: 'spouse' },
+      { value: 'extended', kind: 'extended' },
+    ],
+  },
+  {
+    label: 'Personal',
+    options: [
+      { value: 'romantic', kind: 'romantic' },
+      { value: 'friend', kind: 'friend' },
+      { value: 'frenemy', kind: 'frenemy' },
+      { value: 'enemy', kind: 'enemy' },
+    ],
+  },
+  {
+    label: 'Work & school',
+    options: [
+      { value: 'colleague', kind: 'colleague' },
+      { value: 'roommate', kind: 'roommate' },
+      { value: 'classmate', kind: 'classmate' },
+    ],
+  },
 ];
 
-/** Every kind the picker offers, groups first and the escape hatch last. */
-export const KINSHIP_KINDS: MapRelKind[] = [...KIND_GROUPS.flatMap((g) => g.kinds), 'other'];
+/** Every option the picker offers, groups first and the escape hatch last. */
+export const KIND_OPTIONS: KindOption[] = [
+  ...KIND_GROUPS.flatMap((g) => g.options),
+  { value: 'other', kind: 'other' },
+];
+
+/** Every kind those options can produce — one fewer than the options, since `child` writes a `parent`. */
+export const KINSHIP_KINDS: MapRelKind[] = [...new Set(KIND_OPTIONS.map((o) => o.kind))];
+
+/**
+ * The record a picked option writes: whose card it lands on, and who it points at.
+ *
+ * The swap for an inverted option happens here rather than at the call site, so the caller can
+ * hand over the two people in whatever order the gesture produced them and stay out of it.
+ */
+export function resolveKindOption(
+  value: string,
+  sourceId: string,
+  targetId: string,
+): { sourceId: string; targetId: string; kind: MapRelKind } {
+  const opt = KIND_OPTIONS.find((o) => o.value === value);
+  // Unreachable from the picker, but an unrecognised word is a written one, and `other` is where
+  // those go — which beats handing `createRelationship` a kind that has no metadata to read.
+  if (!opt) return { sourceId, targetId, kind: 'other' };
+  return opt.invert
+    ? { sourceId: targetId, targetId: sourceId, kind: opt.kind }
+    : { sourceId, targetId, kind: opt.kind };
+}
 
 export interface Edge {
   /** Stable across renders: the id of the relationship record that anchors this line. */
