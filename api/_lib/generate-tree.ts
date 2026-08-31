@@ -44,8 +44,15 @@ const MAX_TOKENS = 8192;
 /**
  * Per-attempt ceiling. With maxRetries: 1 the worst case is roughly double this, which has to stay
  * inside the function's maxDuration in vercel.json alongside two source fetches. Raise together.
+ *
+ * Generous, and measured rather than guessed: the first version of this file used 25s, copied from
+ * its neighbours, and every real request died on it — twice, for 50s of latency and a 503, which
+ * is exactly the shape of "the feature does not work". Reading a page of prose about twenty-five
+ * people and deciding which claims are quotable is a minute of thinking, not the few seconds a
+ * one-paragraph recap takes. The streaming call below is what makes a ceiling this high safe to
+ * ask for.
  */
-const REQUEST_TIMEOUT_MS = 25_000;
+const REQUEST_TIMEOUT_MS = 120_000;
 
 /**
  * The system prompt embeds one real spoiler as a worked example, which is the convention
@@ -141,16 +148,25 @@ export async function generateTree(input: {
 
   let message;
   try {
-    message = await anthropic.messages.create({
-      model: TREE_MODEL,
-      max_tokens: MAX_TOKENS,
-      system: SYSTEM,
-      messages: [{ role: 'user', content: userContent }],
-      // `high` rather than the recap's `medium`: this is the one generation where the model has to
-      // actively withhold what it knows, across a whole cast at once, and the cost is paid once per
-      // show rather than once per reader.
-      output_config: { effort: 'high', format: { type: 'json_schema', schema: SCHEMA } },
-    });
+    /**
+     * Streamed, unlike its two neighbours, and for a mechanical reason rather than a stylistic
+     * one: a non-streaming request has to complete inside one HTTP response, and this is the only
+     * one of the three generations long enough to be at risk of that. Nothing consumes the tokens
+     * as they arrive — `finalMessage()` waits for the whole thing — the stream exists purely to
+     * keep the connection alive while the model works.
+     */
+    message = await anthropic.messages
+      .stream({
+        model: TREE_MODEL,
+        max_tokens: MAX_TOKENS,
+        system: SYSTEM,
+        messages: [{ role: 'user', content: userContent }],
+        // `high` rather than the recap's `medium`: this is the one generation where the model has
+        // to actively withhold what it knows, across a whole cast at once, and the cost is paid
+        // once per show rather than once per reader.
+        output_config: { effort: 'high', format: { type: 'json_schema', schema: SCHEMA } },
+      })
+      .finalMessage();
   } catch (err) {
     if (err instanceof Anthropic.APIError) {
       console.error('Anthropic API error', err.status, err.message);

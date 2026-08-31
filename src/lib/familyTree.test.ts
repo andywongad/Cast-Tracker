@@ -12,7 +12,7 @@
  * one establishes and nothing else; anything a model would add from memory has no sentence to
  * quote, and that is the lock being tested.
  */
-import { verifyTree } from './familyTree/verify';
+import { verifyTree, stripEvidence } from './familyTree/verify';
 import { narrowToRelational } from './familyTree/narrow';
 import { planSeed } from './familyTree/seed';
 import type { FamilyTree } from './familyTree/types';
@@ -347,6 +347,28 @@ const tree = (edges: FamilyTree['edges'], names = CAST): FamilyTree => ({
 {
   const empty = planSeed(tree([]), [member('n', 'Eddard Stark')], relsFor);
   check('an empty tree plans no writes and is not an error', empty.writes.length === 0);
+}
+
+console.log('what reaches the browser');
+{
+  /**
+   * The quotes are the most spoiler-dense text this feature touches — the sentence proving Eddard
+   * is Sansa's father, in a series-wide article, is the one about his execution. They are needed to
+   * verify and kept to audit; they must not be shipped.
+   */
+  const spoilery = tree([{ from: 0, to: 3, kind: 'parent', evidence: "Joffrey orders Ned's execution for his own amusement" }]);
+  const sent = stripEvidence(spoilery);
+
+  check('no quotation reaches the client', sent.edges.every((e) => e.evidence === undefined));
+  check('but the link itself survives intact',
+    sent.edges[0].from === 0 && sent.edges[0].to === 3 && sent.edges[0].kind === 'parent');
+  check('and the stored tree still has its quotes to audit', spoilery.edges[0].evidence !== undefined);
+  check('everything else about the tree is unchanged', sent.names === spoilery.names && sent.asOfEpisode === 1);
+}
+{
+  // Stripping is for the response only. An edge arriving without a quote is still unverifiable.
+  const { edges } = run([{ from: 0, to: 2, kind: 'parent' }]);
+  check('an edge with no quote never verifies in the first place', edges.length === 0);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

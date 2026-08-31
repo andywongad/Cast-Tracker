@@ -1,4 +1,4 @@
-import { TREE_REL_KINDS, type TreeEdge, type TreeRelKind } from './types.js';
+import { TREE_REL_KINDS, type FamilyTree, type TreeEdge, type TreeRelKind } from './types.js';
 
 /**
  * What a proposed family tree has to survive before anyone sees it.
@@ -199,4 +199,19 @@ export function verifyTree(
         .sort((x, y) => y.count - x.count),
     },
   };
+}
+
+/**
+ * The tree with its quotations removed, for sending to a browser.
+ *
+ * Lives here rather than in the handler because this is the file that owns the evidence rule, and
+ * because a guarantee about spoilers is worth a test — which a function inside an api/ route would
+ * not get, the suites all bundling from src/.
+ *
+ * The quotes are the most spoiler-dense text this feature touches: "Eddard is the parent of Sansa"
+ * is safe on any episode, while the sentence proving it, pulled from an article about the whole
+ * series, may be about his execution. The server keeps them, the browser never receives them.
+ */
+export function stripEvidence(tree: FamilyTree): FamilyTree {
+  return { ...tree, edges: tree.edges.map(({ evidence: _quoted, ...edge }) => edge) };
 }

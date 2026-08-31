@@ -43,13 +43,21 @@ export interface TreeEdge {
   to: number;
   kind: TreeRelKind;
   /**
-   * The sentence in the source text that says so, quoted.
+   * The sentence in the source text that says so, quoted. Server-side only.
    *
    * Not decoration and not an audit nicety — it is load-bearing. An edge whose evidence cannot be
    * found in the source we fetched is discarded, which is what turns "the model asserted this"
    * into "the text we read said this". See verify.ts.
+   *
+   * Optional because it is stripped before the tree is sent to a browser, and the reason is worth
+   * stating plainly: the quotes are the most spoiler-dense text in this whole feature. A link
+   * saying "Eddard is the parent of Sansa" is safe on any episode; the sentence proving it, pulled
+   * from a series-wide article, may be about his execution. The verifier needs the quote, the KV
+   * row keeps it so a bad tree can be audited later, and the client is never given it — nothing
+   * there renders it today, and "nothing renders it" is a guarantee that lasts exactly until
+   * someone adds a debug view.
    */
-  evidence: string;
+  evidence?: string;
 }
 
 export interface FamilyTree {

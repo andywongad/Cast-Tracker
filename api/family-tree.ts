@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { treeKey } from './_lib/tree-key.js';
+import { stripEvidence } from '../src/lib/familyTree/verify.js';
 import { fetchTreeSource } from './_lib/tree-source.js';
 import { generateTree } from './_lib/generate-tree.js';
 import {
@@ -93,7 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Immutable once generated — the episode it describes is fixed — so let the edge serve repeats
     // without waking a function.
     res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800');
-    return res.status(200).json(cached.data);
+    return res.status(200).json(stripEvidence(cached.data));
   }
   if (cached?.status === 'unavailable') {
     // A known dead end. Answering from the marker skips two pointless round trips.
@@ -149,5 +150,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   await kvTreeStore.putReady(key, result.data);
   res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800');
-  return res.status(200).json(result.data);
+  return res.status(200).json(stripEvidence(result.data));
 }
