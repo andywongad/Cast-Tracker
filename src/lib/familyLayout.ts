@@ -56,6 +56,17 @@ const BAND_GAP = 1;
 const UNRELATED_GAP = 2;
 
 /**
+ * An empty row between one generation and the next, inside a family.
+ *
+ * Not spacing for its own sake. A person's name is drawn under their face, and a line's label sits
+ * at the midpoint of the line — so with generations on adjacent rows, every "Parent of" label
+ * lands exactly on the parent's name and the top row of every family becomes unreadable. Scattered
+ * boards never showed this because their lines were long; tidying is what puts the two in the same
+ * place. The row costs height on a board that already scrolls, which is the cheaper of the two.
+ */
+const GENERATION_GAP = 1;
+
+/**
  * Kinds that make two people the same generation.
  *
  * `extended` is deliberately absent. It is the map's word for "related, no precise word" — which
@@ -213,9 +224,13 @@ export function layoutTree(
       byGeneration.set(n, ids);
     }
 
-    for (const n of [...byGeneration.keys()].sort((a, b) => a - b)) {
+    const generations = [...byGeneration.keys()].sort((a, b) => a - b);
+    generations.forEach((n, i) => {
       row = placeRow(byGeneration.get(n)!, row);
-    }
+      // Between generations only. A generation too wide for the board wraps onto a second row, and
+      // those two rows have no lines between them, so nothing needs the space.
+      if (i < generations.length - 1) row += GENERATION_GAP;
+    });
     row += BAND_GAP;
   }
 

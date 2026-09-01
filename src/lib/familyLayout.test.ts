@@ -45,6 +45,13 @@ const CLAN_LINKS = [
 
   check('everyone handed in gets a cell', Object.keys(cells).length === CLAN.length);
   check('parents sit above their children', row('ned') < row('robb') && row('catelyn') < row('robb'));
+  /**
+   * A blank row between them, because a "Parent of" label is drawn at the midpoint of its line and
+   * a person's name under their face — on adjacent rows those are the same pixels, and the parent
+   * generation of every family became unreadable.
+   */
+  check('with a row between the generations for the line labels', row('robb') - row('ned') === 2,
+    String(row('robb') - row('ned')));
   check('spouses share a row', row('ned') === row('catelyn'));
   check('and are placed side by side', Math.abs(cells['ned'].c - cells['catelyn'].c) === 1);
   check('an uncle sits with the parents, not the children', row('benjen') === row('ned'));
