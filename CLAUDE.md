@@ -56,5 +56,5 @@ reasoning is in the header comment of `src/lib/sync.ts` — read it before chang
 
 - The code carries unusually detailed header comments explaining *why* things are the way they
   are. Read the header of a file before changing it; most of the traps are already documented.
-- `README.md` is stale in one respect: it describes the app as having "no account or backend",
-  which predates Supabase auth, sync, the `api/` functions, and notifications.
+- `demo/README.md` holds the manual test script and the seed library it runs against. If you change
+  what a screen does, that script is where a tester will notice you didn't.
