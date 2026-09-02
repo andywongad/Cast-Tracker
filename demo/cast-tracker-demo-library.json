@@ -452,6 +452,525 @@
         ]
       },
       {
+        "id": "s-demo-succession",
+        "title": "Succession",
+        "type": "DRAMA",
+        "color": "#4A5D6E",
+        "status": "watching",
+        "poster": "https://image.tmdb.org/t/p/w300/7HW47XbkNQ5fiwQFYGWdw9gs144.jpg",
+        "tmdbId": 76331,
+        "originCountry": "US",
+        "wikiUrl": "",
+        "imdbUrl": "",
+        "currentSeason": 1,
+        "mapEpisode": "Ep 1",
+        "editedAt": 1785585600000,
+        "cast": [
+          {
+            "id": "p-succ-logan",
+            "color": "#2E4356",
+            "name": "Logan Roy",
+            "native": "",
+            "nickname": "",
+            "otherNames": [],
+            "whoTheyAre": "Founder and CEO of Waystar Royco",
+            "desc": "",
+            "photo": "https://image.tmdb.org/t/p/w185/scSjbFCTRngXlkJRoKptM5kQGw7.jpg",
+            "notes": "",
+            "gender": "Male",
+            "age": "",
+            "hometown": "",
+            "occupation": "",
+            "social": "",
+            "socialPlatform": "Instagram",
+            "firstEp": "Ep 1",
+            "season": 1,
+            "actorName": "Brian Cox",
+            "actorTmdbId": 1248,
+            "wikiUrl": "",
+            "imdbUrl": "",
+            "versions": [],
+            "relationships": [],
+            "relByEp": {
+              "1_Ep 1": [
+                {
+                  "id": "rs1",
+                  "targetId": "p-succ-connor",
+                  "label": "Parent of",
+                  "kind": "parent"
+                },
+                {
+                  "id": "rs2",
+                  "targetId": "p-succ-kendall",
+                  "label": "Parent of",
+                  "kind": "parent"
+                },
+                {
+                  "id": "rs3",
+                  "targetId": "p-succ-shiv",
+                  "label": "Parent of",
+                  "kind": "parent"
+                },
+                {
+                  "id": "rs4",
+                  "targetId": "p-succ-roman",
+                  "label": "Parent of",
+                  "kind": "parent"
+                },
+                {
+                  "id": "rs5",
+                  "targetId": "p-succ-marcia",
+                  "label": "Spouse",
+                  "kind": "spouse"
+                },
+                {
+                  "id": "rs17",
+                  "targetId": "p-succ-greg",
+                  "label": "Relative",
+                  "kind": "extended"
+                }
+              ]
+            },
+            "mapCellByEp": {
+              "1_Ep 1": {
+                "r": 1,
+                "c": 4
+              }
+            }
+          },
+          {
+            "id": "p-succ-marcia",
+            "color": "#3C5067",
+            "name": "Marcia Roy",
+            "native": "",
+            "nickname": "",
+            "otherNames": [],
+            "whoTheyAre": "Logan's wife",
+            "desc": "",
+            "photo": "https://image.tmdb.org/t/p/w185/2cz9mO3qhUQeGdVHzWkS2Pwx94l.jpg",
+            "notes": "",
+            "gender": "Female",
+            "age": "",
+            "hometown": "",
+            "occupation": "",
+            "social": "",
+            "socialPlatform": "Instagram",
+            "firstEp": "Ep 1",
+            "season": 1,
+            "actorName": "Hiam Abbass",
+            "actorTmdbId": 765,
+            "wikiUrl": "",
+            "imdbUrl": "",
+            "versions": [],
+            "relationships": [],
+            "relByEp": {
+              "1_Ep 1": [
+                {
+                  "id": "rs6",
+                  "targetId": "p-succ-logan",
+                  "label": "Spouse",
+                  "kind": "spouse"
+                }
+              ]
+            },
+            "mapCellByEp": {
+              "1_Ep 1": {
+                "r": -2,
+                "c": 0
+              }
+            }
+          },
+          {
+            "id": "p-succ-connor",
+            "color": "#4A5D6E",
+            "name": "Connor Roy",
+            "native": "",
+            "nickname": "",
+            "otherNames": [],
+            "whoTheyAre": "The eldest, mostly off the ranch",
+            "desc": "",
+            "photo": "https://image.tmdb.org/t/p/w185/hj7CuWinT12hMKjRhSO4XEMVq7w.jpg",
+            "notes": "",
+            "gender": "Male",
+            "age": "",
+            "hometown": "",
+            "occupation": "",
+            "social": "",
+            "socialPlatform": "Instagram",
+            "firstEp": "Ep 1",
+            "season": 1,
+            "actorName": "Alan Ruck",
+            "actorTmdbId": 2394,
+            "wikiUrl": "",
+            "imdbUrl": "",
+            "versions": [],
+            "relationships": [],
+            "relByEp": {
+              "1_Ep 1": [
+                {
+                  "id": "rs7",
+                  "targetId": "p-succ-kendall",
+                  "label": "Sibling",
+                  "kind": "sibling"
+                }
+              ]
+            },
+            "mapCellByEp": {
+              "1_Ep 1": {
+                "r": 3,
+                "c": 2
+              }
+            }
+          },
+          {
+            "id": "p-succ-kendall",
+            "color": "#586A7A",
+            "name": "Kendall Roy",
+            "native": "",
+            "nickname": "",
+            "otherNames": [],
+            "whoTheyAre": "Being lined up to take over",
+            "desc": "",
+            "photo": "https://image.tmdb.org/t/p/w185/jcMhXWICSi4QjQttJVhFSiKVvpF.jpg",
+            "notes": "",
+            "gender": "Male",
+            "age": "",
+            "hometown": "",
+            "occupation": "",
+            "social": "",
+            "socialPlatform": "Instagram",
+            "firstEp": "Ep 1",
+            "season": 1,
+            "actorName": "Jeremy Strong",
+            "actorTmdbId": 239271,
+            "wikiUrl": "",
+            "imdbUrl": "",
+            "versions": [],
+            "relationships": [],
+            "relByEp": {
+              "1_Ep 1": [
+                {
+                  "id": "rs8",
+                  "targetId": "p-succ-connor",
+                  "label": "Sibling",
+                  "kind": "sibling"
+                },
+                {
+                  "id": "rs9",
+                  "targetId": "p-succ-shiv",
+                  "label": "Sibling",
+                  "kind": "sibling"
+                },
+                {
+                  "id": "rs13",
+                  "targetId": "p-succ-rava",
+                  "label": "Spouse",
+                  "kind": "spouse"
+                }
+              ]
+            },
+            "mapCellByEp": {
+              "1_Ep 1": {
+                "r": -3,
+                "c": 5
+              }
+            }
+          },
+          {
+            "id": "p-succ-shiv",
+            "color": "#667786",
+            "name": "Siobhan 'Shiv' Roy",
+            "native": "",
+            "nickname": "",
+            "otherNames": [],
+            "whoTheyAre": "The one who left for politics",
+            "desc": "",
+            "photo": "https://image.tmdb.org/t/p/w185/w9xv72oaTISLgeT381fU4Jor9GV.jpg",
+            "notes": "",
+            "gender": "Female",
+            "age": "",
+            "hometown": "",
+            "occupation": "",
+            "social": "",
+            "socialPlatform": "Instagram",
+            "firstEp": "Ep 1",
+            "season": 1,
+            "actorName": "Sarah Snook",
+            "actorTmdbId": 235416,
+            "wikiUrl": "",
+            "imdbUrl": "",
+            "versions": [],
+            "relationships": [],
+            "relByEp": {
+              "1_Ep 1": [
+                {
+                  "id": "rs10",
+                  "targetId": "p-succ-kendall",
+                  "label": "Sibling",
+                  "kind": "sibling"
+                },
+                {
+                  "id": "rs11",
+                  "targetId": "p-succ-roman",
+                  "label": "Sibling",
+                  "kind": "sibling"
+                },
+                {
+                  "id": "rs15",
+                  "targetId": "p-succ-tom",
+                  "label": "Partner",
+                  "kind": "romantic"
+                }
+              ]
+            },
+            "mapCellByEp": {
+              "1_Ep 1": {
+                "r": 2,
+                "c": 1
+              }
+            }
+          },
+          {
+            "id": "p-succ-roman",
+            "color": "#748492",
+            "name": "Roman Roy",
+            "native": "",
+            "nickname": "",
+            "otherNames": [],
+            "whoTheyAre": "The youngest",
+            "desc": "",
+            "photo": "https://image.tmdb.org/t/p/w185/b5EC4nziLhBRX4GOcYx2BdS3FTt.jpg",
+            "notes": "",
+            "gender": "Male",
+            "age": "",
+            "hometown": "",
+            "occupation": "",
+            "social": "",
+            "socialPlatform": "Instagram",
+            "firstEp": "Ep 1",
+            "season": 1,
+            "actorName": "Kieran Culkin",
+            "actorTmdbId": 18793,
+            "wikiUrl": "",
+            "imdbUrl": "",
+            "versions": [],
+            "relationships": [],
+            "relByEp": {
+              "1_Ep 1": [
+                {
+                  "id": "rs12",
+                  "targetId": "p-succ-shiv",
+                  "label": "Sibling",
+                  "kind": "sibling"
+                }
+              ]
+            },
+            "mapCellByEp": {
+              "1_Ep 1": {
+                "r": -1,
+                "c": 3
+              }
+            }
+          },
+          {
+            "id": "p-succ-rava",
+            "color": "#2E4356",
+            "name": "Rava Roy",
+            "native": "",
+            "nickname": "",
+            "otherNames": [],
+            "whoTheyAre": "Kendall's wife",
+            "desc": "",
+            "photo": "https://image.tmdb.org/t/p/w185/x6x5kpWUUJ15In9SHeWeNRcYy3y.jpg",
+            "notes": "",
+            "gender": "Female",
+            "age": "",
+            "hometown": "",
+            "occupation": "",
+            "social": "",
+            "socialPlatform": "Instagram",
+            "firstEp": "Ep 1",
+            "season": 1,
+            "actorName": "Natalie Gold",
+            "actorTmdbId": 143256,
+            "wikiUrl": "",
+            "imdbUrl": "",
+            "versions": [],
+            "relationships": [],
+            "relByEp": {
+              "1_Ep 1": [
+                {
+                  "id": "rs14",
+                  "targetId": "p-succ-kendall",
+                  "label": "Spouse",
+                  "kind": "spouse"
+                }
+              ]
+            },
+            "mapCellByEp": {
+              "1_Ep 1": {
+                "r": 4,
+                "c": 5
+              }
+            }
+          },
+          {
+            "id": "p-succ-tom",
+            "color": "#3C5067",
+            "name": "Tom Wambsgans",
+            "native": "",
+            "nickname": "",
+            "otherNames": [],
+            "whoTheyAre": "Shiv's fiance, and works for the company",
+            "desc": "",
+            "photo": "https://image.tmdb.org/t/p/w185/sFaIfkykJdftwrc3BdEfpdg2mYW.jpg",
+            "notes": "",
+            "gender": "Male",
+            "age": "",
+            "hometown": "",
+            "occupation": "",
+            "social": "",
+            "socialPlatform": "Instagram",
+            "firstEp": "Ep 1",
+            "season": 1,
+            "actorName": "Matthew Macfadyen",
+            "actorTmdbId": 15576,
+            "wikiUrl": "",
+            "imdbUrl": "",
+            "versions": [],
+            "relationships": [],
+            "relByEp": {
+              "1_Ep 1": [
+                {
+                  "id": "rs16",
+                  "targetId": "p-succ-shiv",
+                  "label": "Partner",
+                  "kind": "romantic"
+                }
+              ]
+            },
+            "mapCellByEp": {
+              "1_Ep 1": {
+                "r": 0,
+                "c": 0
+              }
+            }
+          },
+          {
+            "id": "p-succ-greg",
+            "color": "#4A5D6E",
+            "name": "Greg Hirsch",
+            "native": "",
+            "nickname": "",
+            "otherNames": [],
+            "whoTheyAre": "Turns up looking for a job",
+            "desc": "",
+            "photo": "https://image.tmdb.org/t/p/w185/b2I6bZptuld3pjlVkYIy4DtMKGg.jpg",
+            "notes": "",
+            "gender": "Male",
+            "age": "",
+            "hometown": "",
+            "occupation": "",
+            "social": "",
+            "socialPlatform": "Instagram",
+            "firstEp": "Ep 1",
+            "season": 1,
+            "actorName": "Nicholas Braun",
+            "actorTmdbId": 85139,
+            "wikiUrl": "",
+            "imdbUrl": "",
+            "versions": [],
+            "relationships": [],
+            "relByEp": {
+              "1_Ep 1": [
+                {
+                  "id": "rs18",
+                  "targetId": "p-succ-logan",
+                  "label": "Relative",
+                  "kind": "extended"
+                }
+              ]
+            },
+            "mapCellByEp": {
+              "1_Ep 1": {
+                "r": -3,
+                "c": 2
+              }
+            }
+          },
+          {
+            "id": "p-succ-frank",
+            "color": "#586A7A",
+            "name": "Frank Vernon",
+            "native": "",
+            "nickname": "",
+            "otherNames": [],
+            "whoTheyAre": "Company man, no relation",
+            "desc": "",
+            "photo": "https://image.tmdb.org/t/p/w185/3pyU0yQsRIqSZw1fYapFRXJ3EHp.jpg",
+            "notes": "",
+            "gender": "Male",
+            "age": "",
+            "hometown": "",
+            "occupation": "",
+            "social": "",
+            "socialPlatform": "Instagram",
+            "firstEp": "Ep 1",
+            "season": 1,
+            "actorName": "Peter Friedman",
+            "actorTmdbId": 54246,
+            "wikiUrl": "",
+            "imdbUrl": "",
+            "versions": [],
+            "relationships": [],
+            "relByEp": {
+              "1_Ep 1": []
+            },
+            "mapCellByEp": {
+              "1_Ep 1": {
+                "r": 3,
+                "c": 4
+              }
+            }
+          },
+          {
+            "id": "p-succ-lawrence",
+            "color": "#667786",
+            "name": "Lawrence Yee",
+            "native": "",
+            "nickname": "",
+            "otherNames": [],
+            "whoTheyAre": "Runs a company Waystar wants",
+            "desc": "",
+            "photo": "https://image.tmdb.org/t/p/w185/rijNHjy45mhXw6TIhLesuDs4BY4.jpg",
+            "notes": "",
+            "gender": "Male",
+            "age": "",
+            "hometown": "",
+            "occupation": "",
+            "social": "",
+            "socialPlatform": "Instagram",
+            "firstEp": "Ep 1",
+            "season": 1,
+            "actorName": "Rob Yang",
+            "actorTmdbId": 207389,
+            "wikiUrl": "",
+            "imdbUrl": "",
+            "versions": [],
+            "relationships": [],
+            "relByEp": {
+              "1_Ep 1": []
+            },
+            "mapCellByEp": {
+              "1_Ep 1": {
+                "r": -1,
+                "c": 1
+              }
+            }
+          }
+        ]
+      },
+      {
         "id": "s-demo-beef",
         "title": "BEEF",
         "type": "DRAMA",

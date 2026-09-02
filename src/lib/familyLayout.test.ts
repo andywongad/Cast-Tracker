@@ -90,6 +90,21 @@ const CLAN_LINKS = [
   check('and marrying in does not drag a spouse up a generation', cells['catelyn'].r === cells['ned'].r);
 }
 {
+  /**
+   * A couple who are not married yet are still a couple. Before this, "Partner" was no relation to
+   * the layout, so one half stood with the family and the other was filed with the strangers.
+   */
+  const cells = layoutTree(
+    [P('logan'), P('shiv'), P('tom'), P('frank')],
+    [link('logan', 'shiv', 'parent'), link('shiv', 'tom', 'romantic')],
+  );
+  check('an unmarried partner joins the family, as a spouse does', cells['tom'].r === cells['shiv'].r);
+  check('and is not left with the people who have nobody', cells['tom'].r < cells['frank'].r);
+  check('while a colleague is still nobody\u2019s family',
+    layoutTree([P('a'), P('b')], [link('a', 'b', 'colleague')])['a'].r
+      === layoutTree([P('a'), P('b')], [link('a', 'b', 'colleague')])['b'].r);
+}
+{
   // Cousins are peers; an aunt is not. `extended` joins a family without claiming a generation.
   const cells = layoutTree(
     [P('ned'), P('robb'), P('lysa')],

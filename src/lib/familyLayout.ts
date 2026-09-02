@@ -74,10 +74,21 @@ const GENERATION_GAP = 1;
  * link would flatten a grandmother into her grandchildren's row on the strength of a guess, so it
  * joins a family together without having any say in what row anyone lands on.
  */
-const PEER_KINDS: MapRelKind[] = ['sibling', 'spouse'];
+const PEER_KINDS: MapRelKind[] = ['sibling', 'spouse', 'romantic'];
 
-/** Kinds that put two people in the same family at all. Everything family-ish, `extended` included. */
-const FAMILY_KINDS: MapRelKind[] = ['parent', 'sibling', 'spouse', 'extended'];
+/**
+ * Kinds that put two people in the same family at all. Everything family-ish, `extended` included.
+ *
+ * `romantic` is here alongside `spouse` because the difference between them is a wedding, not a
+ * household. A show introduces couples long before it marries them off — Shiv and Tom are engaged
+ * in the first episode of Succession — and a tidy that treats "Partner" as no relation drops one
+ * half of a couple into the strangers band while their partner stands with the family. Whoever
+ * drew that line said these two are together; that is a family fact whichever word they picked.
+ *
+ * The rest of the personal kinds stay out. A friend, a rival or a colleague is a real connection
+ * and not a family one, and a family tree that seats them with the parents is not a family tree.
+ */
+const FAMILY_KINDS: MapRelKind[] = ['parent', 'sibling', 'spouse', 'extended', 'romantic'];
 
 class DisjointSet {
   private parent = new Map<string, string>();
