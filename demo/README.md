@@ -174,9 +174,11 @@ in the browser that made it still works, but proves less.
     reaches this screen; it is removed silently, which is the intended behaviour, not a miss.)*
 
 ### 11. New episode alerts
-38. Open a show that is still running — Reacher, not The Bear. An orange **bell** sits next to the
-    title. On a finished show there is no bell at all: nothing more is coming, so there is nothing
-    to be told about. A struck-through bell means alerts are off, a filled one ringing means on.
+38. Open a show that is still running — Reacher, not The Bear. An orange **bell** captioned
+    *Episode alerts* sits next to the title. On a finished show there is no bell at all: nothing
+    more is coming, so there is nothing to be told about. A struck-through bell means alerts are
+    off, a filled one ringing means on — the caption stays the same either way, since it names the
+    button rather than reporting its state.
 39. Tap it. The card says which show it is about and offers **At time of episode / 30 minutes /
     1 hour / 1 day before / Custom**. Pick one and **Turn on**; the browser asks permission, and
     the bell fills.

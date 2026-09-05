@@ -263,22 +263,46 @@ export default function EpisodeAlertButton({
             : 'Notify me about new episodes'
         }
         /**
-         * No container. The 32px box is the tap target, not a visual — anything smaller is below
-         * the size a thumb should be asked to hit, and the icon inside it is what is actually
-         * seen. Colour does the work a surface was doing: this is the only orange in the bar.
+         * No container. The box is the tap target, not a visual — anything narrower is below the
+         * size a thumb should be asked to hit, and the icon inside it is what is actually seen.
+         * Colour does the work a surface was doing: this is the only orange in the bar.
          */
         style={{
-          flex: 'none', width: 32, height: 32, marginLeft: 6, padding: 0,
+          flex: 'none', minWidth: 32, marginLeft: 6, padding: 0,
           border: 'none', background: 'transparent', borderRadius: 999, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          // Optically aligned rather than centred. Flex centres the 32px box against the heading's
-          // line box, but the bell's visual mass sits above its own centre — the clapper is a thin
-          // tail — so geometric centring reads as riding high next to the title's x-height.
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: 1,
+          // Optically aligned rather than centred. Flex centres the box against the heading's line
+          // box, but the bell's visual mass sits above its own centre — the clapper is a thin tail
+          // — so geometric centring reads as riding high next to the title's x-height.
           // `relative` so the nudge costs no layout.
           position: 'relative', top: 2,
         }}
       >
         <BellIcon on={following} />
+        {/**
+          * The bell alone was a mystery tap: an orange glyph beside a title, with nothing saying
+          * what it does until you press it. The caption is the smallest thing on the bar on
+          * purpose — it exists to be read once, not to compete with the show's name — and it is
+          * `aria-hidden` because the button's own label already says this and more, and a screen
+          * reader announcing "Episode alerts" twice is worse than not announcing it at all.
+          *
+          * One colour in both states, and deliberately not the bell's. The icon is `--cta` whether
+          * you follow the show or not — it says so with fill and with the waves, never with hue —
+          * so a caption that changed colour would be claiming a state the icon does not use, and a
+          * caption that borrowed the orange would spend the one thing that makes the bell findable
+          * at all. It is a label for the control, not a readout of it.
+          */}
+        <span
+          aria-hidden="true"
+          style={{
+            fontSize: 9, lineHeight: 1, fontWeight: 700, letterSpacing: 0.1,
+            color: 'var(--text-faint)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Episode alerts
+        </span>
       </button>
 
       {open && (
