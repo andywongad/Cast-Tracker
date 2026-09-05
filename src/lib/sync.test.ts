@@ -14,7 +14,7 @@
  * remote edit overwriting a newer local one, and a stale delete destroying a record that was
  * edited afterwards.
  */
-import { stampEdits, applyRemote, readTombstones, collectPush, cursorFor, saveCursor, clearCursor } from './sync';
+import { stampEdits, applyRemote, stampRestored, readTombstones, collectPush, cursorFor, saveCursor, clearCursor } from './sync';
 import type { AppData, CastMember } from '../types';
 
 const store: Record<string, string> = {};
@@ -221,6 +221,60 @@ console.log('the sync cursor');
   clearCursor();
   saveCursor(A, '2026-08-30T06:00:00.000Z');
   check('and a later mark still saves normally afterwards', cursorFor(A) === '2026-08-30T06:00:00.000Z');
+}
+
+/**
+ * Restoring a backup, for someone who is signed in.
+ *
+ * This is the case where losing costs the most: the user has already ruined something, the damage
+ * has already synced, and the backup file is the last copy of what they had. It used to be
+ * defeated by the merge rule — the file's records carry the stamps they were written with, which
+ * are older than the damage on the server, so the next pull put the damage straight back.
+ */
+console.log('restoring a backup beats what is on the server');
+{
+  const OLD = Date.parse('2026-07-01T00:00:00.000Z');   // when the backup was taken
+  const BAD = Date.parse('2026-08-01T00:00:00.000Z');   // when the record was ruined, and synced
+  const backup = data([member('a', { notes: 'the notes I want back', editedAt: OLD })]);
+  const remoteDamage = [{
+    show_id: 'sh1', record_id: 'a',
+    payload: { id: 'a', name: 'a', notes: '' },
+    edited_at: new Date(BAD).toISOString(), server_at: new Date(BAD).toISOString(), deleted_at: null,
+  }] as any;
+
+  // The old behaviour, kept as a case so the regression is visible rather than remembered.
+  const unstamped = applyRemote(backup, remoteDamage);
+  check('an unstamped restore loses to the newer damage on the server',
+    unstamped.shows[0].cast[0].notes === '', JSON.stringify(unstamped.shows[0].cast[0].notes));
+
+  const restored = stampRestored(backup, BAD + 1000);
+  const merged = applyRemote(restored, remoteDamage);
+  check('a stamped restore survives the next pull',
+    merged.shows[0].cast[0].notes === 'the notes I want back', merged.shows[0].cast[0].notes);
+}
+{
+  const NOW = 1_800_000_000_000;
+  const before = data([member('a', { editedAt: 1 }), member('b')]);
+  const after = stampRestored(before, NOW);
+
+  check('every restored record carries the moment of the restore',
+    after.shows[0].cast.every((c) => c.editedAt === NOW));
+  check('including one that had no stamp at all', after.shows[0].cast[1].editedAt === NOW);
+  check('and the show itself, which syncs on the same rule', after.shows[0].editedAt === NOW);
+  check('the library it was given is not mutated',
+    before.shows[0].cast[0].editedAt === 1 && before.shows[0].editedAt === undefined);
+  check('nothing else about a record is touched',
+    after.shows[0].cast[0].id === 'a' && after.shows[0].title === 'Show');
+}
+{
+  /**
+   * A restore is a statement about the whole library, so a record identical to the one already
+   * here is stamped too — the copy on the server may differ from both, and it is the server this
+   * has to beat.
+   */
+  const same = data([member('a', { notes: 'unchanged', editedAt: 500 })]);
+  check('a record that already matches is stamped anyway',
+    stampRestored(same, 9_000).shows[0].cast[0].editedAt === 9_000);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -207,6 +207,12 @@ in the browser that made it still works, but proves less.
 48. Settings → Export. A `cast-tracker-backup-<date>.json` file downloads.
 49. Settings → Reset to blank state. The library empties.
 50. Import the file you just exported. Everything returns, including the notes and relationships.
+51. Now the case the file exists for, and it needs a second device. Signed in on both: ruin
+    something on A — clear a character's notes — and let it reach B. Import an export taken before
+    the damage on A, then force a sync on both. The restored notes stay restored and reach B; the
+    damage does not come back. *(A restore is stamped as of the moment you make it, so it wins the
+    merge against the newer damage sitting on the server. Before that it lost, and the recovery
+    silently reverted on the next pull.)*
 
 ### 15. Sync across two devices
 Working as of 2026-08-25. Sign-in goes through Resend from `noreply@casttracker.app`, at 30 emails
@@ -215,19 +221,19 @@ link. **Use the code, not the link** — a link is single-use, so a mail scanner
 message first spends it, and it only works in the browser that asked for it. The code has neither
 constraint, which is what makes this work on a phone.
 
-51. Sign in on device A. The library uploads.
-52. Sign in as the same account on device B. The library arrives.
-53. On device A, edit a character's notes and **leave immediately** — switch apps, or lock the
+52. Sign in on device A. The library uploads.
+53. Sign in as the same account on device B. The library arrives.
+54. On device A, edit a character's notes and **leave immediately** — switch apps, or lock the
     screen — without waiting. Bring device B to the front. The edit is there. *(A push waits three
     seconds after your last edit, so leaving faster than that used to strand the edit on device A
     until it was next opened. Leaving now sends it. Closing the tab outright is the weaker case —
     the request goes out, but a browser may cancel it mid-flight, so a change that fails to arrive
     after a hard tab close is a known limit rather than a bug worth chasing.)*
-54. Nothing arrives on a device that is sitting open and untouched. Bring it to the front — or
+55. Nothing arrives on a device that is sitting open and untouched. Bring it to the front — or
     reload — and it syncs. There is no polling and no live connection, by design.
-55. Edit the same character's notes differently on each device, B last. Both converge on B's text.
-56. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
-57. Delete a character on A. It disappears on B rather than coming back.
+56. Edit the same character's notes differently on each device, B last. Both converge on B's text.
+57. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
+58. Delete a character on A. It disappears on B rather than coming back.
 
 ### Known gaps to mention to a tester before they find them
 - **The character sheet has no save button, and that is new.** It used to have ✓ / ✕ / ↶ and a

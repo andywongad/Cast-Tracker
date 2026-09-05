@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { AppData, AppSettings, Show, ShareStore, CastMember } from '../types';
 import * as storage from '../lib/storage';
-import { stampEdits } from '../lib/sync';
+import { stampEdits, stampRestored } from '../lib/sync';
 import { genId, initials, colorForIndex } from '../lib/utils';
 import { packShow, packCast, type SharePacket } from '../lib/shareLink';
 import { isDisposable, countDisposable, countKept } from '../lib/castValue';
@@ -186,7 +186,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (!b || b.app !== 'cast-tracker' || !b.data || !Array.isArray(b.data.shows)) {
       return { ok: false as const, error: 'This doesn’t look like a Cast Tracker backup file.' };
     }
-    const nextData: AppData = { shows: b.data.shows };
+    /**
+     * Stamped as of now, not left with the timestamps in the file. A restore has to be able to win
+     * the sync merge against whatever is on the server, or importing a backup is a recovery that
+     * quietly reverts on the next pull. See `stampRestored` in lib/sync.ts.
+     */
+    const nextData: AppData = stampRestored({ shows: b.data.shows });
     storage.persistData(nextData);
     setData(nextData);
     if (Array.isArray(b.recent)) { storage.persistRecent(b.recent); setRecentShows(b.recent); }

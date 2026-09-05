@@ -338,6 +338,42 @@ export async function pull(userId: string): Promise<{ rows: RemoteRow[]; newest:
  * simply because it reconnected last.
  */
 /**
+ * Re-stamp a library restored from a backup file, so the restore is the newest version of itself.
+ *
+ * Without this, importing a backup is a recovery path that works locally and is silently undone on
+ * the next sync. The records in a backup carry the `editedAt` they had when it was written — older,
+ * by definition, than whatever is on the server now. `applyRemote` resolves per record on that
+ * stamp and pulls before it pushes, so the sequence a user actually runs is:
+ *
+ *   1. ruin some records; the damage syncs up
+ *   2. import last month's backup; the app says it worked, and locally it did
+ *   3. the next pull finds newer rows on the server and puts the damage straight back
+ *
+ * The one situation export exists for is the one where it was being defeated. Stamping every
+ * restored record with the moment of the restore says the true thing — "I am deliberately putting
+ * this back, now" — and lets it win the merge on the same rule as any other edit.
+ *
+ * Deliberately blanket rather than a diff against what is already here. A restore is a statement
+ * about the whole library, and a record that happens to match the current one still needs the
+ * stamp: the copy on the server may differ from both, and it is the server this has to beat.
+ *
+ * What this does NOT do is delete. Records on the server that the backup does not contain come
+ * back on the next pull, because nothing here writes a tombstone for them. Import replaces the
+ * library on this device; making it replace it on every device is a larger and much more
+ * destructive promise, and is not what this fixes.
+ */
+export function stampRestored(data: AppData, now = Date.now()): AppData {
+  return {
+    ...data,
+    shows: data.shows.map((show) => ({
+      ...show,
+      editedAt: now,
+      cast: show.cast.map((c) => ({ ...c, editedAt: now })),
+    })),
+  };
+}
+
+/**
  * Put an arriving record where the device that sent it had it, rather than on the end.
  *
  * Appending is what made the same library read differently on two devices: whoever loaded Breaking
