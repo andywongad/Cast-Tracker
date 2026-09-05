@@ -153,7 +153,7 @@ export default function SettingsSheet() {
                   <div style={{ fontSize: 12.5, marginTop: 2, lineHeight: 1.4, color: sync.state === 'error' ? 'var(--danger)' : 'var(--text-muted)' }}>
                     {sync.state === 'syncing' && 'Syncing\u2026'}
                     {sync.state === 'error' && (sync.error || 'Sync failed. It will try again shortly.')}
-                    {sync.state === 'idle' && (sync.lastSyncedAt ? 'Everything is saved to your account.' : 'Waiting to sync.')}
+                    {sync.state === 'idle' && (sync.lastSyncedAt ? 'Your devices are up to date with each other.' : 'Waiting to sync.')}
                     {sync.state === 'off' && 'Signed in.'}
                   </div>
                 </div>
@@ -187,7 +187,7 @@ export default function SettingsSheet() {
                 </button>
                 <div style={{ fontSize: 13, color: 'var(--text-faint)', lineHeight: 1.45, marginBottom: 22 }}>
                   {isSyncConfigured()
-                    ? 'Optional. Your library keeps working on this device either way.'
+                    ? 'Optional. Puts your library on your other devices and keeps them matching; your library keeps working on this one either way. It is not a backup \u2014 what you delete here is deleted there.'
                     : 'Preview of a future feature — no account is created yet.'}
                 </div>
               </>
@@ -205,12 +205,21 @@ export default function SettingsSheet() {
         <div style={{ borderTop: '1px solid var(--border)', margin: '20px 0 16px' }} />
 
         <label className="ct-label-muted">BACKUP</label>
-        {/* Says the number and the age, because both were invisible. A library showing four hundred
+        {/* Two things have to be said here, and the second one only to people who are signed in.
+
+            The number and the age, because both were invisible: a library showing four hundred
             people might have twelve worth saving — the rest reload from TMDb — and a file that
-            small looks broken unless you're told why it's small. */}
+            small looks broken unless you're told why it's small.
+
+            And what a file is FOR, once sync exists. "Sync" reads as "backed up", so a signed-in
+            user looking at an Export button reasonably wonders what it could possibly add. The old
+            copy here — "Synced to your account, and exportable as a file" — answered that with a
+            shrug. The honest answer is that they protect against different things: sync is a
+            mirror, and a mirror shows the damage too; a file is a photograph of a moment that a
+            later mistake cannot reach. Said in one sentence, because this is a settings sheet. */}
         <div style={{ fontSize: 13.5, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 10 }}>
           {session
-            ? 'Synced to your account, and exportable as a file.'
+            ? 'A file is a snapshot of right now, and the way back from a change you didn\u2019t mean to make. Sync is a different job: it keeps your devices matching each other, deletions included, so a mistake reaches them too.'
             : 'Your data lives only on this device \u2014 no account, no server copy.'}{' '}
           {keptTotal === 0
             ? 'Nothing has been edited yet, so there is nothing a backup would need to carry: auto-loaded cast reloads by itself.'

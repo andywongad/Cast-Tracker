@@ -236,6 +236,11 @@ constraint, which is what makes this work on a phone.
 58. Delete a character on A. It disappears on B rather than coming back.
 
 ### Known gaps to mention to a tester before they find them
+- **Ask a signed-in tester what they think the Export button is for.** "Sync" reads as "backed up",
+  which makes a second save button look redundant, and the honest answer is that they protect
+  against different things: sync is a mirror and shows the damage too, a file is a moment a later
+  mistake cannot reach. The Settings copy now says so; whether it lands is worth hearing from
+  someone who has not been told.
 - **The character sheet has no save button, and that is new.** It used to have ✓ / ✕ / ↶ and a
   setting to turn them off; the setting is gone and the sheet now writes as you type, like the rest
   of the app. Anyone who used the old build will look for the tick. ↶ is what replaced it, and it
