@@ -2,6 +2,18 @@ export type ThemeName = 'Light' | 'Dark';
 
 export interface ThemeTokens {
   bg: string;
+  /**
+   * The page behind the app, seen only when the window is wider than the app is.
+   *
+   * On a phone this is never visible — the app is the whole viewport. On a laptop it is most of
+   * the screen, and it used to be a hardcoded near-white in both themes, which put a bright void
+   * around a near-black column in dark mode and read as a page that had failed to load rather than
+   * an app that is happy at one width.
+   *
+   * A step deeper than `bg` rather than equal to it, so the app reads as a surface resting on a
+   * page instead of a rectangle that merely stops.
+   */
+  backdrop: string;
   card: string;
   sheet: string;
   surface: string;
@@ -79,7 +91,7 @@ export interface ThemeTokens {
  */
 export const THEMES: Record<ThemeName, ThemeTokens> = {
   Dark: {
-    bg: '#0B1926', card: '#122433', sheet: '#0F2130', surface: '#162C3D', fieldBg: '#26485F', border: '#1D3346',
+    bg: '#0B1926', backdrop: '#060F18', card: '#122433', sheet: '#0F2130', surface: '#162C3D', fieldBg: '#26485F', border: '#1D3346',
     inputBorder: '#274156', divider: '#24394C', text: '#E9EFF6', textMuted: '#9AAFC4',
     textSecondary: '#9CB0C5', textTertiary: '#C6D3E0', textFaint: '#8FA3B9', iconMuted: '#627687',
     accent: '#8FA9C4', accentText: '#0B1926', accentTint: 'rgba(143,169,196,0.16)', accentSoft: '#9FB8D0',
@@ -88,7 +100,7 @@ export const THEMES: Record<ThemeName, ThemeTokens> = {
     shadowLift: '0 2px 6px rgba(0,0,0,0.5), 0 16px 40px rgba(3,10,18,0.55)',
   },
   Light: {
-    bg: '#E8EDF3', card: '#FFFFFF', sheet: '#F7FAFC', surface: '#DFE7F0', fieldBg: '#FFFFFF', border: '#D2DCE8',
+    bg: '#E8EDF3', backdrop: '#D6E0EB', card: '#FFFFFF', sheet: '#F7FAFC', surface: '#DFE7F0', fieldBg: '#FFFFFF', border: '#D2DCE8',
     inputBorder: '#C9D5E3', divider: '#D2DCE8', text: '#15293B', textMuted: '#4F6480',
     textSecondary: '#4C617A', textTertiary: '#2B3F55', textFaint: '#556B84', iconMuted: '#7C848D',
     accent: '#3C5067', accentText: '#FFFFFF', accentTint: '#E2E9F1', accentSoft: '#3C5067',

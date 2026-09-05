@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef, useState } from 'react';
+import React, { useMemo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StoreProvider, useStore } from './hooks/useStore';
 import { UIProvider, useUI } from './hooks/useUI';
 import { AuthProvider, useAuth } from './hooks/useAuth';
@@ -268,6 +268,23 @@ function Shell() {
     background: t.bg, color: t.text,
     ...themeVars(t),
   }) as React.CSSProperties, [t]);
+
+  /**
+   * Paint the page behind the app to match the theme.
+   *
+   * The theme reaches the DOM as inline custom properties on `.ct-app`, which means everything
+   * outside that element — the body, and on a wide window that is most of the screen — cannot see
+   * a single one of them. The body kept a hardcoded near-white from the stylesheet in both themes,
+   * so a dark library on a laptop sat in a bright void and read as a page that had failed rather
+   * than an app that is content at one width.
+   *
+   * A layout effect, not a plain one: it runs before paint, so the backdrop is never briefly the
+   * wrong colour when the theme changes. Written to `body.style` rather than through a class,
+   * because the value is a theme token and belongs with the theme rather than duplicated in CSS.
+   */
+  useLayoutEffect(() => {
+    document.body.style.background = t.backdrop;
+  }, [t]);
 
   return (
     <div className="ct-app" data-keyboard={keyboardOpen ? 'open' : undefined} style={rootStyle}>

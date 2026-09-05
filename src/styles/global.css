@@ -338,7 +338,32 @@ a { color: inherit; }
 
 ::placeholder { color: var(--text-faint); opacity: 1; }
 
-/* Dev-only surround (added by main.tsx under import.meta.env.DEV) — a neutral mid-gray
-   backdrop so the app's edges are obvious on a wide desktop window. */
-body.ct-dev { background: #74767B; }
-body.ct-dev .ct-app { box-shadow: 0 0 0 1px rgba(0,0,0,0.22), 0 24px 64px rgba(0,0,0,0.32); }
+/* The app on a window wider than the app is.
+
+   Everything above this point is the phone, which is the shape the whole app is designed in and
+   the shape it should keep. What was missing was not a desktop layout but an acknowledgement that
+   the window is bigger: a 560px column ending in a flat expanse reads as a page that failed to
+   fill itself, and in dark mode — a near-black column in a near-white field — it reads as broken.
+
+   So the column is given an edge and set down on the page, rather than being stretched into a
+   shape nothing here is built for. The bottom nav, the sheets that rise from the bottom, the
+   one-thing-at-a-time screens: all of those are phone ideas, and a phone idea spread across
+   1400px is worse than a phone idea at the size it was drawn.
+
+   `min-width: 640px` — the column plus a margin either side. Below that the frame would be
+   touching both edges, which is the phone case, where none of this should apply.
+
+   There used to be a dev-only version of this rule, a mid-gray body added under
+   import.meta.env.DEV so the app's edges were visible while working. It existed because the real
+   backdrop was wrong; the backdrop is a theme token now, so the workaround is gone with it — and
+   dev finally shows what production does. */
+@media (min-width: 640px) {
+  .ct-app {
+    height: calc(var(--app-h, 100dvh) - 48px);
+    margin: 24px auto;
+    border-radius: 22px;
+    /* A hairline to hold the edge where the shadow is too soft to, and the shadow to lift it.
+       Both in the theme's own ink so this works in either. */
+    box-shadow: 0 0 0 1px var(--border), 0 24px 64px rgba(0, 0, 0, 0.18);
+  }
+}
