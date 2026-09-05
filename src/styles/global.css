@@ -230,6 +230,21 @@ a { color: inherit; }
 }
 .ct-footer-label { font-size: 12.5px; font-weight: 500; color: var(--text-muted); }
 
+/* The primary action, hoisted onto a disc above the bar. Was inline on the element; moved here so
+   the desktop rail can take it apart, since a floating disc is a bottom-bar idea. */
+.ct-footer-add {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  border: none; background: none; padding: 0; cursor: pointer;
+}
+.ct-footer-add-disc {
+  width: 54px; height: 54px; border-radius: 999px; background: var(--cta);
+  display: flex; align-items: center; justify-content: center;
+  margin-top: -26px; box-shadow: var(--shadow-lift); border: 5px solid var(--bg);
+}
+.ct-footer-add-label {
+  font-size: 12.5px; font-weight: 500; color: var(--text-muted); padding-bottom: 10px;
+}
+
 .ct-card {
   position: relative; /* anchors the corner-hung action buttons */
   background: var(--card); border: none; border-radius: 22px; padding: 12px;
@@ -338,25 +353,21 @@ a { color: inherit; }
 
 ::placeholder { color: var(--text-faint); opacity: 1; }
 
-/* The app on a window wider than the app is.
+/* Two steps out of the phone, because there are two different windows to be in.
 
-   Everything above this point is the phone, which is the shape the whole app is designed in and
-   the shape it should keep. What was missing was not a desktop layout but an acknowledgement that
-   the window is bigger: a 560px column ending in a flat expanse reads as a page that failed to
-   fill itself, and in dark mode — a near-black column in a near-white field — it reads as broken.
+   640-1023px — a tablet, or a browser window someone has left narrow. Too wide for the app to fill
+   edge to edge, too narrow for a second column of anything. The column keeps its width and is
+   given an edge, so it reads as a surface resting on a page rather than a page that failed to fill
+   itself. In dark mode this is the difference between an app and a bug: a near-black column in a
+   near-white field looks broken.
 
-   So the column is given an edge and set down on the page, rather than being stretched into a
-   shape nothing here is built for. The bottom nav, the sheets that rise from the bottom, the
-   one-thing-at-a-time screens: all of those are phone ideas, and a phone idea spread across
-   1400px is worse than a phone idea at the size it was drawn.
+   1024px and up — a laptop, which is where someone sits down to type feedback, and where a 560px
+   strip in the middle of the screen reads as a phone emulator rather than a program. The app fills
+   the window, the bottom bar becomes a rail down the left, and the content keeps a readable width
+   inside it rather than stretching posters to the size of playing cards.
 
-   `min-width: 640px` — the column plus a margin either side. Below that the frame would be
-   touching both edges, which is the phone case, where none of this should apply.
-
-   There used to be a dev-only version of this rule, a mid-gray body added under
-   import.meta.env.DEV so the app's edges were visible while working. It existed because the real
-   backdrop was wrong; the backdrop is a theme token now, so the workaround is gone with it — and
-   dev finally shows what production does. */
+   What does not change at any width: one screen at a time, and the same components in the same
+   order. This is the same app laid out for the room it is in, not a second app. */
 @media (min-width: 640px) {
   .ct-app {
     height: calc(var(--app-h, 100dvh) - 48px);
@@ -366,4 +377,116 @@ a { color: inherit; }
        Both in the theme's own ink so this works in either. */
     box-shadow: 0 0 0 1px var(--border), 0 24px 64px rgba(0, 0, 0, 0.18);
   }
+}
+
+@media (min-width: 1024px) {
+  /* Fills the window. The frame above is undone rather than never applied, because the two rules
+     have to stack: a browser dragged from 1400px down to 800px passes through both. */
+  .ct-app {
+    max-width: none;
+    height: var(--app-h, 100dvh);
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    /* Room for the rail, which is taken out of flow below so it can span the full height. */
+    padding-left: 232px;
+  }
+
+  /* The bottom bar, stood up on its left edge.
+
+     Absolute rather than sticky: it has to span from the top of the window to the bottom, past
+     the header, which a flex child in a column cannot do. `.ct-app` is already `position:
+     relative`, so this is anchored to the app rather than the viewport. */
+  .ct-footer {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 232px;
+    height: auto;
+    padding: 18px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 4px;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+  }
+  /* The wash under the nav is light spilling up from the bottom of a phone. In a vertical rail it
+     is a glow from nowhere. */
+  .ct-footer::before { display: none; }
+
+  .ct-footer-btn {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 12px;
+    text-align: left;
+  }
+  .ct-footer-btn:hover { background: var(--surface); }
+  .ct-footer-label { font-size: 14px; }
+
+  /* The disc comes down off its perch and becomes the first item in the list — still the one warm
+     thing on the screen, but a row like its neighbours rather than a button hanging in space. */
+  .ct-footer-add {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 12px;
+    margin-bottom: 4px;
+    background: var(--cta);
+  }
+  .ct-footer-add-disc {
+    width: 22px; height: 22px;
+    margin-top: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+  }
+  .ct-footer-add-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cta-text);
+    padding-bottom: 0;
+  }
+
+  /* A readable column inside a wide window. The grids are `repeat(N, 1fr)` on a user setting, so
+     without a cap two columns across 1400px become two enormous posters. */
+  .ct-scroll > * {
+    max-width: 1080px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* The cast grid picks its own column count.
+
+     Everywhere else the count is a user setting of 2, 3 or 4, chosen on a phone where all three
+     are sensible. On a laptop that same 2 is two portraits nearly half a metre apart, which is the
+     single thing that most makes this look like a phone screenshot rather than a program. Here the
+     width decides instead, which is what a desktop grid should do.
+
+     `!important` because the template is written inline on the element, and an inline style cannot
+     be beaten any other way. It is doing one job — the column count — and the setting still governs
+     everything else the cards do.
+
+     Deliberately not applied to the show posters: those are art, they are meant to be looked at,
+     and four of them across this width is the right size already. */
+  .ct-cast-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+  }
+
+  /* Sheets stop being sheets. Rising from the bottom edge is a thumb idea; on a laptop the eye and
+     the pointer are both mid-screen, and a panel anchored to the bottom of a tall window is a long
+     way from both. Centred, with corners all round, it is the dialog it always was. */
+  .ct-scrim { align-items: center; justify-content: center; padding: 24px; }
+  .ct-sheet {
+    max-width: 560px;
+    max-height: 84%;
+    border-radius: 20px;
+  }
+  /* The grabber is a promise that the sheet can be dragged down off the bottom of the screen. It
+     is not attached to the bottom of anything any more, and there is no gesture here to make. */
+  .ct-sheet-grabber { display: none; }
 }

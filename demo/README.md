@@ -238,6 +238,12 @@ constraint, which is what makes this work on a phone.
 58. Delete a character on A. It disappears on B rather than coming back.
 
 ### Known gaps to mention to a tester before they find them
+- **On a laptop this is a different layout, and that is the newest thing here.** Above 1024px the
+  bottom bar becomes a rail down the left, the app fills the window, the cast grid picks its own
+  column count from the width rather than the 2/3/4 setting, and sheets stop rising from the bottom
+  and open as centred dialogs. Between 640 and 1024 the phone column stays but is given an edge.
+  A tester on a laptop is seeing the least-used layout in the app — worth asking them directly
+  whether anything looks out of place, rather than waiting for them to mention it.
 - **Ask a signed-in tester what they think the Export button is for.** "Sync" reads as "backed up",
   which makes a second save button look redundant, and the honest answer is that they protect
   against different things: sync is a mirror and shows the damage too, a file is a moment a later
