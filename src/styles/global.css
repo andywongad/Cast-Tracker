@@ -468,13 +468,13 @@ a { color: inherit; }
      width decides instead, which is what a desktop grid should do.
 
      `!important` because the template is written inline on the element, and an inline style cannot
-     be beaten any other way. It is doing one job — the column count — and the setting still governs
-     everything else the cards do.
+     be beaten any other way. It swaps a count for a width; the setting is still what decides which
+     width, and still governs everything else the cards do.
 
      Deliberately not applied to the show posters: those are art, they are meant to be looked at,
      and four of them across this width is the right size already. */
   .ct-cast-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(var(--col-min, 200px), 1fr)) !important;
   }
 
   /* Posters are one size, whichever column count is set.
@@ -485,18 +485,18 @@ a { color: inherit; }
      stays reasonable — the same setting meaning something completely different depending on the
      window.
 
-     So the width decides here too, and the setting stops changing how big a poster is. What it
-     still does is everything in ShowTile that keys off it, which is why it is passed through
-     unchanged: the noted badge shortens to a bare number at 4, and the caught-up pill is hidden
-     there. Those are judgements about a crowded tile, and a tile at this size is not crowded.
+     So here the setting picks the card's width and the row fits as many as it can, rather than the
+     setting picking a count and the cards taking whatever that leaves. It is the same control doing
+     the same job — denser or roomier — expressed the way a wide window needs it. `--col-min` is set
+     on the element in HomeScreen; the three steps put three, four or five in a 1080px row.
 
-     220px, so a 1080px row holds four at ~260px — the size the 4-column setting already produced,
-     which is the one of the three that was right on a laptop.
+     The alternative, one fixed size, was tried and thrown away: it made the toggle do nothing at
+     all on a laptop, which is worse than the sizes it was fixing.
 
      Recently Viewed is untouched: it is a flex row of its own with its own thumbnails, and it never
      read from this setting. */
   .ct-show-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(var(--col-min, 220px), 1fr)) !important;
   }
 
   /* Sheets stop being sheets. Rising from the bottom edge is a thumb idea; on a laptop the eye and

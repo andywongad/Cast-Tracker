@@ -49,6 +49,18 @@ export default function HomeScreen() {
 
   const cols = settings.showColumns || 4;
   const gridCols = `repeat(${cols}, 1fr)`;
+  /**
+   * The same setting, as a card size rather than a divisor.
+   *
+   * On a phone the row is 560px, so "how many across" and "how big" are the same question and the
+   * count answers both. On a laptop they come apart: dividing 1080px by two gives a poster the
+   * size of a paperback. So above 1024px the stylesheet lays these out by width, and this is the
+   * width it uses — the setting still chooses the density, it just chooses it directly.
+   *
+   * 320/250/190 put three, four and five in a 1080px row. Ignored below 1024px, where `gridCols`
+   * above is still what runs.
+   */
+  const colMin = cols === 2 ? '320px' : cols === 3 ? '250px' : '190px';
 
   const searchResults = useMemo(() => data.shows.filter((s) => (s.title + ' ' + s.type).toLowerCase().includes(q)), [data.shows, q]);
   const currentShows = useMemo(() => data.shows.filter((s) => s.status !== 'completed'), [data.shows]);
@@ -114,7 +126,7 @@ export default function HomeScreen() {
           {searchResults.length > 0 && (
             <>
               <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 10 }}>IN YOUR LIBRARY &middot; {searchResults.length}</div>
-              <div className="ct-show-grid" style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>
+              <div className="ct-show-grid" style={{ ['--col-min' as string]: colMin, display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>
                 {searchResults.map((s) => <ShowTile key={s.id} show={s} columns={cols} done={s.status === 'completed'} />)}
               </div>
             </>
@@ -205,7 +217,7 @@ export default function HomeScreen() {
                 </div>
                 <DensityToggle value={cols} options={[2, 3, 4]} onChange={setShowColumns} label="Show columns" />
               </div>
-              <div className="ct-show-grid" style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14, marginBottom: 26 }}>
+              <div className="ct-show-grid" style={{ ['--col-min' as string]: colMin, display: 'grid', gridTemplateColumns: gridCols, gap: 14, marginBottom: 26 }}>
                 {currentShows.map((s) => <ShowTile key={s.id} show={s} columns={cols} />)}
                 {currentShows.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 18, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, border: '1px dashed var(--border)', borderRadius: 14 }}>Nothing in progress.</div>}
               </div>
@@ -214,7 +226,7 @@ export default function HomeScreen() {
                 <h2 className="ct-eyebrow" style={{ marginBottom: 0, marginTop: 0 }}>Completed</h2>
                 <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700 }}>{completedShows.length}</span>
               </div>
-              <div className="ct-show-grid" style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>
+              <div className="ct-show-grid" style={{ ['--col-min' as string]: colMin, display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>
                 {completedShows.map((s) => <ShowTile key={s.id} show={s} columns={cols} done />)}
                 {completedShows.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 18, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, border: '1px dashed var(--border)', borderRadius: 14 }}>Nothing finished yet.</div>}
               </div>
