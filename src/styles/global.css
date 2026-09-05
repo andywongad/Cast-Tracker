@@ -477,6 +477,28 @@ a { color: inherit; }
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
   }
 
+  /* Posters are one size, whichever column count is set.
+
+     The 2/3/4 toggle divides the row, so on a phone it is a size control: two big posters or four
+     small ones, all of them a sensible size because the row is 560px wide. Across a laptop the same
+     control spans 1080px, and "2 columns" becomes two posters the size of paperbacks while "4"
+     stays reasonable — the same setting meaning something completely different depending on the
+     window.
+
+     So the width decides here too, and the setting stops changing how big a poster is. What it
+     still does is everything in ShowTile that keys off it, which is why it is passed through
+     unchanged: the noted badge shortens to a bare number at 4, and the caught-up pill is hidden
+     there. Those are judgements about a crowded tile, and a tile at this size is not crowded.
+
+     220px, so a 1080px row holds four at ~260px — the size the 4-column setting already produced,
+     which is the one of the three that was right on a laptop.
+
+     Recently Viewed is untouched: it is a flex row of its own with its own thumbnails, and it never
+     read from this setting. */
+  .ct-show-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+  }
+
   /* Sheets stop being sheets. Rising from the bottom edge is a thumb idea; on a laptop the eye and
      the pointer are both mid-screen, and a panel anchored to the bottom of a tall window is a long
      way from both. Centred, with corners all round, it is the dialog it always was. */

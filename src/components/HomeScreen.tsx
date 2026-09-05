@@ -114,7 +114,7 @@ export default function HomeScreen() {
           {searchResults.length > 0 && (
             <>
               <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 10 }}>IN YOUR LIBRARY &middot; {searchResults.length}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>
+              <div className="ct-show-grid" style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>
                 {searchResults.map((s) => <ShowTile key={s.id} show={s} columns={cols} done={s.status === 'completed'} />)}
               </div>
             </>
@@ -205,7 +205,7 @@ export default function HomeScreen() {
                 </div>
                 <DensityToggle value={cols} options={[2, 3, 4]} onChange={setShowColumns} label="Show columns" />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14, marginBottom: 26 }}>
+              <div className="ct-show-grid" style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14, marginBottom: 26 }}>
                 {currentShows.map((s) => <ShowTile key={s.id} show={s} columns={cols} />)}
                 {currentShows.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 18, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, border: '1px dashed var(--border)', borderRadius: 14 }}>Nothing in progress.</div>}
               </div>
@@ -214,7 +214,7 @@ export default function HomeScreen() {
                 <h2 className="ct-eyebrow" style={{ marginBottom: 0, marginTop: 0 }}>Completed</h2>
                 <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 700 }}>{completedShows.length}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>
+              <div className="ct-show-grid" style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 14 }}>
                 {completedShows.map((s) => <ShowTile key={s.id} show={s} columns={cols} done />)}
                 {completedShows.length === 0 && <div style={{ gridColumn: '1 / -1', padding: 18, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, border: '1px dashed var(--border)', borderRadius: 14 }}>Nothing finished yet.</div>}
               </div>
