@@ -123,7 +123,6 @@ export function loadSettings(): AppSettings {
     // Clamped to the two the toggle offers, so a hand-edited or future value can't strand the map
     // at a scale with no button to leave it by.
     mapZoom: s.mapZoom === 2 ? 2 : 1,
-    autoSave: s.autoSave ?? false,
   };
 }
 

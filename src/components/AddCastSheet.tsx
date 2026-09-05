@@ -227,9 +227,32 @@ export default function AddCastSheet() {
   // custom-field row leave the ✓ lit up forever after a save.
   const hasChanges = useMemo(() => JSON.stringify(toSavedFields(form)) !== savedSnapshot, [form, savedSnapshot]);
 
-  // Auto-save effect
+  /**
+   * Whether Undo has anything to put back — measured against the sheet opening, not the last save.
+   *
+   * `hasChanges` is the auto-save's question: is there anything still to write? Two seconds after
+   * you stop typing the answer is no, and it stays no. Gating Undo on it therefore greys the button
+   * out at exactly the moment the edit is complete and someone might want it back, which is the
+   * only moment it is worth having. This asks the other question: does the record still look the
+   * way it did when I opened it?
+   */
+  const canUndo = useMemo(
+    () => !!originalFormRef.current
+      && JSON.stringify(toSavedFields(form)) !== JSON.stringify(toSavedFields(originalFormRef.current)),
+    // originalFormRef only changes when the sheet opens on someone new, which changes `form` too.
+    [form, addCastSheet.editingId],
+  );
+
+  /**
+   * Save what is on the form, two seconds after the typing stops.
+   *
+   * Unconditional now — this used to sit behind a setting, and the sheet was the last screen in
+   * the app still asking to be told when to write. Drawing a line on the map, moving someone,
+   * marking a show finished: all of those commit as you do them, and the character sheet no
+   * longer disagrees.
+   */
   useEffect(() => {
-    if (!settings.autoSave || !hasChanges || !addCastSheet.open) return;
+    if (!hasChanges || !addCastSheet.open) return;
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(() => {
       handleSave();
@@ -237,7 +260,7 @@ export default function AddCastSheet() {
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [form, settings.autoSave, hasChanges, addCastSheet.open]);
+  }, [form, hasChanges, addCastSheet.open]);
 
   const handleSave = async () => {
     if (!form.name.trim() || !show) return;
@@ -257,8 +280,13 @@ export default function AddCastSheet() {
         }
       });
       if (newId) createdIdRef.current = newId;
-      originalFormRef.current = structuredClone(form);
-      // Stay on the sheet — the ✓ greys out on its own now that the form matches what's stored.
+      /**
+       * `originalFormRef` is deliberately NOT refreshed here. It holds the record as it was when
+       * the sheet opened, and a save every two seconds would walk it forward to whatever is on
+       * screen — leaving Undo a button that restores the state it is already in. Keeping it fixed
+       * is what makes Undo mean "put back what I found", which is the only safety net left on a
+       * sheet that writes as you type.
+       */
       setSavedSnapshot(JSON.stringify(fields));
     } finally {
       setIsSaving(false);
@@ -271,15 +299,17 @@ export default function AddCastSheet() {
     }
   };
 
+  /**
+   * Flush before closing.
+   *
+   * The auto-save is debounced, so anything typed in the last two seconds is still sitting in a
+   * timer that the effect's cleanup cancels the moment the sheet closes. That was survivable while
+   * auto-save was opt-in; now that it is the only mode, closing a sheet quickly would silently
+   * drop the edit that prompted you to open it.
+   */
   const handleCancel = () => {
-    if (hasChanges && !settings.autoSave) {
-      if (confirm(`Discard changes to ${form.name || termLower}?`)) {
-        handleUndo();
-        closeAddCast();
-      }
-    } else {
-      closeAddCast();
-    }
+    if (hasChanges) void handleSave();
+    closeAddCast();
   };
 
   if (!addCastSheet.open || !show) return null;
@@ -435,7 +465,7 @@ export default function AddCastSheet() {
         them -- a backdrop tap dropping the same work silently was an inconsistency, not a
         shortcut. The system back gesture is the one route that cannot ask: by the time popstate
         fires the entry is already gone. */}
-    <Sheet onClose={handleCancel} label={editing ? 'Edit details' : 'Add cast'} sheetStyle={{ paddingBottom: settings.autoSave ? undefined : '140px' }}>
+    <Sheet onClose={handleCancel} label={editing ? 'Edit details' : 'Add cast'} sheetStyle={{ paddingBottom: '96px' }}>
         <button className="ct-sheet-close" onClick={handleCancel}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="var(--text)" strokeWidth="1.6" strokeLinecap="round" /></svg>
         </button>
@@ -704,12 +734,9 @@ export default function AddCastSheet() {
             </div>
 
             <EditControls
-              onSave={handleSave}
-              onCancel={handleCancel}
               onUndo={handleUndo}
-              autoSave={settings.autoSave}
               isSaving={isSaving}
-              hasChanges={hasChanges}
+              canUndo={canUndo}
               hidden={fieldMenuOpen}
             />
             {editing && <button onClick={deleteCast} style={{ width: '100%', height: 40, border: 'none', background: 'transparent', color: '#E08A80', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginTop: 12 }}>Delete {termLower}</button>}

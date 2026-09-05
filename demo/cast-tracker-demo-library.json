@@ -1057,8 +1057,7 @@
   "settings": {
     "theme": null,
     "showColumns": 2,
-    "castColumns": 2,
-    "autoSave": false
+    "castColumns": 2
   },
   "shares": {},
   "recent": [
