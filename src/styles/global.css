@@ -429,13 +429,26 @@ a { color: inherit; }
   /* The disc comes down off its perch and becomes the first item in the list — still the one warm
      thing on the screen, but a row like its neighbours rather than a button hanging in space. */
   .ct-footer-add {
+    /* First in the rail, not second.
+
+       On a phone this button is the middle of three because it is the thumb's home position, and
+       the two it sits between are equals either side of it. A vertical list has no middle in that
+       sense — it has a top — and the top is where the thing you came to do belongs, above two
+       utilities you reach for occasionally.
+
+       `order` rather than moving it in the markup, so the phone bar keeps the middle button it is
+       designed around. The cost is that a keyboard on desktop still tabs Translate first, since
+       focus follows the DOM and not this. Three items, so the mismatch is small; moving it in the
+       markup instead would simply hand the same mismatch to the phone, where it would be read out
+       by a screen reader on the platform most people are using. */
+    order: -1;
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
     gap: 12px;
     padding: 11px 14px;
     border-radius: 12px;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
     background: var(--cta);
   }
   .ct-footer-add-disc {
