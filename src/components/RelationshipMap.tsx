@@ -3,7 +3,7 @@ import type { CastMember, MapCell, MapRelationship, MapRelKind, Show } from '../
 import { useStore } from '../hooks/useStore';
 import { bgStyle, epNumFromLabel, genId, initials } from '../lib/utils';
 import { MAP_LINE, MAP_HEART } from '../lib/theme';
-import { buildEdges, parentIdsOf, resolveKindOption, KIND_GROUPS, REL_KINDS } from '../lib/relationshipEdges';
+import { buildEdges, parentIdsOf, resolveKindOption, writesBothEnds, KIND_GROUPS, REALITY_GROUPS, REL_KINDS } from '../lib/relationshipEdges';
 import { layoutTree } from '../lib/familyLayout';
 
 const COLS = 6;
@@ -441,7 +441,9 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
    */
   const createKinship = (sourceId: string, targetId: string, kind: MapRelKind, label?: string) => {
     createRelationship(sourceId, targetId, kind, label);
-    if (REL_KINDS[kind].symmetric) createRelationship(targetId, sourceId, kind, label);
+    // Not `symmetric` — see writesBothEnds. Mirroring a kind that points turns one-way interest
+    // into a mutual heart the moment it is drawn.
+    if (writesBothEnds(kind)) createRelationship(targetId, sourceId, kind, label);
   };
 
   /**
@@ -528,11 +530,11 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
       document.removeEventListener('pointerup', onUp);
       if (decided === 'relate') {
         const targetId = nodeIdAtPoint(ev.clientX, ev.clientY);
-        // Reality keeps its one meaning and needs no question. Kinship has to be named, and
-        // guessing a default would fill family trees with whichever kind was cheapest to assume.
+        // Both boards ask now. Reality used to have one meaning and needed no question; it has a
+        // vocabulary of its own since alliances arrived, and a drag that silently picked one of
+        // them would be guessing at the thing the board exists to record.
         if (targetId && targetId !== id) {
-          if (kinship) setPendingKind({ sourceId: id, targetId, at: viewportPoint(ev.clientX, ev.clientY) });
-          else createRelationship(id, targetId);
+          setPendingKind({ sourceId: id, targetId, at: viewportPoint(ev.clientX, ev.clientY) });
         }
         setDragRelate(null);
       } else if (decided === 'move') {
@@ -660,14 +662,14 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
             {kinship ? (
               <li>Drag from one character to another to say how they&rsquo;re related — you pick which when you let go</li>
             ) : (
-              <li>Drag from one contestant to another to show interest — the line starts at the person who&rsquo;s interested</li>
+              <li>Drag from one contestant to another and say what they are to each other — an ally, a target, interested, an ex. You pick when you let go</li>
             )}
             <li>Press and hold {kinship ? 'a character' : 'a contestant'} to reposition them</li>
             <li>Tap the circles, or spread two fingers, to make the map bigger — pinch to fit it back on screen</li>
             {zoom > 1 && <li>Drag the background to move around the map</li>}
             <li>Drag a line's end to reconnect it, or drop it away from everyone to delete</li>
-            {kinship && <li>Pick &ldquo;something else&rdquo; to write your own description — &ldquo;half-sister&rdquo;, &ldquo;raised him&rdquo;. Tap any line&rsquo;s label to reword or remove it</li>}
-            {kinship && <li>What you record is per episode, so a reveal is just an edit on the episode where it happens</li>}
+            <li>Pick &ldquo;something else&rdquo; to write your own words — {kinship ? '\u201chalf-sister\u201d, \u201craised him\u201d' : '\u201cfinal three\u201d, \u201cowes her a favour\u201d'}. Tap any line&rsquo;s label to reword or remove it</li>
+            <li>What you record is per episode, so {kinship ? 'a reveal' : 'a betrayal'} is just an edit on the episode where it happens</li>
             {kinship && hasLines && <li>&ldquo;Tidy the tree&rdquo; stacks each family by generation — grandparents at the top, then parents and their siblings, then children and cousins — and moves anyone with no relatives to the bottom</li>}
             <li>Tap the &times; on {kinship ? 'a character' : 'a contestant'} to take them off the map — they move to “Not shown on map” below, where you can add them back</li>
           </ul>
@@ -698,16 +700,15 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
               parent to the child, which is the one thing about a family tree worth stating. The
               other side is not enumerated: eleven kinds do not fit in a legend, and they all draw
               the same plain line with their own word written on it. */}
-          {kinship ? (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="11" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /><path d="M11,1 L15,4 L11,7 Z" fill={MAP_LINE} /></svg><span>parent of</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="15" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /></svg><span>everything else</span></div>
-            </>
-          ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="15" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /></svg><span>interested in</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13.6s-5.6-3.4-5.6-7.3C2.4 3.9 4.2 2.3 6.3 2.3c1.1 0 2.1.5 2.9 1.4.7-.9 1.7-1.4 2.8-1.4 2.1 0 3.9 1.6 3.9 4 0 3.9-5.6 7.3-5.6 7.3z" fill={MAP_HEART} /></svg><span>mutual</span></div>
-            </>
+          {/* What an arrow means is the only thing worth a legend, because it is the only mark
+              whose meaning is not written next to it. On a family tree it is parent to child; on a
+              reality board it is whoever is doing the wanting or the hunting, and the label on the
+              line says which. Everything else draws a plain line with its own word on it and
+              needs no key. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="11" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /><path d="M11,1 L15,4 L11,7 Z" fill={MAP_LINE} /></svg><span>{kinship ? 'parent of' : 'points at the other person'}</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="16" height="8" viewBox="0 0 16 8"><line x1="1" y1="4" x2="15" y2="4" stroke={MAP_LINE} strokeWidth="1.5" /></svg><span>goes both ways</span></div>
+          {!kinship && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 13.6s-5.6-3.4-5.6-7.3C2.4 3.9 4.2 2.3 6.3 2.3c1.1 0 2.1.5 2.9 1.4.7-.9 1.7-1.4 2.8-1.4 2.1 0 3.9 1.6 3.9 4 0 3.9-5.6 7.3-5.6 7.3z" fill={MAP_HEART} /></svg><span>mutual interest</span></div>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
@@ -818,10 +819,15 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           );
         })}
 
-        {/* Kinship lines carry their word at the midpoint. A family tree of unlabelled strokes
-            says who is connected and not how, which is the only thing anyone opens it to learn.
-            The label is also the delete target, the way the heart is on the dating board. */}
-        {kinship && singleLines.map((e) => {
+        {/* Every line carries its word at the midpoint. A board of unlabelled strokes says who is
+            connected and not how, which is the only thing anyone opens it to learn — true of a
+            family tree, and true of a reality board the moment it can draw more than one thing.
+            The label is also the delete target, the way the heart is.
+
+            Mutual interest is the exception and keeps its bare heart: it is the one relationship
+            the board draws as a picture rather than a word, and writing "Interested" beside the
+            heart would explain the joke. */}
+        {singleLines.map((e) => {
           const a = posById[e.aId], b = posById[e.bId];
           if (!a || !b) return null;
           const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
@@ -905,7 +911,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
           const target = visibleCast.find((c) => c.id === pendingKind.targetId);
           if (!source || !target) return null;
           return (
-            <MapPopover at={pendingKind.at} viewportRef={viewportRef} width={190} label={`How is ${source.name} related to ${target.name}?`}>
+            <MapPopover at={pendingKind.at} viewportRef={viewportRef} width={190} label={kinship ? `How is ${source.name} related to ${target.name}?` : `What is ${source.name} to ${target.name}?`}>
               <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.35, marginBottom: 8 }}>
                 <strong style={{ color: 'var(--text)' }}>{source.name.split(' ')[0]}</strong> is{' '}
                 <strong style={{ color: 'var(--text)' }}>{target.name.split(' ')[0]}</strong>&rsquo;s&hellip;
@@ -937,7 +943,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
                 style={{ height: 36, fontSize: 13 }}
               >
                 <option value="" disabled>Choose&hellip;</option>
-                {KIND_GROUPS.map((g) => (
+                {(kinship ? KIND_GROUPS : REALITY_GROUPS).map((g) => (
                   <optgroup key={g.label} label={g.label}>
                     {g.options.map((o) => (
                       <option key={o.value} value={o.value}>
@@ -972,7 +978,7 @@ export default function RelationshipMap({ show, seasonCast, currentSeason, episo
             setLabelEdit(null);
           };
           return (
-            <MapPopover at={labelEdit.at} viewportRef={viewportRef} width={210} label={`How is ${source.name} related to ${target.name}?`}>
+            <MapPopover at={labelEdit.at} viewportRef={viewportRef} width={210} label={kinship ? `How is ${source.name} related to ${target.name}?` : `What is ${source.name} to ${target.name}?`}>
               <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.35, marginBottom: 8 }}>
                 <strong style={{ color: 'var(--text)' }}>{source.name.split(' ')[0]}</strong> is{' '}
                 <strong style={{ color: 'var(--text)' }}>{target.name.split(' ')[0]}</strong>&rsquo;s&hellip;

@@ -75,6 +75,8 @@ export interface MapCell {
  */
 export type MapRelKind =
   | 'interested'
+  // Reality: the competition, and who arrived already attached
+  | 'ally' | 'target' | 'deal' | 'ex'
   // Family
   | 'parent' | 'sibling' | 'spouse' | 'extended'
   // Personal

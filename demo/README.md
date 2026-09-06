@@ -87,61 +87,66 @@ shows under Currently watching and one under Completed.
 
 ### 4. The relationship map, on a reality show
 The map is two different tools wearing one face, and which one you get is decided by the show's
-type. A reality show gets the dating board: one kind of link, drawn from whoever is interested.
+type. A reality show gets the cast board: who wants whom, and who is playing with or against whom.
 
 12. Open Single's Inferno → the map. Eight people, laid out women on one side and men on the other
     (that split comes from the `gender` field being set on every seeded record).
-13. Drag from one person to another to create a link — it appears immediately, with an arrow at the
-    person on the receiving end. Drag a person to move them.
-14. Drag the other way between the same two people. The two arrows collapse into a single line with
-    a heart: that is the board saying the interest is mutual.
-15. Switch to the next episode. The previous episode's links carry forward as a starting point;
+13. Drag from one person to another. A panel asks what they are to each other, grouped as **the
+    game** (ally, targeting, targeted by, final deal, enemy), **attraction** (interested in, who X
+    is interested in, partner, exes), and a couple of social ones. Pick *interested in* — the line
+    appears with an arrow at the person on the receiving end. Drag a person to move them.
+14. Drag the other way between the same two people and pick *interested in* again. The two arrows
+    collapse into a single line with a heart: the board saying the interest is mutual.
+15. Draw an **ally** between two others. One drag, and it appears without an arrow — an alliance is
+    the same fact from both ends, so it is recorded at both. Interest and targeting are not: they
+    point, and stay one-way until the other person is drawn pointing back.
+16. Switch to the next episode. The previous episode's links carry forward as a starting point;
     changing them there does not change the earlier episode.
-16. Hide someone from the map, then bring them back from the bottom of the sheet.
+17. Hide someone from the map, then bring them back from the bottom of the sheet.
 
 ### 5. The family tree, on a scripted show
 A scripted show gets kinship instead, and the heading changes to say so. Here a link has to be
 named, because "related" is not one thing.
 
-17. Open The Bear → the map. The heading reads **Who's related to who**, and there is no
+18. Open The Bear → the map. The heading reads **Who's related to who**, and there is no
     women-on-one-side split — that layout is for the dating board only.
-18. Drag from one character to another. A small panel asks how they are related, phrased as a
+19. Drag from one character to another. A small panel asks how they are related, phrased as a
     sentence: *[first name] is [other first name]'s…*. Pick from the dropdown — the family options
     name the other person out loud ("parent of Sydney", "child of Sydney") because those two are
     the only ones where direction matters, and getting them the wrong way round is the easiest
     mistake to make.
-19. Draw another and pick **something else…**. It asks for your own words instead — "half-sister",
+20. Draw another and pick **something else…**. It asks for your own words instead — "half-sister",
     "raised him" — which is the escape hatch for every family a dropdown cannot name.
-20. Tap a line's label to reword or remove it. A parent link keeps its arrow, pointing from the
+21. Tap a line's label to reword or remove it. A parent link keeps its arrow, pointing from the
     parent down to the child; everything else is a plain line, because those read the same in both
     directions.
 
 ### 6. Tidying the tree
-21. Open Succession → the map. It arrives deliberately messy: eleven people scattered across the
+22. Open Succession → the map. It arrives deliberately messy: eleven people scattered across the
     board with lines crossing over each other. This is the state a real board reaches after ten
     minutes of drawing.
-22. Press **Tidy the tree**. Everything rearranges into bands, and a line under the toolbar says
+23. Press **Tidy the tree**. Everything rearranges into bands, and a line under the toolbar says
     what happened. Expect, reading down: Logan, Marcia and Greg on top; the four Roy children with
     Rava and Tom beside them on the next band; and Frank Vernon and Lawrence Yee alone at the
     bottom, set further apart than the families are from each other.
-23. Check the three things the arrangement is claiming. Parents sit above their children with a
+24. Check the three things the arrangement is claiming. Parents sit above their children with a
     clear row between them for the "Parent of" labels. Spouses and partners sit side by side —
     Rava is there because she married Kendall, Tom because he is engaged to Shiv, and neither is a
     blood Roy. Anyone with no family at all is pushed below everyone who has one.
-24. Press it again. Nothing moves — the arrangement is the same every time, so it is safe to press
+25. Press it again. Nothing moves — the arrangement is the same every time, so it is safe to press
     when you are not sure whether you already did.
-25. Drag someone somewhere else, then press it again. They go back. Tidy is not a suggestion the
+26. Drag someone somewhere else, then press it again. They go back. Tidy is not a suggestion the
     board remembers; it recomputes from the lines every time, and your own placements are what it
     overwrites. That is the one action on this screen that moves people who were already placed.
 
 ### 7. Episodes and auto-loading
-26. On The Bear, pick a season and episode from the strip. Cast credited on that episode load in.
-27. Show menu (⋯) → "Clear N auto-loaded characters". The seeded six stay; the loaded ones go.
-28. Reopen the same episode — they come back. Nothing was lost.
+27. On The Bear, pick a season and episode from the strip. Cast credited on that episode load in.
+28. Show menu (⋯) → "Clear N auto-loaded characters". The seeded six stay; the loaded ones go.
+29. Reopen the same episode — they come back. Nothing was lost.
 
 ### 8. Status
-29. Show menu → "Mark as completed". The show moves to Completed on the home screen.
-30. From Completed, "Move back to Currently watching". It returns.
+30. Show menu → "Mark as completed". The show moves to Completed on the home screen.
+31. From Completed, "Move back to Currently watching". It returns.
 
 ### 9. Sharing
 Sharing is a **link**, not a code. The payload rides in the URL fragment, which browsers never
@@ -149,67 +154,67 @@ send to a server, so the notes travel only to the person you sent them to — an
 can render a preview of one. Test it across two browsers (or a phone and a laptop); a link opened
 in the browser that made it still works, but proves less.
 
-31. Show menu → **"Share this show"**. The sheet shows the link itself, a **Copy** button, and on a
+32. Show menu → **"Share this show"**. The sheet shows the link itself, a **Copy** button, and on a
     phone **"Send link…"**, which hands it to the operating system's own share sheet.
-32. Open that link somewhere else. A preview sheet names the show and how many characters it
+33. Open that link somewhere else. A preview sheet names the show and how many characters it
     carries, and **nothing is written until you accept** — dismissing it leaves the library
     untouched. Accept, and the show lands with the characters someone wrote. Cast that came from
     TMDb is not in the link; it reloads from TMDb on the new device.
-33. Open Carmy and tap the share icon in the top-right corner of the sheet. That link carries one
+34. Open Carmy and tap the share icon in the top-right corner of the sheet. That link carries one
     character.
-34. Open the character link on the other device. Because a character needs a show to live in, the
+35. Open the character link on the other device. Because a character needs a show to live in, the
     sheet **asks where it should go**: it offers The Bear if that show is already in the library,
     offers to create it if not, and lists everything else underneath. Each destination says whether
     it already holds this character. Pick one and the character lands there.
-35. Try sharing a show you have written a great deal into. Past the link limit the sheet refuses
+36. Try sharing a show you have written a great deal into. Past the link limit the sheet refuses
     outright and points at Settings → Export instead, rather than producing a link that messaging
     apps silently truncate.
 
 ### 10. Duplicate shows
-36. With The Bear already in the library, add it again from the home screen search. Write a note on
+37. With The Bear already in the library, add it again from the home screen search. Write a note on
     a character inside the *new* copy, so both copies hold something you typed.
-37. A bar appears on the home screen: "You have two copies of The Bear, both with characters you
+38. A bar appears on the home screen: "You have two copies of The Bear, both with characters you
     wrote", with **Resolve**. The sheet — "Two copies of the same show" — offers to merge them or
     keep one, and says what each side holds. *(A duplicate with nothing of yours in it never
     reaches this screen; it is removed silently, which is the intended behaviour, not a miss.)*
 
 ### 11. New episode alerts
-38. Open a show that is still running — Reacher, not The Bear. An orange **bell** captioned
+39. Open a show that is still running — Reacher, not The Bear. An orange **bell** captioned
     *Episode alerts* sits next to the title. On a finished show there is no bell at all: nothing
     more is coming, so there is nothing to be told about. A struck-through bell means alerts are
     off, a filled one ringing means on — the caption stays the same either way, since it names the
     button rather than reporting its state.
-39. Tap it. The card says which show it is about and offers **At time of episode / 30 minutes /
+40. Tap it. The card says which show it is about and offers **At time of episode / 30 minutes /
     1 hour / 1 day before / Custom**. Pick one and **Turn on**; the browser asks permission, and
     the bell fills.
-40. Reopen the card. It comes back on the lead time you chose, and following one show does not
+41. Reopen the card. It comes back on the lead time you chose, and following one show does not
     turn the others on. **Turn off notifications** at the bottom clears it and the bell goes back
     to struck-through.
-41. In the same card, **WHERE TO WATCH** names the services carrying the show in your country. A
+42. In the same card, **WHERE TO WATCH** names the services carrying the show in your country. A
     show JustWatch has no listing for falls back to the channel it airs on, credited to TVmaze
     rather than JustWatch — the line changes to "Streams on…" or "Airs on…", which is a claim
     about the show rather than about your country.
     *(Delivery itself is hard to test to order — see the known gaps.)*
 
 ### 12. Footer tools
-42. **Translate** in the footer: type a phrase, pick a language, get a translation back. It calls a
+43. **Translate** in the footer: type a phrase, pick a language, get a translation back. It calls a
     free public API, so expect modest quality and an occasional failure rather than an error page.
-43. **Convert**: type an amount and switch currencies. Rates are live, with a static table as a
+44. **Convert**: type an amount and switch currencies. Rates are live, with a static table as a
     fallback, so a number always appears.
 
 ### 13. Offline
-44. Open the app, then turn on airplane mode.
-45. Reload. It should open normally, with your library and cast photos intact — everything is on
+45. Open the app, then turn on airplane mode.
+46. Reload. It should open normally, with your library and cast photos intact — everything is on
     the device and the app shell is cached.
-46. Search for a new show. It should fail: TMDb is a live call and the app doesn't pretend
+47. Search for a new show. It should fail: TMDb is a live call and the app doesn't pretend
     otherwise. Everything already in your library keeps working.
-47. Turn airplane mode off. Nothing to do — the next reload picks up any new deploy.
+48. Turn airplane mode off. Nothing to do — the next reload picks up any new deploy.
 
 ### 14. Backup
-48. Settings → Export. A `cast-tracker-backup-<date>.json` file downloads.
-49. Settings → Reset to blank state. The library empties.
-50. Import the file you just exported. Everything returns, including the notes and relationships.
-51. Now the case the file exists for, and it needs a second device. Signed in on both: ruin
+49. Settings → Export. A `cast-tracker-backup-<date>.json` file downloads.
+50. Settings → Reset to blank state. The library empties.
+51. Import the file you just exported. Everything returns, including the notes and relationships.
+52. Now the case the file exists for, and it needs a second device. Signed in on both: ruin
     something on A — clear a character's notes — and let it reach B. Import an export taken before
     the damage on A, then force a sync on both. The restored notes stay restored and reach B; the
     damage does not come back. *(A restore is stamped as of the moment you make it, so it wins the
@@ -223,19 +228,19 @@ link. **Use the code, not the link** — a link is single-use, so a mail scanner
 message first spends it, and it only works in the browser that asked for it. The code has neither
 constraint, which is what makes this work on a phone.
 
-52. Sign in on device A. The library uploads.
-53. Sign in as the same account on device B. The library arrives.
-54. On device A, edit a character's notes and **leave immediately** — switch apps, or lock the
+53. Sign in on device A. The library uploads.
+54. Sign in as the same account on device B. The library arrives.
+55. On device A, edit a character's notes and **leave immediately** — switch apps, or lock the
     screen — without waiting. Bring device B to the front. The edit is there. *(A push waits three
     seconds after your last edit, so leaving faster than that used to strand the edit on device A
     until it was next opened. Leaving now sends it. Closing the tab outright is the weaker case —
     the request goes out, but a browser may cancel it mid-flight, so a change that fails to arrive
     after a hard tab close is a known limit rather than a bug worth chasing.)*
-55. Nothing arrives on a device that is sitting open and untouched. Bring it to the front — or
+56. Nothing arrives on a device that is sitting open and untouched. Bring it to the front — or
     reload — and it syncs. There is no polling and no live connection, by design.
-56. Edit the same character's notes differently on each device, B last. Both converge on B's text.
-57. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
-58. Delete a character on A. It disappears on B rather than coming back.
+57. Edit the same character's notes differently on each device, B last. Both converge on B's text.
+58. Take device A offline, edit there, come back online. A's newer edit wins over the older remote.
+59. Delete a character on A. It disappears on B rather than coming back.
 
 ### Known gaps to mention to a tester before they find them
 - **On a laptop this is a different layout, and that is the newest thing here.** Above 1024px the

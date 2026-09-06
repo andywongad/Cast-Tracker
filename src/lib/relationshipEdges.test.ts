@@ -7,7 +7,7 @@
  * anything. The dating board shipped first and works; the cases below exist so adding kinship
  * cannot quietly change it.
  */
-import { buildEdges, parentIdsOf, resolveKindOption, KIND_GROUPS, KIND_OPTIONS, KINSHIP_KINDS, REL_KINDS } from './relationshipEdges';
+import { buildEdges, parentIdsOf, resolveKindOption, writesBothEnds, KIND_GROUPS, REALITY_GROUPS, KIND_OPTIONS, KINSHIP_KINDS, REL_KINDS } from './relationshipEdges';
 import type { CastMember, MapRelationship } from '../types';
 
 const EP = '1_Ep 1';
@@ -147,8 +147,21 @@ console.log('the taxonomy');
   const asymmetric = (Object.keys(REL_KINDS) as (keyof typeof REL_KINDS)[]).filter((k) => !REL_KINDS[k].symmetric);
   check('parent is the only asymmetric kind', asymmetric.join() === 'parent', asymmetric.join());
 
-  const arrowed = (Object.keys(REL_KINDS) as (keyof typeof REL_KINDS)[]).filter((k) => REL_KINDS[k].directed && k !== 'interested');
-  check('and the only kinship kind that draws an arrow', arrowed.join() === 'parent', arrowed.join());
+  /**
+   * Three kinds point, and each one points for its own reason: a parent at a child, a suitor at
+   * whoever they fancy, a player at whoever they are coming for. What matters is not how many
+   * there are but that every one of them can be recorded from either end — an arrow is the one
+   * mark whose meaning inverts if you drag the wrong way, and the picker has to offer the way back.
+   */
+  const arrowed = (Object.keys(REL_KINDS) as (keyof typeof REL_KINDS)[]).filter((k) => REL_KINDS[k].directed).sort();
+  check('the kinds that draw an arrow are the ones that point',
+    arrowed.join() === 'interested,parent,target', arrowed.join());
+
+  const unrecoverable = arrowed.filter((k) => {
+    if (!REL_KINDS[k].symmetric) return false;  // asymmetric kinds carry their own direction
+    return !KIND_OPTIONS.some((o) => o.kind === k && o.invert);
+  });
+  check('and every one of them can be drawn from either end', unrecoverable.length === 0, unrecoverable.join());
 
   const values = KIND_OPTIONS.map((o) => o.value);
   check('no option is offered twice', new Set(values).size === values.length, values.join());
@@ -160,9 +173,15 @@ console.log('the taxonomy');
    * One fact, one kind. `parent` is allowed to back two options because they are the same link
    * read from opposite ends; a second kind sharing an option would be a genuine duplicate.
    */
+  /**
+   * Inverting is only meaningful for a kind that points. Swapping the ends of a symmetric,
+   * undirected link — two siblings, two allies — produces the identical record, so an inverted
+   * option there would be a second button that does the same thing as the first.
+   */
   const inverted = KIND_OPTIONS.filter((o) => o.invert);
-  check('only "child of" is inverted', inverted.map((o) => o.value).join() === 'child', inverted.map((o) => o.value).join());
-  check('and it is an inverted parent', inverted[0]?.kind === 'parent');
+  check('something is invertible', inverted.length > 0);
+  const pointless = inverted.filter((o) => !REL_KINDS[o.kind].directed);
+  check('and only the kinds that point can be inverted', pointless.length === 0, pointless.map((o) => o.value).join());
   const uninverted = KIND_OPTIONS.filter((o) => !o.invert).map((o) => o.kind);
   check('every other option is its own kind, once', new Set(uninverted).size === uninverted.length, uninverted.join());
 
@@ -182,6 +201,101 @@ console.log('every symmetric kind merges');
     return edges.length !== 1 || !edges[0].mutual;
   });
   check('recorded from both ends, each draws one line', notMerged.length === 0, notMerged.join());
+}
+
+/**
+ * The reality vocabulary. A dating board used to have one meaning and no picker; it now has to
+ * carry a competition too, where the thing worth recording is who is working with whom and who is
+ * about to be sent home.
+ */
+console.log('the reality vocabulary');
+{
+  const values = REALITY_GROUPS.flatMap((g) => g.options.map((o) => o.value));
+  const unresolvable = values.filter((v) => !KIND_OPTIONS.some((o) => o.value === v));
+  check('every option the reality picker offers can be resolved', unresolvable.length === 0, unresolvable.join());
+  check('and it offers the two the ask was about', values.includes('ally') && values.includes('target'));
+}
+{
+  // Targeting points, so it must record the same fact from whichever end it was drawn.
+  const forward = resolveKindOption('target', 'sana', 'jia');
+  const backward = resolveKindOption('targeted-by', 'jia', 'sana');
+  check('"targeting" and "targeted by" write the same record',
+    JSON.stringify(forward) === JSON.stringify(backward), JSON.stringify([forward, backward]));
+  check('and it is the hunter the record sits on', forward.sourceId === 'sana' && forward.targetId === 'jia');
+}
+{
+  const oneWay = buildEdges([person('a', [rel('r1', 'b', 'target')]), person('b')], relsFor);
+  check('one-way targeting keeps its arrow', oneWay.length === 1 && oneWay[0].directed);
+
+  const feud = buildEdges([
+    person('a', [rel('r1', 'b', 'target')]),
+    person('b', [rel('r2', 'a', 'target')]),
+  ], relsFor);
+  check('two people targeting each other is one line, not two', feud.length === 1, String(feud.length));
+  check('and it drops the arrow, because it no longer points anywhere', feud[0]?.directed === false);
+  /**
+   * The heart is drawn for mutual `interested` and nothing else. A mutual target is a feud, and the
+   * map would be lying about the show if it drew one as the other.
+   */
+  check('a feud is not a romance', feud[0]?.kind === 'target' && feud[0]?.mutual === true);
+}
+{
+  const allies = buildEdges([
+    person('a', [rel('r1', 'b', 'ally')]),
+    person('b', [rel('r2', 'a', 'ally')]),
+  ], relsFor);
+  check('an alliance recorded from both ends draws one line', allies.length === 1);
+  check('with no arrowhead, because neither of them is the ally', allies[0]?.directed === false);
+
+  const mixed = buildEdges([
+    person('a', [rel('r1', 'b', 'ally')]),
+    person('b', [rel('r2', 'a', 'target')]),
+  ], relsFor);
+  check('an alliance one way and a target the other stays two lines — that is the show',
+    mixed.length === 2, JSON.stringify(mixed.map((e) => e.kind)));
+}
+{
+  // The vocabularies overlap on purpose; what they must not do is disagree about a word.
+  const kinshipValues = KIND_GROUPS.flatMap((g) => g.options.map((o) => o.value));
+  const realityValues = REALITY_GROUPS.flatMap((g) => g.options.map((o) => o.value));
+  const shared = kinshipValues.filter((v) => realityValues.includes(v));
+  const disagree = shared.filter((v) => {
+    const a = KIND_GROUPS.flatMap((g) => g.options).find((o) => o.value === v)!;
+    const b = REALITY_GROUPS.flatMap((g) => g.options).find((o) => o.value === v)!;
+    return a.kind !== b.kind || !!a.invert !== !!b.invert;
+  });
+  check('a word offered by both pickers means the same thing in both', disagree.length === 0, disagree.join());
+}
+
+/**
+ * Which links the board writes at both ends when you draw one.
+ *
+ * This was `symmetric` and it was wrong, in a way that only showed up by drawing on the board: one
+ * -way interest came back as a mutual heart, because `symmetric` means "two of these merge" and
+ * was being read as "assert both ends". Kept as its own function so the distinction has somewhere
+ * to be tested.
+ */
+console.log('what a single drag writes');
+{
+  check('an alliance is written at both ends — both halves are the same fact', writesBothEnds('ally'));
+  check('so is a sibling', writesBothEnds('sibling'));
+  check('so is a final deal', writesBothEnds('deal'));
+
+  check('interest is not, or one-way interest would draw itself a heart', !writesBothEnds('interested'));
+  check('nor is targeting, which is a fact about the hunter until the other agrees', !writesBothEnds('target'));
+  check('nor is parent, which is not the same fact from the other end', !writesBothEnds('parent'));
+}
+{
+  /** Every kind that draws an arrow must be left one-way, or the arrow can never be seen. */
+  const mirroredButPointing = (Object.keys(REL_KINDS) as (keyof typeof REL_KINDS)[])
+    .filter((k) => REL_KINDS[k].directed && writesBothEnds(k));
+  check('nothing that points is ever written at both ends', mirroredButPointing.length === 0, mirroredButPointing.join());
+}
+{
+  // The end-to-end version of the bug: draw interest once, and it must still be an arrow.
+  const oneWay = buildEdges([person('a', [rel('r1', 'b', 'interested')]), person('b')], relsFor);
+  check('one-way interest stays an arrow and not a heart',
+    oneWay.length === 1 && oneWay[0].directed && !oneWay[0].mutual);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

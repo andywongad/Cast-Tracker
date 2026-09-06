@@ -17,6 +17,29 @@ export const REL_KINDS: Record<MapRelKind, { label: string; symmetric: boolean; 
   interested: { label: 'Interested', symmetric: true, directed: true },
 
   /**
+   * The competition kinds, which is what a reality show is mostly about once it stops being about
+   * who fancies whom.
+   *
+   * `target` is shaped like `interested`, not like `parent`, and that is the whole trick. It points
+   * — A is coming for B, and B may have no idea — so it draws an arrow. But two people targeting
+   * each other is not two claims, it is a feud, and it should collapse to one line the way
+   * reciprocated interest does. `symmetric: true, directed: true` says exactly that, and it keeps
+   * `parent` the only genuinely asymmetric kind in the table.
+   */
+  ally: { label: 'Ally', symmetric: true, directed: false },
+  target: { label: 'Targeting', symmetric: true, directed: true },
+
+  /**
+   * A pact to reach the end together. Distinct from `ally` on purpose: an alliance is who you are
+   * working with this week, a deal is who you have promised the last seat to, and the entire
+   * back half of one of these shows is the gap between the two.
+   */
+  deal: { label: 'Final deal', symmetric: true, directed: false },
+
+  /** Together before the show, or earlier in it. The reason half a dating cast already know each other. */
+  ex: { label: 'Exes', symmetric: true, directed: false },
+
+  /**
    * `parent` is the only asymmetric relationship here, and that is not an accident of the list —
    * it is the only one where the two people are not the same thing to each other. Everything else
    * is a description both of them would give, which is why it merges into one line and carries no
@@ -126,13 +149,79 @@ export const KIND_GROUPS: { label: string; options: KindOption[] }[] = [
   },
 ];
 
-/** Every option the picker offers, groups first and the escape hatch last. */
-export const KIND_OPTIONS: KindOption[] = [
-  ...KIND_GROUPS.flatMap((g) => g.options),
-  { value: 'other', kind: 'other' },
+/**
+ * The other vocabulary: what a reality show is about.
+ *
+ * Reality boards used to have no picker at all. A drag meant `interested` and nothing else, which
+ * was right when the only reality show anyone had in mind was a dating one — and useless for a
+ * competition, where the thing worth writing down is who is working with whom and who is about to
+ * be sent home. Both fit on one board because both are true of the same cast at the same time: the
+ * showmance and the alliance are frequently the same two people, and that tension is the show.
+ *
+ * `interested` and `target` both name the other person, for the same reason `parent of` does —
+ * they point, and getting the direction backwards inverts the meaning. Both offer the inverse
+ * option too, so it can be recorded from whichever end you happen to drag from.
+ *
+ * The kinship kinds are deliberately absent even though real families turn up on these shows all
+ * the time. A reality cast is not a family tree, and offering fourteen options to describe eight
+ * contestants is how a picker stops being read. Anyone with an actual sibling in the cast has
+ * "something else…" and their own words.
+ */
+export const REALITY_GROUPS: { label: string; options: KindOption[] }[] = [
+  {
+    label: 'The game',
+    options: [
+      { value: 'ally', kind: 'ally' },
+      { value: 'target', kind: 'target', word: (o) => `targeting ${o}` },
+      { value: 'targeted-by', kind: 'target', invert: true, word: (o) => `targeted by ${o}` },
+      { value: 'deal', kind: 'deal' },
+      { value: 'enemy', kind: 'enemy' },
+    ],
+  },
+  {
+    label: 'Attraction',
+    options: [
+      { value: 'interested', kind: 'interested', word: (o) => `interested in ${o}` },
+      { value: 'interests', kind: 'interested', invert: true, word: (o) => `who ${o} is interested in` },
+      { value: 'romantic', kind: 'romantic' },
+      { value: 'ex', kind: 'ex' },
+    ],
+  },
+  {
+    label: 'Everything else',
+    options: [
+      { value: 'friend', kind: 'friend' },
+      { value: 'frenemy', kind: 'frenemy' },
+    ],
+  },
 ];
 
-/** Every kind those options can produce — one fewer than the options, since `child` writes a `parent`. */
+/** The escape hatch, offered at the end of both pickers. */
+const OTHER_OPTION: KindOption = { value: 'other', kind: 'other' };
+
+/**
+ * Every option either picker offers, which is what `resolveKindOption` looks a value up in.
+ *
+ * One flat list across both vocabularies rather than one per board, because resolution does not
+ * care which picker a value came from — it only has to turn a value into a record. Values are
+ * unique across the two lists, which the test suite checks, so the lookup cannot be ambiguous.
+ */
+export const KIND_OPTIONS: KindOption[] = (() => {
+  const byValue = new Map<string, KindOption>();
+  /**
+   * De-duplicated by value, because the two vocabularies legitimately overlap. Friend, frenemy,
+   * enemy and partner are as true of eight people in a villa as of a cast of characters, and each
+   * picker should offer them rather than one of them borrowing the other's word. They are the same
+   * option in both places — same kind, same direction — so the table keeps one entry and the
+   * lookup stays unambiguous.
+   */
+  for (const o of [...KIND_GROUPS.flatMap((g) => g.options), ...REALITY_GROUPS.flatMap((g) => g.options), OTHER_OPTION]) {
+    if (!byValue.has(o.value)) byValue.set(o.value, o);
+  }
+  return [...byValue.values()];
+})();
+
+/** Every kind either picker can produce. Fewer than the options: the inverted ones share a kind. */
 export const KINSHIP_KINDS: MapRelKind[] = [...new Set(KIND_OPTIONS.map((o) => o.kind))];
 
 /**
@@ -153,6 +242,23 @@ export function resolveKindOption(
   return opt.invert
     ? { sourceId: targetId, targetId: sourceId, kind: opt.kind }
     : { sourceId, targetId, kind: opt.kind };
+}
+
+/**
+ * Should drawing this link write a record at both ends?
+ *
+ * `symmetric` alone is the wrong test, and using it was a real bug: it answers "do two of these
+ * merge into one line", which is true of `interested` — reciprocated interest is a heart — while
+ * "assert both ends on the user's behalf" is emphatically not. Recording one-way interest and
+ * getting a mutual heart back says something about two people that nobody said.
+ *
+ * The kinds that point are exactly the kinds where one end is a claim about the other, so the rule
+ * is symmetric AND undirected: an alliance is mutual by nature and both halves are the same fact,
+ * whereas wanting someone, or coming for them, is a fact about one person until the other agrees.
+ */
+export function writesBothEnds(kind: MapRelKind): boolean {
+  const meta = REL_KINDS[kind] ?? REL_KINDS.other;
+  return meta.symmetric && !meta.directed;
 }
 
 export interface Edge {
