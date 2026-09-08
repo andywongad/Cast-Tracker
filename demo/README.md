@@ -20,7 +20,9 @@ sessions are comparable afterwards.
 record counts behave as they would for a real user. Names, photos and TMDb ids are real, pulled
 from TMDb, so photos load and the ids match what the app would fetch on its own.
 
-Succession is the exception to the rule below, and the only show that arrives with its map drawn:
+Succession is the exception to the rule below, and the only show that arrives with its map drawn —
+though not one anybody can open at the moment, since scripted shows have no map button while
+`FAMILY_TREE_ENABLED` is off. The tree is still in the file, waiting:
 two generations of Roys, two people who married or attached themselves in, a relative with no
 precise word for it, and two colleagues who are nobody's family. It exists so "Tidy the tree" has
 something real to arrange — the button only appears once a board has lines on it, and hand-drawing
@@ -104,7 +106,13 @@ type. A reality show gets the cast board: who wants whom, and who is playing wit
     changing them there does not change the earlier episode.
 17. Hide someone from the map, then bring them back from the bottom of the sheet.
 
-### 5. The family tree, on a scripted show
+### 5. The family tree, on a scripted show — SKIP, currently hidden
+> **Not in this round.** Scripted shows have no map button at all right now: `FAMILY_TREE_ENABLED`
+> in `ShowScreen.tsx` is `false`, so only reality shows reach the board. Nothing is deleted — the
+> trees already drawn are still in the data and come back when the flag is flipped — but a tester
+> cannot get here, so steps 18 to 26 are unreachable. They are kept, in order, so that turning the
+> flag back on restores a script that already covers it.
+
 A scripted show gets kinship instead, and the heading changes to say so. Here a link has to be
 named, because "related" is not one thing.
 
@@ -121,7 +129,10 @@ named, because "related" is not one thing.
     parent down to the child; everything else is a plain line, because those read the same in both
     directions.
 
-### 6. Tidying the tree
+### 6. Tidying the tree — SKIP, currently hidden
+> Same flag as section 5. Succession still arrives with its family drawn, so this section works
+> again the moment scripted shows get the map back.
+
 22. Open Succession → the map. It arrives deliberately messy: eleven people scattered across the
     board with lines crossing over each other. This is the state a real board reaches after ten
     minutes of drawing.
@@ -243,6 +254,11 @@ constraint, which is what makes this work on a phone.
 59. Delete a character on A. It disappears on B rather than coming back.
 
 ### Known gaps to mention to a tester before they find them
+- **Scripted shows have no map at all right now, and that is deliberate.** The board draws two
+  different things and only the reality one is being tested this round, so `FAMILY_TREE_ENABLED` is
+  off. If a tester opens a drama expecting the family tree they saw before, nothing is broken and
+  nothing is lost — their trees are still in the data. Sections 5 and 6 are unreachable until the
+  flag goes back on.
 - **On a laptop this is a different layout, and that is the newest thing here.** Above 1024px the
   bottom bar becomes a rail down the left, the app fills the window, the cast grid picks its own
   column count from the width rather than the 2/3/4 setting, and sheets stop rising from the bottom

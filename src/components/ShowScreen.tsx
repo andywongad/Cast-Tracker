@@ -18,6 +18,26 @@ import FinishedPrompt, { shouldOfferCompletion } from './FinishedPrompt';
 import SerialCastView from './SerialCastView';
 
 /**
+ * Whether scripted shows get the map at all.
+ *
+ * Off for now. The board draws two different things — kinship for scripted shows, and who wants,
+ * helps or is hunting whom for reality — and only one of them is being put in front of people this
+ * round. A tester who opens a drama and finds a family tree has been handed a second feature to
+ * have opinions about, which is the surest way to learn nothing clear about either.
+ *
+ * Hidden rather than removed, and the distinction is the point: every family tree already drawn is
+ * still in `relByEp`, untouched, and comes back exactly as it was when this is flipped. Nothing
+ * here deletes a line, and nothing about the kinship code has changed — RelationshipMap still
+ * knows how to draw a family tree, it is just never asked to.
+ *
+ * `gridMode` is component state that starts `true`, so a drama simply shows its cast grid and
+ * there is no stranded state to migrate.
+ *
+ * To bring it back: set this to true. That is the whole change.
+ */
+const FAMILY_TREE_ENABLED = false;
+
+/**
  * Episode credits already fetched this session, keyed showId:season:episode.
  *
  * Capped because it was unbounded: roughly 2.5KB per episode visited, held for the life of the
@@ -494,7 +514,7 @@ export default function ShowScreen() {
           map is worth drawing for some shows and pointless for others — The Office is twenty
           people in one room — and that is the viewer's call, not something to infer from a cast
           count and then hide the door behind. */}
-      {(isRealityShow || show.type === 'DRAMA') && (
+      {(isRealityShow || (FAMILY_TREE_ENABLED && show.type === 'DRAMA')) && (
         <div style={{ display: 'inline-flex', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 999, padding: 3, margin: '10px 0' }}>
           <button onClick={() => setGridMode(true)} style={{ height: 30, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer', background: gridMode ? 'var(--accent)' : 'transparent', color: gridMode ? 'var(--accent-text)' : 'var(--text-secondary)' }}>Grid</button>
           <button onClick={() => setGridMode(false)} style={{ height: 30, padding: '0 12px', border: 'none', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', background: !gridMode ? 'var(--accent)' : 'transparent', color: !gridMode ? 'var(--accent-text)' : 'var(--text-secondary)' }}>
