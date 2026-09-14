@@ -16,6 +16,33 @@
          canonical is the only fix that covers hosts nobody has thought of yet. -->
     <link rel="canonical" href="https://casttracker.app/" />
 
+    <!-- How this page looks when someone pastes the link.
+
+         Static tags rather than a head manager, because there is nothing to vary: no router, no
+         second route, and screens are swapped by state in App.tsx. Every visitor arrives at "/"
+         and that is the only URL a scraper can ever see, so per-page overrides would be machinery
+         with nothing to manage. The day this grows real routes, react-helmet-async goes here and
+         these become the defaults it falls back to.
+
+         Title and description are the same words as the <title> and <meta name="description">
+         above, on purpose: the preview card and the search result should not disagree about what
+         this is.
+
+         The image URLs are absolute, which is a small deviation from "/og-image.png" and a
+         deliberate one — relative og:image is resolved inconsistently across scrapers and is
+         simply dropped by some, which shows as a card with no picture rather than an error.
+         /og-image.png does not exist yet, so previews will render text-only until it does. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://casttracker.app/" />
+    <meta property="og:title" content="Cast Tracker" />
+    <meta property="og:description" content="Keep track of who's who — cast, characters, and relationships across the shows you watch." />
+    <meta property="og:image" content="https://casttracker.app/og-image.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Cast Tracker" />
+    <meta name="twitter:description" content="Keep track of who's who — cast, characters, and relationships across the shows you watch." />
+    <meta name="twitter:image" content="https://casttracker.app/og-image.png" />
+
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" href="/favicon-48.png" />
