@@ -37,11 +37,19 @@
     <meta property="og:title" content="Cast Tracker" />
     <meta property="og:description" content="Keep track of who's who — cast, characters, and relationships across the shows you watch." />
     <meta property="og:image" content="https://casttracker.app/og-image.png" />
+    <!-- Read from the file itself: 1200x630. Declaring them lets a scraper reserve the right space
+         before the image arrives, instead of reflowing the card once it does — and if they ever
+         disagree with the real file, the space reserved is the wrong shape, so they are worth
+         re-checking whenever the image is replaced. -->
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Cast Tracker — keep track of who's who across the shows you watch." />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Cast Tracker" />
     <meta name="twitter:description" content="Keep track of who's who — cast, characters, and relationships across the shows you watch." />
     <meta name="twitter:image" content="https://casttracker.app/og-image.png" />
+    <meta name="twitter:image:alt" content="Cast Tracker — keep track of who's who across the shows you watch." />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
