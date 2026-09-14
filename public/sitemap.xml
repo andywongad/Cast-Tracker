@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One URL, and that is not an oversight.
+
+  Cast Tracker keeps everything in the visitor's own browser and swaps screens by state rather than
+  by route, so "/" is the whole site as far as a crawler is concerned. The ?show= links that appear
+  in the address bar carry ids generated on one device for one library; they resolve to nothing
+  anywhere else, and listing them would be asking Google to index four hundred dead ends. Share
+  links carry their payload in the fragment, which is never sent to a server and cannot be crawled
+  at all — which is the privacy property that makes them safe to paste.
+
+  lastmod is maintained by hand. If it stops being true it is worth deleting rather than leaving:
+  Google only weighs it while it is trustworthy, and a date that never moves is not.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://casttracker.app/</loc>
+    <lastmod>2026-09-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

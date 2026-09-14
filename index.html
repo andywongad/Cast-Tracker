@@ -7,6 +7,15 @@
     <title>Cast Tracker</title>
     <meta name="description" content="Keep track of who's who — cast, characters, and relationships across the shows you watch." />
 
+    <!-- The one address this app lives at, whatever address you arrived by.
+
+         vercel.json already redirects cast-tracker-m8g3.vercel.app here, but that rule names one
+         host and Vercel gives every deployment a URL of its own — cast-tracker-git-main-….vercel.app
+         and one per preview. Those serve the identical app and are perfectly indexable, so without
+         this the real site would be competing in search results against copies of itself. A
+         canonical is the only fix that covers hosts nobody has thought of yet. -->
+    <link rel="canonical" href="https://casttracker.app/" />
+
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" href="/favicon-48.png" />

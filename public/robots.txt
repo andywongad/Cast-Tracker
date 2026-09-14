@@ -1,0 +1,21 @@
+# Cast Tracker — https://casttracker.app
+#
+# Everything a person can see is welcome. The only closed door is /api/, and it is closed for a
+# reason that is not tidiness: /api/recap and /api/enrichment call a language model and are billed
+# per generation. They are rate limited and they check their cache first, so a crawler could not
+# run up a large bill — but a crawler has no use for a JSON payload it cannot render, and there is
+# no reason to spend anything at all on one.
+#
+# Nothing else needs hiding. The library lives in the visitor's own browser, so there is no user
+# content here to keep out of an index: every URL below is the same public app shell.
+
+# Disallow first, deliberately. Google resolves a conflict by the longest matching rule and would
+# read these either way round, but not every crawler does — several take the first match in file
+# order, and with `Allow: /` at the top they take it every time. Ordering it this way is correct
+# under both readings.
+
+User-agent: *
+Disallow: /api/
+Allow: /
+
+Sitemap: https://casttracker.app/sitemap.xml
