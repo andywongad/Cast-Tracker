@@ -1,4 +1,10 @@
 {
+  "rewrites": [
+    {
+      "source": "/show/:tmdbId",
+      "destination": "/api/show/:tmdbId"
+    }
+  ],
   "redirects": [
     {
       "source": "/:path(.*)",
@@ -27,6 +33,9 @@
     },
     "api/check-episodes.ts": {
       "maxDuration": 300
+    },
+    "api/show/[tmdbId].ts": {
+      "maxDuration": 15
     }
   }
 }

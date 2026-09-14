@@ -1,4 +1,4 @@
-import type { AggregateCastMember } from './tmdb';
+import type { AggregateCastMember } from './tmdb.js';
 
 /**
  * Works out what shape a show's cast has, so the cast view can match it.

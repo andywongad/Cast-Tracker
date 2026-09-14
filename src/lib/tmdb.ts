@@ -1,4 +1,4 @@
-import type { ShowType } from '../types';
+import type { ShowType } from '../types.js';
 
 /**
  * Whether TMDb-backed features should be offered at all.
