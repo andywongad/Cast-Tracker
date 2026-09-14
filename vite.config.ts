@@ -10,7 +10,16 @@ import react from '@vitejs/plugin-react';
  * Dev-only: `server.proxy` is not part of the production build.
  * Override the target with API_PROXY_TARGET when working against a preview deployment.
  */
-const API_TARGET = process.env.API_PROXY_TARGET || 'https://cast-tracker-m8g3.vercel.app';
+/**
+ * The canonical host, not the deployment one.
+ *
+ * This pointed at cast-tracker-m8g3.vercel.app, which vercel.json 308-redirects to casttracker.app
+ * so the two do not compete in search. A browser follows that redirect to a different origin, the
+ * request becomes cross-origin, and fetch fails with "Failed to fetch" — so every /api/* call in
+ * local dev broke: TMDb search, bios, recaps, all of it. curl hid it, because -L follows the
+ * redirect that a page cannot.
+ */
+const API_TARGET = process.env.API_PROXY_TARGET || 'https://casttracker.app';
 
 export default defineConfig({
   plugins: [react()],

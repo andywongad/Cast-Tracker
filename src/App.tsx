@@ -8,6 +8,8 @@ import { supabaseAuth, sessionFromUrl, onSessionChange, lastExchangeError } from
 import { consumeSignInLinkError, arrivedWithSignInCode, SIGN_IN_EXCHANGE_FAILED } from './lib/auth';
 import { findDuplicateGroups, planResolution, applyResolutions } from './lib/duplicateShows';
 import { takeShareFromUrl, decodeShare, type SharePacket } from './lib/shareLink';
+import { takeAddFromUrl } from './lib/addFromUrl';
+import { getShowPrefill } from './lib/tmdb';
 import { THEMES, themeVars } from './lib/theme';
 import { registerServiceWorker } from './lib/notifications';
 import TopBar from './components/TopBar';
@@ -82,6 +84,13 @@ const ARRIVED_WITH_CODE = arrivedWithSignInCode();
  * already.
  */
 const ARRIVING_SHARE = takeShareFromUrl();
+/**
+ * `?add=<tmdbId>`, from the public show pages at /show/:tmdbId.
+ *
+ * Read here for the same reason as the two above and not one line later: `useUI` rewrites the URL
+ * as it mounts, and anything still in the query string by then is gone.
+ */
+const ARRIVING_ADD = takeAddFromUrl();
 
 /**
  * Shown when someone arrives from a sign-in link that didn't work.
@@ -161,7 +170,7 @@ function DuplicateNoticeBar({ count, title, onResolve }: { count: number; title:
 
 function Shell() {
   const { settings, storageFailed, data, updateData } = useStore();
-  const { screen, activeShowId, openSettings, openAuth, openDuplicates } = useUI();
+  const { screen, activeShowId, openSettings, openAuth, openDuplicates, openShow, openAddShow } = useUI();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const { session, ready: authReady } = useAuth();
   const [dismissedSignInError, setDismissedSignInError] = useState(false);
@@ -175,6 +184,34 @@ function Shell() {
     void decodeShare(ARRIVING_SHARE).then((packet) => { if (alive && packet) setIncomingShare(packet); });
     return () => { alive = false; };
   }, []);
+  /**
+   * Someone followed "Open in Cast Tracker" from a public show page.
+   *
+   * Two outcomes, and the first one matters more than it looks. If the show is already in the
+   * library, open it — adding a second copy of a show you already track, because you followed a
+   * link to it, is the worst possible answer: it is the duplicate this app has a whole detector
+   * and a home-screen bar for. Matching on `tmdbId` is exact, since that is the id the link was
+   * built from.
+   *
+   * Otherwise fetch enough to fill the add form in — a title and a poster, so the sheet opens
+   * looking like the show rather than like a blank. The form is still a form: nothing is written
+   * until they save it, which is the right shape for something a stranger's link can trigger.
+   *
+   * Waits for `authReady` the way the share flow does, so this never opens over a sign-in that is
+   * still resolving. A TMDb lookup that fails leaves the app exactly as it was; there is nothing
+   * useful to say about a show we cannot name.
+   */
+  useEffect(() => {
+    if (!ARRIVING_ADD) return;
+    const existing = data.shows.find((s) => s.tmdbId === ARRIVING_ADD);
+    if (existing) { openShow(existing.id); return; }
+    let alive = true;
+    void getShowPrefill(ARRIVING_ADD).then((prefill) => { if (alive && prefill) openAddShow(prefill); });
+    return () => { alive = false; };
+    // Once per load: ARRIVING_ADD is consumed at import and the URL no longer carries it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /**
    * Two ways a sign-in link fails, one message channel.
    *

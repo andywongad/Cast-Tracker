@@ -110,6 +110,29 @@ export interface ShowDetails {
   nextEpisodeAt: string | null;
 }
 
+/**
+ * Just enough about a show to fill in the add form, for someone arriving from a public show page
+ * with nothing but its TMDb id.
+ *
+ * Separate from `getShowDetails`, which answers a different question — how many seasons, is it
+ * still running, when is the next episode — and would have to grow four fields it has no use for.
+ * Both hit the same cached `/tv/{id}`, so the extra call costs nothing.
+ */
+export async function getShowPrefill(tmdbId: number): Promise<{
+  title: string; type: ShowType; poster: string | null; tmdbId: number; originCountry: string;
+} | null> {
+  const d = await get<{ name?: string; poster_path?: string | null; genres?: { id: number }[]; origin_country?: string[] }>(`/tv/${tmdbId}`);
+  if (!d?.name) return null;
+  return {
+    title: d.name,
+    // `/tv/{id}` returns full genre objects where search returns bare ids; the classifier wants ids.
+    type: inferShowType((d.genres || []).map((g) => g.id)),
+    poster: img(d.poster_path ?? null),
+    tmdbId,
+    originCountry: d.origin_country?.[0] || '',
+  };
+}
+
 export async function getShowDetails(tmdbId: number): Promise<ShowDetails | null> {
   const data = await get<any>(`/tv/${tmdbId}`, { append_to_response: 'external_ids' });
   if (!data) return null;
