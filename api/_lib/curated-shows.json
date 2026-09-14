@@ -1,0 +1,364 @@
+{
+  "_comment": [
+    "Shows the sitemap lists whether or not anyone has followed one.",
+    "",
+    "Every id was resolved against TMDb and checked, not typed from memory: a title search returns",
+    "the wrong country more often than not for a format that has been remade everywhere. MasterChef",
+    "first resolved to the Polish version, Kingdom to a Japanese anime rather than the Korean drama,",
+    "Heart Signal and Perfect Match and The Ultimatum to editions nobody here meant. Each entry was",
+    "re-checked against the origin country its category implies, which is what caught those five.",
+    "",
+    "Chosen for genre spread over personal taste - reality, Korean reality, K-drama and soaps are the",
+    "audiences this app is for, and they are the shows with the large, shifting casts that are hard",
+    "to keep straight, which is the problem it solves.",
+    "",
+    "'name' is TMDb's own, kept so a future reader can tell at a glance whether an id still points at",
+    "what it says. Nothing reads it at runtime; the sitemap needs only the ids.",
+    "",
+    "Editing: add a line, resolve the id against TMDb first, and keep them unique. The sitemap unions",
+    "this with whatever is in shows:watched, so a duplicate here is harmless but a wrong id is a URL",
+    "that renders someone else's show."
+  ],
+  "shows": [
+    {
+      "tmdbId": 61575,
+      "name": "90 Day Fiancé",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 63726,
+      "name": "Alone",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 50042,
+      "name": "Below Deck",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 10160,
+      "name": "Big Brother",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 1508,
+      "name": "Dancing with the Stars",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 14814,
+      "name": "Keeping Up with the Kardashians",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 99353,
+      "name": "Love Is Blind",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 66636,
+      "name": "Love Island",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 60989,
+      "name": "Married at First Sight",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 40290,
+      "name": "MasterChef",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 218521,
+      "name": "Perfect Match",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 76922,
+      "name": "Queer Eye",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 8514,
+      "name": "RuPaul's Drag Race",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 87826,
+      "name": "Selling Sunset",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 14658,
+      "name": "Survivor",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 30957,
+      "name": "The Amazing Race",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 355,
+      "name": "The Bachelor",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 1562,
+      "name": "The Bachelorette",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 62,
+      "name": "The Challenge",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 97083,
+      "name": "The Circle",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 87012,
+      "name": "The Great British Bake Off",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 32390,
+      "name": "The Real Housewives of Beverly Hills",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 215943,
+      "name": "The Traitors",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 169588,
+      "name": "The Ultimatum: Marry or Move On",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 37678,
+      "name": "The Voice",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 102085,
+      "name": "Too Hot to Handle",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 41822,
+      "name": "Top Chef",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 61581,
+      "name": "Vanderpump Rules",
+      "category": "reality"
+    },
+    {
+      "tmdbId": 245684,
+      "name": "Culinary Class Wars",
+      "category": "korean-reality"
+    },
+    {
+      "tmdbId": 128119,
+      "name": "EXchange",
+      "category": "korean-reality"
+    },
+    {
+      "tmdbId": 72976,
+      "name": "Heart Signal",
+      "category": "korean-reality"
+    },
+    {
+      "tmdbId": 129236,
+      "name": "I Am Solo",
+      "category": "korean-reality"
+    },
+    {
+      "tmdbId": 70672,
+      "name": "Men on a Mission",
+      "category": "korean-reality"
+    },
+    {
+      "tmdbId": 210905,
+      "name": "Physical: 100",
+      "category": "korean-reality"
+    },
+    {
+      "tmdbId": 33238,
+      "name": "Running Man",
+      "category": "korean-reality"
+    },
+    {
+      "tmdbId": 139798,
+      "name": "Single's Inferno",
+      "category": "korean-reality"
+    },
+    {
+      "tmdbId": 214582,
+      "name": "The Devil's Plan",
+      "category": "korean-reality"
+    },
+    {
+      "tmdbId": 54553,
+      "name": "The Genius",
+      "category": "korean-reality"
+    },
+    {
+      "tmdbId": 154825,
+      "name": "Business Proposal",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 94796,
+      "name": "Crash Landing on You",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 65143,
+      "name": "Descendants of the Sun",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 197067,
+      "name": "Extraordinary Attorney Woo",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 67915,
+      "name": "Guardian: The Lonely and Great God",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 96102,
+      "name": "Hospital Playlist",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 90447,
+      "name": "Hotel Del Luna",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 96162,
+      "name": "Itaewon Class",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 70593,
+      "name": "Kingdom",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 96571,
+      "name": "Move to Heaven",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 75820,
+      "name": "Mr. Sunshine",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 76662,
+      "name": "My Mister",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 215720,
+      "name": "Queen of Tears",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 64010,
+      "name": "Reply 1988",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 64840,
+      "name": "Signal",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 84327,
+      "name": "SKY Castle",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 93405,
+      "name": "Squid Game",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 136283,
+      "name": "The Glory",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 129888,
+      "name": "Twenty Five Twenty One",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 117376,
+      "name": "Vincenzo",
+      "category": "kdrama"
+    },
+    {
+      "tmdbId": 291,
+      "name": "Coronation Street",
+      "category": "soap"
+    },
+    {
+      "tmdbId": 881,
+      "name": "Days of Our Lives",
+      "category": "soap"
+    },
+    {
+      "tmdbId": 1871,
+      "name": "EastEnders",
+      "category": "soap"
+    },
+    {
+      "tmdbId": 2527,
+      "name": "Emmerdale",
+      "category": "soap"
+    },
+    {
+      "tmdbId": 987,
+      "name": "General Hospital",
+      "category": "soap"
+    },
+    {
+      "tmdbId": 966,
+      "name": "Hollyoaks",
+      "category": "soap"
+    },
+    {
+      "tmdbId": 2354,
+      "name": "Home and Away",
+      "category": "soap"
+    },
+    {
+      "tmdbId": 2674,
+      "name": "Neighbours",
+      "category": "soap"
+    },
+    {
+      "tmdbId": 6647,
+      "name": "The Bold and the Beautiful",
+      "category": "soap"
+    },
+    {
+      "tmdbId": 1054,
+      "name": "The Young and the Restless",
+      "category": "soap"
+    }
+  ]
+}
