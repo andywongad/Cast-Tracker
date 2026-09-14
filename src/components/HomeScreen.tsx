@@ -87,6 +87,37 @@ export default function HomeScreen() {
       </div>
 
 
+      {/**
+        * What this is, for someone who has never seen it — and the only text on the screen a
+        * search engine can read.
+        *
+        * The app renders from localStorage, so a first visit used to be a search box above two
+        * empty shelves: nothing saying what the thing is for, and nothing for a crawler to index
+        * but the word "Cast Tracker". Google runs JavaScript, so this — not the no-JS fallback in
+        * index.html — is what it actually sees.
+        *
+        * Shown on an empty library only, and it disappears for good the moment a show is added:
+        * the answer to "what is this" stops being worth the space once you have obviously worked
+        * it out. Same condition and same card shape as the account note below it, which is how
+        * this screen already speaks in its own voice.
+        */}
+      {!isSearching && data.shows.length === 0 && (
+        <div style={{ background: 'var(--card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, padding: 16, marginBottom: 14 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 600, margin: '0 0 6px' }}>Keep track of who&rsquo;s who while you watch</h2>
+          <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.55, margin: '0 0 10px' }}>
+            Reality casts and long-running dramas throw more names at you than anyone can hold.
+            Search for a show above to pull in its cast, then write down what you actually need to
+            remember — who someone is, what they&rsquo;re called, who they came in with.
+          </p>
+          <ul style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0, paddingLeft: 18 }}>
+            <li>Load a cast from any episode, with photos, so faces have names</li>
+            <li>Draw the relationship map — who&rsquo;s interested in who, who&rsquo;s allied with who</li>
+            <li>Spoiler-safe bios and &ldquo;previously on&rdquo; recaps that stop where you have</li>
+            <li>Get told before a new episode airs</li>
+          </ul>
+        </div>
+      )}
+
       {showBackupNudge && !isSearching && (
         <div style={{ background: 'var(--card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, padding: 16, marginBottom: 22 }}>
           {/* "There's no account or sync" was true when this was written and became a lie the day
